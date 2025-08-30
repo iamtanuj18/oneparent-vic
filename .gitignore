@@ -1,0 +1,32 @@
+# --- Node.js / React ---
+node_modules/
+dist/
+build/
+.cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Environment / secrets ---
+.env
+.env.*               
+client/.env
+client/.env.*         
+server/.env
+server/.env.*     
+
+# --- Editor / OS junk ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# --- Coverage / testing ---
+coverage/
+.nyc_output/
+
+# --- Local runtime ---
+*.pid

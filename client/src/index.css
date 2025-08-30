@@ -1,0 +1,45 @@
+/* src/index.css */
+
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Global base */
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background-color: #ffffff; /* white background */
+  color: #111827;           
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* App wrapper (so footer sticks at bottom) */
+#root, .app-container {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Links (neutral) */
+a {
+  color: #2563eb;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Headings */
+h1, h2, h3 {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}

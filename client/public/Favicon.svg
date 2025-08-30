@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 240 240">
+  <!-- white background box -->
+  <rect x="0" y="0" width="240" height="240" fill="#ffffff"/>
+  
+  <!-- your original illustration -->
+  <circle cx="90" cy="80" r="28" fill="#2563EB"/>
+  <circle cx="150" cy="110" r="20" fill="#0EA5E9"/>
+  <path d="M50 140
+           C70 190, 170 190, 190 140
+           C190 120, 170 110, 150 110
+           C140 110, 130 116, 120 126
+           C110 116, 100 110, 90 110
+           C70 110, 50 120, 50 140Z"
+        fill="#94A3B8"/>
+</svg>
