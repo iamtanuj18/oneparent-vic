@@ -1,5 +1,13 @@
-require("dotenv").config();
+const path = require("path");
+const fs = require("fs");
 
+// Try to load .env.local if it exists
+const localEnvPath = path.resolve(__dirname, "../.env.local");
+if (fs.existsSync(localEnvPath)) {
+  require("dotenv").config({ path: localEnvPath });
+}
+
+// Now NODE_ENV should be available if defined in .env.local
 const parseCsv = (s) =>
   (s || "")
     .split(",")
