@@ -1,0 +1,7 @@
+{
+  "name": "oneparent-vic-production",
+  "private": true,
+  "scripts": {
+    "heroku-postbuild": "cd server && npm install"
+  }
+}

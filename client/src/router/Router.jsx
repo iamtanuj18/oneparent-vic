@@ -26,6 +26,7 @@ import DataPrivacyPage from "../pages/dataprivacy/DataPrivacyPage";
 // Not Found
 import NotFoundPage from "../pages/notfound/NotFoundPage";
 import EventsPage from "../pages/events/EventsPage";
+import ApitestPage from "../pages/apitest/ApitestPage";
 
 const Router = () => {
   return (
@@ -49,6 +50,9 @@ const Router = () => {
       {/* Additional Info */}
       <Route path="/about" element={<AboutPage />} />
       <Route path="/privacy" element={<DataPrivacyPage />} />
+
+      {/* Server Health*/}
+      <Route path="/api/health-check" element={<ApitestPage />} />
 
       {/* 404 - NotFound */}
       <Route path="*" element={<NotFoundPage />} />
