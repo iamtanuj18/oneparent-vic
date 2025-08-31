@@ -17,7 +17,7 @@
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
     Content-Security-Policy = '''
       default-src 'self';
-      connect-src 'self' https://oneparent-vic-prod.herokuapp.com https://oneparent-dev-api.onrender.com;
+      connect-src 'self' https://oneparent-vic-prod-9a338acb8033.herokuapp.com https://oneparent-dev-api.onrender.com;
       img-src 'self' data: https:;
       style-src 'self' 'unsafe-inline';
       script-src 'self';
