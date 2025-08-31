@@ -16,6 +16,7 @@ const parseCsv = (s) =>
 
 const CONFIG = {
   NODE_ENV: process.env.NODE_ENV || "development",
+  API_ENV: process.env.API_ENV,
   PORT: parseInt(process.env.PORT || "5000", 10),
 
   CORS_ORIGINS: parseCsv(process.env.CORS_ORIGINS),

@@ -6,7 +6,7 @@ const router = express.Router();
 router.get("/health", (_req, res) => {
   res.json({
     ok: true,
-    service: "oneparent-vic from " + CONFIG.NODE_ENV,
+    service: "oneparent-vic from " + CONFIG.API_ENV,
     time: new Date().toISOString()
   });
 });

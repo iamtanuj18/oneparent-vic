@@ -4,18 +4,13 @@
   command = "npm run build"
   publish = "dist"
 
-# Local defaults overridden by Netlify env 
-[build.environment]
-  VITE_API_BASE_URL = "http://localhost:5000"
-  VITE_ENV = "dev"
-
-#  SPA routing
+# SPA routing
 [[redirects]]
   from = "/*"
   to   = "/index.html"
   status = 200
 
-#  Security headers 
+# Security headers 
 [[headers]]
   for = "/*"
   [headers.values]
@@ -23,5 +18,4 @@
     Referrer-Policy        = "strict-origin-when-cross-origin"
     Permissions-Policy     = "geolocation=(), microphone=(), camera=()"
     Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
-    # CSP: allow only self + API base URL from env 
     Content-Security-Policy = "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ${VITE_API_BASE_URL}"
