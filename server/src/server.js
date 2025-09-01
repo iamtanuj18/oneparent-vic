@@ -41,7 +41,7 @@ app.use(limiter);
 // Mount routes
 app.use(health);
 // app.use(insights);
-// app.use(events);
+app.use(events);
 // app.use(playdate);
 // app.use(benefits);
 // app.use(childcare);

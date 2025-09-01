@@ -1,4 +1,155 @@
-/* src/pages/events/EventsPage.css */
-.events-page {
-  padding: 1rem;
+/* ============ PAGE BACKGROUND (light, warm) ============ */
+.events-filter {
+  background: #faf6f1;                 /* change to #fff if you want pure white */
+  padding: 1.25rem 0 0.25rem;
+  border-top: 1px solid #f1e9e2;
 }
+.events-wrap {
+  background: #000000;                 /* change to #fff if you want pure white */
+  padding: 2rem 0 4rem;
+}
+
+/* hint under filters */
+.click-hint {
+  color: rgba(17,24,39,.65);
+  font-size: .9rem;
+  margin-top: .5rem;
+}
+
+/* labels on light background */
+.events-filter .form-label {
+  margin-bottom: .25rem;
+  color: #334155;                      /* slate-700 */
+}
+
+/* ============ LOADER ============ */
+.loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3rem 0 2rem;
+}
+.spinner-xl {
+  width: 3.5rem;
+  height: 3.5rem;
+  border-width: .35rem;
+}
+.text-light-50 {                        /* repurpose for light theme */
+  color: rgba(17,24,39,.65);
+}
+
+/* ============ CLICKABLE CARD (ghost overlay link) ============ */
+.card-link-ghost {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  text-decoration: none !important;
+  color: inherit !important;
+  background: transparent;
+}
+.card-link-ghost:focus-visible {
+  outline: 3px solid #0d6efd;
+  outline-offset: 2px;
+}
+
+/* neutralize any nested anchors (safety) */
+.event-card a,
+.event-card a:hover,
+.event-card a:focus {
+  text-decoration: none !important;
+  color: inherit !important;
+}
+
+/* ============ CARD ============ */
+/* soft rounded container + warm background */
+.event-card {
+  position: relative;
+  background: #f6eee7;                 /* warm beige card surface */
+  border: 1px solid #efe6de;
+  border-radius: 18px;
+  overflow: hidden;                     /* keep image corners tidy */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 14px;                        /* inner breathing room */
+  box-shadow: 0 6px 20px rgba(15,23,42,0.06);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  cursor: pointer;
+}
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(15,23,42,0.08);
+  border-color: #e7ddd4;
+}
+
+/* image with rounded corners inside the card */
+.event-thumb {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%;                  /* 16:9 */
+  background: #ece7e3;
+  border-radius: 14px;                   /* rounded like your reference */
+  overflow: hidden;
+  margin: 0;                             /* separate visual spacing via padding above */
+}
+.event-thumb img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* category pill – light blue like “Media” */
+.event-chip {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #7dd3fc;                  /* sky-300 */
+  color: #0b1220;                        /* dark text */
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.28rem 0.6rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+/* card content */
+.event-body {
+  display: flex;
+  flex-direction: column;
+  gap: .55rem;
+  padding: 0.9rem 0.25rem 0.2rem;        /* tighter to image for the “tile” feel */
+}
+
+/* metadata row */
+.event-meta {
+  color: #738090;                        /* softened grey */
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.event-meta .dot { opacity: .55; }
+.event-date { color: #8c99a6; }          /* lighter date tone */
+
+/* title */
+.event-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;                        /* near-black */
+  line-height: 1.3;
+  margin: 0 0 .1rem;
+  min-height: 2.6em;                     /* ~2 lines */
+}
+
+/* location ellipsis */
+.event-loc {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* empty state */
+.empty-wrap p   { color: rgba(17,24,39,.85); }
+.empty-wrap small { color: rgba(17,24,39,.6); }
