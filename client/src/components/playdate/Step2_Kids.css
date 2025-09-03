@@ -1,0 +1,35 @@
+/* src/components/playdate/Step2_Kids.css */
+
+/* card for each child */
+.child-block{
+  background:#f8f9fa;
+  padding:1.5rem;
+  border-radius:1rem;
+  border:1px solid #e0e0e0;
+  box-shadow:0 2px 5px rgba(0,0,0,.03);
+}
+
+/* option rows */
+.energy-options,
+.learning-style-options{
+  display:flex;
+  flex-wrap:wrap;
+  gap:.6rem;
+  margin-top:.35rem;
+}
+
+/* reuse .energy-btn from step1 for both groups */
+
+/* next button */
+.btn-next{
+  background-color:#198754;
+  color:#fff;
+  border:none;
+  border-radius:2rem;
+  padding:.5rem 1.5rem;
+}
+.btn-next:hover{ background-color:#157347; }
+
+/* inline error look */
+.text-danger.small,
+.invalid-feedback{ font-size:.85rem; }

@@ -2,7 +2,7 @@
 import { apiFetch } from "./client";
 
 /**
- * Calculate childcare/kinder weekly net cost.
+ *  childcare cost.
  */
 export function calculateChildcare(body) {
   return apiFetch("/childcare/calc", { method: "POST", body });

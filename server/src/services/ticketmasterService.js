@@ -1,7 +1,7 @@
 const { resolveLocation } = require("../utils/locationResolver");
 const CATEGORY_MAP = require("../utils/categoryMapping");
 
-/** Format to DD/MM/YYYY safely */
+// format to dd/mm/yyyy safely
 function formatToAustralianDate(isoDate) {
   if (!isoDate) return "N/A";
   const d = new Date(isoDate);
@@ -13,7 +13,23 @@ function formatToAustralianDate(isoDate) {
   });
 }
 
-/** ISO 8601 UTC Z at start/end of day */
+// trim description 
+function trimDescription(description, maxLength = 120) {
+  if (!description) return "";
+  
+  // strip html tags if any
+  const plainText = description.replace(/<[^>]*>/g, '');
+  
+  if (plainText.length <= maxLength) return plainText;
+  
+  // trim to last complete word within limit
+  const trimmed = plainText.substring(0, maxLength);
+  const lastSpace = trimmed.lastIndexOf(' ');
+  
+  return lastSpace > 0 ? trimmed.substring(0, lastSpace) + '...' : trimmed + '...';
+}
+
+// iso  start and end of day
 function toTicketmasterDate(dateStr, endOfDay = false) {
   try {
     const d = new Date(dateStr);
@@ -26,36 +42,33 @@ function toTicketmasterDate(dateStr, endOfDay = false) {
   }
 }
 
-/**
- * Ticketmaster fetch:
- * - ALWAYS uses AU/VIC from resolver.
- * - Uses CATEGORY_MAP.ticketmaster.keywords only.
- */
 async function getTicketmasterEvents(filters = {}) {
   const {
-    category,
+    category, // will be null for load more calls
     dateFrom,
     dateTo,
     page = 0,
-    perPage = 6, // 🔹 match /get-events default
+    perPage = 6,
   } = filters;
 
   const API_KEY = process.env.TICKETMASTER_KEY;
   const BASE_URL = "https://app.ticketmaster.com/discovery/v2/events.json";
 
-  const catCfg = CATEGORY_MAP?.[category]?.ticketmaster;
+  // only get keywords for initial search, not pagination
+  const catCfg = category ? CATEGORY_MAP?.[category]?.ticketmaster : null;
   const keywords = Array.isArray(catCfg?.keywords) ? catCfg.keywords : [];
 
-  // 🔒 Always { countryCode:'AU', stateCode:'VIC' }
   const locationConfig = resolveLocation("ticketmaster");
 
   const params = new URLSearchParams({
     apikey: API_KEY,
     size: String(perPage),
     page: String(page),
+    sort: "date,asc", // stable sorting
     ...locationConfig,
   });
 
+  // only add keywords for initial search
   if (keywords.length > 0) {
     params.append("keyword", keywords.join(" "));
   }
@@ -70,28 +83,31 @@ async function getTicketmasterEvents(filters = {}) {
   }
 
   const finalUrl = `${BASE_URL}?${params.toString()}`;
-  console.log(`[Ticketmaster] page=${page} VIC-only kw=[${keywords.join(", ")}] → ${finalUrl}`);
+  console.log(`[Ticketmaster] page=${page} vic-only kw=[${keywords.join(", ")}]`);
 
   try {
     const res = await fetch(finalUrl);
-    if (!res.ok) throw new Error(`Ticketmaster API error: ${res.status}`);
+    if (!res.ok) throw new Error(`ticketmaster api error: ${res.status}`);
     const data = await res.json();
 
     const events = data?._embedded?.events || [];
     return events.map((e) => {
       const venue = e._embedded?.venues?.[0];
       return {
+        id: e.id,
         title: e.name,
         date: formatToAustralianDate(e.dates?.start?.localDate),
+        rawDate: e.dates?.start?.dateTime || e.dates?.start?.localDate,
         location: `${venue?.name || "N/A"}, ${venue?.city?.name || "N/A"}`,
+        description: trimDescription(e.info || e.pleaseNote),
         url: e.url,
         image: e.images?.[0]?.url || null,
-        category: category || "Other",
+        category: category || "other",
         source: "Ticketmaster",
       };
     });
   } catch (err) {
-    console.error("Ticketmaster fetch failed:", err.message);
+    console.error("ticketmaster fetch failed:", err.message);
     return [];
   }
 }

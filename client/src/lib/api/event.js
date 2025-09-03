@@ -1,7 +1,12 @@
-// src/lib/api/event.js
-
+// separate api functions for each provider
 import { apiFetch } from "./client";
 
-export function getEvents(body = {}) {
-  return apiFetch("/get-events", { method: "POST", body });
+// call ticketmaster events api
+export function getTicketmasterEvents(body = {}) {
+  return apiFetch("/ticketmaster", { method: "POST", body });
+}
+
+// call eventfinda events api
+export function getEventfindaEvents(body = {}) {
+  return apiFetch("/eventfinda", { method: "POST", body });
 }

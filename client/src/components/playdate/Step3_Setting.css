@@ -1,0 +1,17 @@
+/* src/components/playdate/Step3_Setting.css */
+
+/* fade-in to match wizard */
+.step-form { animation: fadeIn .25s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* row layout for pills */
+.option-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-top: .35rem;
+}
+
+/* small error text */
+.text-danger.small,
+.invalid-feedback { font-size: .85rem; }

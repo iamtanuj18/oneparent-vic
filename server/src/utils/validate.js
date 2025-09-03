@@ -10,12 +10,9 @@ function validate(schema) {
       err.status = 400;
       return next(err);
     }
-    // attach parsed data if you want
     req.valid = result.data;
     next();
   };
 }
-
-// example schemas per-route will import { z } directly.
 
 module.exports = { validate, z };

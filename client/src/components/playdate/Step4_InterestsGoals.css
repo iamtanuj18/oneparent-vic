@@ -1,0 +1,24 @@
+/* src/components/playdate/Step4_InterestsGoals.css */
+
+/* keep animation same as other steps */
+.interests-goals-step { animation: fadeIn .25s ease-out; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(6px) } to { opacity:1; transform: none } }
+
+/* rows */
+.pill-group { display:flex; flex-wrap:wrap; gap:.6rem; }
+.chip-row  { display:flex; flex-wrap:wrap; gap:.6rem; margin-bottom:.5rem; }
+
+/* chips reuse .energy-btn pill look; add small x */
+.chip { display:inline-flex; align-items:center; gap:.4rem; }
+.chip .chip-x {
+  border:none; background:transparent; line-height:1; font-size:1rem;
+  cursor:pointer; padding:0 .1rem; color:inherit;
+}
+
+/* input + add */
+.chip-input { display:flex; align-items:center; gap:.5rem; max-width:520px; }
+.add-btn { border-radius:999px; }
+
+/* errors */
+.error-text { color:#dc3545; font-size:.9rem; margin-top:.25rem; }
+

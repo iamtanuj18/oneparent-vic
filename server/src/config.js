@@ -41,8 +41,14 @@ const CONFIG = {
   // Third-party API keys 
   TICKETMASTER_KEY: process.env.TICKETMASTER_KEY || "",
   EVENTBRITE_TOKEN: process.env.EVENTBRITE_TOKEN || "",
-  HUMANITIX_TOKEN: process.env.HUMANITIX_TOKEN || "",
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY || ""
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY || "",
+  COHERE_API_KEY: process.env.COHERE_API_KEY || "",
+  HUGGINGFACE_API_KEY: process.env.HUGGINGFACE_API_KEY || "",
+  // Third-party API keys
+  EVENTFINDA_USERNAME: process.env.EVENTFINDA_USERNAME || "",
+  EVENTFINDA_PASSWORD: process.env.EVENTFINDA_PASSWORD || "",
+  EVENTFINDA_BASE: process.env.EVENTFINDA_BASE || "https://api.eventfinda.com.au/v2",
+
 };
 
 module.exports = { CONFIG };

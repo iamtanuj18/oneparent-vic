@@ -1,17 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Helmet } from "react-helmet-async";
-import PageHero from "../../components/pagehero/PageHero";
-import { getEvents } from "../../lib/api/event";
+import { getTicketmasterEvents, getEventfindaEvents } from "../../lib/api/event";
+import EventImage from "../../components/EventImage/EventImage";
 import "./EventsPage.css";
 
+// categories for dropdown
 const CATEGORIES = [
-  "Family Activities & Fun",
-  "Shows & Theatre",
-  "Music & Concert",
-  "Exhibitions & Workshops",
+  "Family & Kids Activities",
+  "Community & Support",
+  "Wellbeing & Parenting",
+  "Learning & Development",
+  "Arts & Entertainment",
+  "Markets & Local Events",
 ];
 
-const PER_PAGE = 9;
+// order by dropdown
+const ORDER_OPTIONS = [
+  { value: "none", label: "no ordering" },
+  { value: "date-asc", label: "date: earliest first" },
+  { value: "date-desc", label: "date: latest first" },
+];
+
+// how many per fetch
+const TM_PAGE_SIZE = 6;
+const EF_PAGE_SIZE = 6;
+const TARGET_TOTAL = TM_PAGE_SIZE + EF_PAGE_SIZE; // 12
 
 // utils
 const ymd = (d) => {
@@ -23,11 +36,8 @@ const addDays = (d, n) => {
   x.setDate(x.getDate() + n);
   return x;
 };
-
-/** Convert "DD/MM/YYYY" (server format) OR ISO into "Month DD, YYYY" */
 const toHumanDate = (input) => {
   if (!input) return "TBA";
-  // dd/mm/yyyy?
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(input);
   let d;
   if (m) {
@@ -41,201 +51,290 @@ const toHumanDate = (input) => {
     ? d.toLocaleDateString("en-AU", { month: "long", day: "2-digit", year: "numeric" })
     : input;
 };
+const parseEventDate = (dateStr) => {
+  if (!dateStr) return new Date(0);
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateStr);
+  if (m) return new Date(`${m[3]}-${m[2]}-${m[1]}`);
+  const parsed = Date.parse(dateStr);
+  return Number.isNaN(parsed) ? new Date(0) : new Date(parsed);
+};
+const sortByOrder = (events, order) => {
+  if (order === "none") return events;
+  return [...events].sort((a, b) => {
+    const da = parseEventDate(a.date);
+    const db = parseEventDate(b.date);
+    return order === "date-desc" ? db - da : da - db;
+  });
+};
+const dedupe = (events) => {
+  const norm = (s) =>
+    (s || "")
+      .toLowerCase()
+      .replace(/&amp;/g, "&")
+      .replace(/[^\w\s]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  const seen = new Set();
+  const out = [];
+  for (const ev of events) {
+    const key = `${ev.source}|${norm(ev.title)}|${norm(ev.location)}|${(ev.rawDate || "").split("T")[0]}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(ev);
+    }
+  }
+  return out;
+};
 
 export default function EventsPage() {
-  // defaults: start = today+1, end = today+10
-  const [category, setCategory] = useState("Family Activities & Fun");
+  // filter ui
+  const [category, setCategory] = useState("Family & Kids Activities");
   const [startDate, setStartDate] = useState(() => ymd(addDays(new Date(), 1)));
-  const [endDate, setEndDate] = useState(() => ymd(addDays(new Date(), 10)));
+  const [endDate, setEndDate] = useState(() => ymd(addDays(new Date(), 45)));
+  const [orderBy, setOrderBy] = useState("none");
 
+  // applied filters
+  const [applied, setApplied] = useState({
+    category: "Family & Kids Activities",
+    startDate: ymd(addDays(new Date(), 1)),
+    endDate: ymd(addDays(new Date(), 45)),
+  });
+
+  // results + pagination
   const [items, setItems] = useState([]);
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
-  const [loading, setLoading] = useState(true); // show loader on first paint
+  const [tmPage, setTmPage] = useState(0);
+  const [efPage, setEfPage] = useState(0);
+  const [tmHasMore, setTmHasMore] = useState(true);
+  const [efHasMore, setEfHasMore] = useState(true);
+
+  // ui flags
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [err, setErr] = useState("");
 
-  // keep end >= start
+  // track requests
+  const reqRef = useRef(0);
+
+  // ensure end date is valid
   useEffect(() => {
     if (endDate < startDate) setEndDate(startDate);
   }, [startDate, endDate]);
 
-  const payload = useMemo(
-    () => ({
-      category,
-      startDate: startDate || undefined,
-      endDate: endDate || undefined,
-      ticketmasterPage: page,
-      perPage: PER_PAGE,
-    }),
-    [category, startDate, endDate, page]
-  );
+  // main fetch
+  const runFetch = async (isLoadMore = false, filters = applied) => {
+    const reqId = ++reqRef.current;
+    const payload = { category: filters.category, startDate: filters.startDate, endDate: filters.endDate };
 
-  async function fetchPage(append = false, overridePage = page) {
     try {
-      setLoading(true);
-      setErr("");
-      const data = await getEvents({ ...payload, ticketmasterPage: overridePage });
-      const newItems = Array.isArray(data?.events) ? data.events : [];
-      setItems((prev) => (append ? [...prev, ...newItems] : newItems));
-      setHasMore(Boolean(data?.pagination?.ticketmasterHasMore));
-    } catch (e) {
-      setErr("Could not load events. Please try again.");
-      setHasMore(false);
-    } finally {
-      setLoading(false);
-    }
-  }
+      if (!isLoadMore) {
+        setInitialLoading(true);
+        setErr("");
+        setItems([]);
+        setTmPage(0);
+        setEfPage(0);
+        setTmHasMore(true);
+        setEfHasMore(true);
+      } else {
+        setLoadingMore(true);
+      }
 
-  // initial load
+      let tmEvents = [];
+      let efEvents = [];
+
+      if (!isLoadMore || tmHasMore) {
+        const tmRes = await getTicketmasterEvents({
+          ...payload,
+          page: isLoadMore ? tmPage : 0,
+          perPage: TM_PAGE_SIZE,
+        });
+        const arr = Array.isArray(tmRes?.events) ? tmRes.events : [];
+        tmEvents = arr;
+        if (arr.length === TM_PAGE_SIZE) setTmPage((p) => p + 1);
+        else setTmHasMore(false);
+      }
+
+      let efSize = !isLoadMore ? TARGET_TOTAL - tmEvents.length : tmHasMore ? TARGET_TOTAL - tmEvents.length : TARGET_TOTAL;
+
+      if (efSize > 0 && (!isLoadMore || efHasMore)) {
+        const efRes = await getEventfindaEvents({
+          ...payload,
+          page: isLoadMore ? efPage : 0,
+          perPage: efSize,
+        });
+        const arr = Array.isArray(efRes?.events) ? efRes.events : [];
+        efEvents = arr;
+        if (arr.length === efSize) setEfPage((p) => p + 1);
+        else setEfHasMore(false);
+      }
+
+      const combined = dedupe([...tmEvents, ...efEvents]);
+
+      if (reqId !== reqRef.current) return;
+      if (isLoadMore) {
+        setItems((prev) => dedupe([...prev, ...combined]));
+      } else {
+        setItems(combined);
+      }
+
+      if (isLoadMore && combined.length === 0) {
+        setTmHasMore(false);
+        setEfHasMore(false);
+      }
+    } catch (e) {
+      if (reqId !== reqRef.current) return;
+      setErr("could not load events please try again");
+    } finally {
+      if (reqId === reqRef.current) {
+        setInitialLoading(false);
+        setLoadingMore(false);
+      }
+    }
+  };
+
   useEffect(() => {
-    fetchPage(false, 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    runFetch(false, applied);
+    // eslint-disable-next-line
   }, []);
 
-  function applyFilters(e) {
-    e?.preventDefault?.();
-    setPage(0);
-    fetchPage(false, 0);
-  }
+  const handleApply = async (e) => {
+    e.preventDefault();
+    const filters = { category, startDate, endDate };
+    setApplied(filters);
+    await runFetch(false, filters);
+  };
 
-  async function loadMore() {
-    const next = page + 1;
-    setPage(next);
-    await fetchPage(true, next);
-  }
+  const handleLoadMore = async () => {
+    if (loadingMore) return;
+    await runFetch(true, applied);
+  };
 
+  const handleEventClick = (url) => {
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const sortedItems = sortByOrder(items, orderBy);
   const todayMin = ymd(new Date());
+  const hasMore = tmHasMore || efHasMore;
+  const isAnyLoading = initialLoading || loadingMore;
 
   return (
     <>
       <Helmet>
         <title>Events Directory — OneParent VIC</title>
-        <meta
-          name="description"
-          content="Curated events for family and kids in one place."
-        />
       </Helmet>
 
-      <PageHero
-        title="Events Directory"
-        subtitle="Curated events for family and kids in one place."
-      />
-
-      {/* FILTERS */}
-      <section className="events-filter">
+      <div className="bg-light py-5 text-center">
         <div className="container">
-          <form className="row g-3 align-items-end" onSubmit={applyFilters}>
-            <div className="col-12 col-md-4">
-              <label className="form-label text-light">Category</label>
-              <select
-                className="form-select"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
+          <div className="row justify-content-center">
+            <div className="col-lg-8">
+              <p className="text-danger fw-bold text-uppercase ls-2 mb-3">see you there!</p>
+              <h1 className="display-3 fw-bold text-dark mb-4">Events</h1>
+              <p className="lead text-muted">a single hub for curated family wellbeing and education events across victoria</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section className="bg-white py-4 border-bottom">
+        <div className="container">
+          <form className="row g-3 align-items-end" onSubmit={handleApply}>
+            <div className="col-12 col-md-3">
+              <label className="form-label fw-semibold">Category</label>
+              <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)} disabled={isAnyLoading}>
                 {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
+                  <option key={c}>{c}</option>
                 ))}
               </select>
             </div>
-
-            <div className="col-6 col-md-3">
-              <label className="form-label text-light">Start date</label>
-              <input
-                type="date"
-                className="form-control"
-                min={todayMin}
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
+            <div className="col-6 col-md-2">
+              <label className="form-label fw-semibold">Start date</label>
+              <input type="date" className="form-control" min={todayMin} value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={isAnyLoading} />
             </div>
-
-            <div className="col-6 col-md-3">
-              <label className="form-label text-light">End date</label>
-              <input
-                type="date"
-                className="form-control"
-                min={startDate || todayMin}
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
+            <div className="col-6 col-md-2">
+              <label className="form-label fw-semibold">End date</label>
+              <input type="date" className="form-control" min={startDate || todayMin} value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={isAnyLoading} />
             </div>
-
+            <div className="col-12 col-md-3">
+              <label className="form-label fw-semibold">Order by</label>
+              <select className="form-select" value={orderBy} onChange={(e) => setOrderBy(e.target.value)} disabled={isAnyLoading}>
+                {ORDER_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div className="col-12 col-md-2 d-grid">
-              <button className="btn btn-primary" type="submit" disabled={loading}>
-                {loading ? "Loading…" : "Apply"}
+              <button className="btn btn-primary fw-semibold" type="submit" disabled={isAnyLoading}>
+                {initialLoading ? "loading..." : "apply"}
               </button>
             </div>
           </form>
-          <p className="click-hint">Tip: Click any card to view the event on Ticketmaster.</p>
         </div>
       </section>
 
-      {/* GRID */}
-      <section className="events-wrap">
+      <section className="bg-light py-5">
         <div className="container">
-          {loading && items.length === 0 && (
-            <div className="loading-wrap">
-              <div className="spinner-border text-primary spinner-xl" role="status" />
-              <p className="mt-3 text-light-50">Fetching events…</p>
+          {initialLoading && (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" style={{ width: "3rem", height: "3rem" }} role="status" />
+              <p className="mt-3 text-muted">loading events...</p>
             </div>
           )}
 
-          {err && !loading && (
-            <div className="alert alert-danger mb-4" role="alert">
-              {err}
+          {err && !initialLoading && <div className="text-center py-5 text-danger">{err}</div>}
+
+          {!initialLoading && !err && sortedItems.length === 0 && (
+            <div className="text-center py-5">
+              <div className="bg-white rounded p-5 shadow-sm border border-2 border-dashed">
+                <h5 className="text-muted mb-2">no events found</h5>
+              </div>
             </div>
           )}
 
-          {!loading && items.length === 0 && !err && (
-            <div className="empty-wrap text-center text-muted py-5">
-              <p className="mb-1">No events found for your selection.</p>
-              <small>Try another category or extend the date range.</small>
-            </div>
-          )}
-
+          {!initialLoading && !err && sortedItems.length > 0 && (
             <div className="row g-4">
-              {items.map((ev, i) => (
-                <div key={`${ev.url}-${i}`} className="col-12 col-md-6 col-lg-4">
-                  <article className="event-card">
-                    {/* overlay link that makes the whole card clickable */}
-                    <a
-                      className="card-link-ghost"
-                      href={ev.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      aria-label={`Open event ${ev.title} on Ticketmaster`}
-                    />
-
-                    <div className="event-thumb">
-                      <img
-                        src={ev.image || "/placeholder.jpg"}
-                        alt={ev.title}
-                        loading="lazy"
-                      />
-                      {ev.category && <span className="event-chip">{ev.category}</span>}
+              {sortedItems.map((ev, i) => (
+                <div key={`${ev.source}-${ev.id}-${i}`} className="col-12 col-sm-6 col-lg-4">
+                  <div className="card h-100 shadow-sm event-card" onClick={() => handleEventClick(ev.url)}>
+                    <div className="position-relative">
+                      <EventImage src={ev.image} alt={ev.title} className="card-img-top" />
+                      <span className="badge bg-primary position-absolute top-0 start-0 m-2 rounded-pill">{applied.category}</span>
                     </div>
-
-                    <div className="event-body">
-                      <div className="event-meta">
-                        <span className="event-date">{toHumanDate(ev.date)}</span>
-                        <span className="dot">•</span>
-                        <span className="event-loc">{ev.location || "Victoria"}</span>
+                    <div className="card-body d-flex flex-column">
+                      <h5 className="card-title">{ev.title}</h5>
+                      {ev.description && <p className="card-text text-muted small fst-italic">{ev.description}</p>}
+                      <div className="mt-auto">
+                        <div className="mb-2">
+                          <small className="text-muted fw-semibold">event date:</small>
+                          <div>{toHumanDate(ev.date)}</div>
+                        </div>
+                        <div className="mb-3">
+                          <small className="text-muted fw-semibold">event location:</small>
+                          <div className="small">{ev.location}</div>
+                        </div>
+                        <button className="btn btn-outline-dark btn-sm w-100" onClick={(e) => { e.stopPropagation(); handleEventClick(ev.url); }}>
+                          view event
+                        </button>
                       </div>
-                      <h3 className="event-title">{ev.title}</h3>
                     </div>
-                  </article>
+                  </div>
                 </div>
               ))}
             </div>
-          {hasMore && (
-            <div className="d-flex justify-content-center mt-4">
-              <button
-                className="btn btn-secondary px-4"
-                onClick={loadMore}
-                disabled={loading}
-              >
-                {loading ? "Loading…" : "Load more"}
-              </button>
+          )}
+
+          {!initialLoading && sortedItems.length > 0 && (
+            <div className="text-center mt-5 pt-4 border-top">
+              {hasMore ? (
+                <button className="btn btn-primary btn-lg px-5 rounded-pill" onClick={handleLoadMore} disabled={loadingMore}>
+                  {loadingMore ? "loading more..." : "load more events"}
+                </button>
+              ) : (
+                <div className="bg-white rounded p-4 text-center border border-2 border-dashed">
+                  <p className="text-muted mb-2">no more events available</p>
+                </div>
+              )}
             </div>
           )}
         </div>

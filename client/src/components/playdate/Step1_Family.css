@@ -1,0 +1,19 @@
+/* src/components/playdate/Step1_Family.css */
+
+/* Smooth entrance matches the wizard */
+.step-form { animation: fadeIn .60s ease-out; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+
+/* Energy pills row */
+.energy-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+  margin-top: .35rem;
+}
+
+/* Inline error look */
+.text-danger.small,
+.invalid-feedback {
+  font-size: .85rem;
+}
