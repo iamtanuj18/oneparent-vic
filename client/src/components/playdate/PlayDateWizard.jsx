@@ -10,10 +10,8 @@ import "./PlayDateWizard.css";
 import PlaydateImage from "../../assets/playdate.png";
 import { createPortal } from "react-dom";
 
-// total number of steps in the wizard
 const TOTAL_STEPS = 4;
 
-// step titles for sidebar and header
 const STEP_TITLES = {
   1: "About you",
   2: "About your kid(s)",
@@ -21,7 +19,6 @@ const STEP_TITLES = {
   4: "Interests & goals",
 };
 
-// initial form state
 const initialForm = {
   parentType: "",
   parentAge: "",
@@ -40,18 +37,28 @@ const initialForm = {
 };
 
 export default function PlayDateWizard() {
-  // wizard step state
   const [step, setStep] = useState(1);
 
-  // service status for backend health
-  const [serviceStatus, setServiceStatus] = useState("idle");
+  const [serviceStatus, setServiceStatus] = useState("checking");
+  const checkHealth = async () => {
+    try {
+      setServiceStatus("checking");
+      await getHealth();
+      setServiceStatus("ok");
+      setStep(1);
+    } catch {
+      setServiceStatus("error");
+    }
+  };
   useEffect(() => {
     let active = true;
     (async () => {
       try {
-        setServiceStatus("warming");
         await getHealth();
-        if (active) setServiceStatus("ok");
+        if (active) {
+          setServiceStatus("ok");
+          setStep(1);
+        }
       } catch {
         if (active) setServiceStatus("error");
       }
@@ -59,33 +66,26 @@ export default function PlayDateWizard() {
     return () => { active = false; };
   }, []);
 
-  // main form data state
   const [formData, setFormData] = useState(initialForm);
 
-  // status for safety and plan generation
   const [safetyChecking, setSafetyChecking] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [safetyIssues, setSafetyIssues] = useState(null);
 
-  // generated plan and modal state
   const [plan, setPlan] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [activeIdea, setActiveIdea] = useState(null);
   const [exportingPdf, setExportingPdf] = useState(false);
 
-  // ref for main content
   const mainRef = useRef(null);
 
-  // go to next step and update form
   const handleNext = (delta = {}) => {
     setFormData((prev) => ({ ...prev, ...delta }));
     setStep((prev) => Math.min(TOTAL_STEPS, prev + 1));
   };
-  // go to previous step
   const handleBack = () => setStep((prev) => Math.max(1, prev - 1));
 
-  // generate plan after validating inputs
   const handleGenerate = async (finalDelta) => {
     const payload = { ...formData, ...finalDelta };
     setFormData(payload);
@@ -121,7 +121,6 @@ export default function PlayDateWizard() {
     }
   };
 
-  // regenerate plan with current answers
   const handleRegenerate = async () => {
     setSubmitError("");
     setGenerating(true);
@@ -137,14 +136,12 @@ export default function PlayDateWizard() {
     }
   };
 
-  // go back to edit answers
   const handleEditAnswers = () => {
     setSubmitError("");
     setSafetyIssues(null);
     setStep(4);
   };
 
-  // reset wizard and start over
   const handleStartOver = () => {
     setSubmitError("");
     setSafetyIssues(null);
@@ -155,13 +152,11 @@ export default function PlayDateWizard() {
     setStep(1);
   };
 
-  // open modal for idea details
   const openIdea = (idea) => {
     setActiveIdea(idea);
     setShowModal(true);
   };
 
-  // export modal content to pdf
   const exportModalToPdf = async () => {
     if (!activeIdea) return;
     const source = document.getElementById("plan-modal-content");
@@ -208,28 +203,38 @@ export default function PlayDateWizard() {
     }
   };
 
-  // check if plan exists
   const hasExistingPlan = !!plan?.ideas?.length;
-  // check if in plan mode
   const planMode = step === 5;
 
-  // main render
+  if (serviceStatus !== "ok") {
+    return (
+      <section className="playdate-wizard-section" id="playdate-wizard">
+        {serviceStatus === "checking" && (
+          <div className="pw-healthgate d-flex flex-column align-items-center justify-content-center py-5">
+            <div className="spinner-border text-primary mb-3" role="status" aria-label="checking service status" />
+            <div className="fw-semibold">checking playdate services…</div>
+            <div className="text-muted small mt-1">this usually takes a moment.</div>
+          </div>
+        )}
+        {serviceStatus === "error" && (
+          <div className="pw-healthgate d-flex flex-column align-items-center justify-content-center py-5">
+            <div className="alert alert-danger text-center" role="alert">
+              We couldn't connect to the playdate service.
+              <br />
+              Please try again.
+            </div>
+            <button className="btn btn-primary rounded-pill mt-2" onClick={checkHealth}>
+              Retry
+            </button>
+          </div>
+        )}
+      </section>
+    );
+  }
+
   return (
     <section className="playdate-wizard-section" id="playdate-wizard">
-      {/* show service status messages */}
-      {serviceStatus === "warming" && (
-        <div className="pw-status pw-status-warming" role="status" aria-live="polite">
-          warming up playdate services…
-        </div>
-      )}
-      {serviceStatus === "error" && (
-        <div className="pw-status pw-status-error" role="alert">
-          having trouble connecting. you can still fill the form and try again later.
-        </div>
-      )}
-
       <div className={`pw-wrapper ${planMode ? "plan-only" : ""}`}>
-        {/* sidebar with progress and steps */}
         {!planMode && (
           <aside className="pw-sidebar">
             <div className="pw-sidebar-inner">
@@ -256,7 +261,6 @@ export default function PlayDateWizard() {
         )}
 
         <main className="pw-main" ref={mainRef}>
-          {/* show header for mobile */}
           {!planMode && (
             <div className="pw-header-sm">
               <div className="pw-header-title">{STEP_TITLES[Math.min(step, TOTAL_STEPS)]}</div>
@@ -270,28 +274,24 @@ export default function PlayDateWizard() {
             </div>
           )}
 
-          {/* step 1: family info */}
           {step === 1 && (
             <div className="pw-card">
               <Step1_Family onNext={handleNext} data={formData} />
             </div>
           )}
 
-          {/* step 2: kids info */}
           {step === 2 && (
             <div className="pw-card">
               <Step2_Kids onNext={handleNext} onBack={handleBack} data={formData} />
             </div>
           )}
 
-          {/* step 3: setting and time */}
           {step === 3 && (
             <div className="pw-card">
               <Step3_Setting onNext={handleNext} onBack={handleBack} data={formData} />
             </div>
           )}
 
-          {/* step 4: interests and goals */}
           {step === 4 && (
             <div className="pw-card">
               <div className="d-flex justify-content-end mb-2">
@@ -315,7 +315,6 @@ export default function PlayDateWizard() {
             </div>
           )}
 
-          {/* plan mode: show generated ideas */}
           {planMode && (
             <div className="pw-plan fade-in">
               <div className="pw-plan-actions center">
@@ -332,7 +331,6 @@ export default function PlayDateWizard() {
 
               <h2 className="pw-plan-title text-center mt-3 mb-3">your activity plan</h2>
 
-              {/* always clean gemini html before showing it for safety */}
               {plan?.geminiHtml && (
                 <div
                   className="gemini-html-response"
@@ -371,7 +369,6 @@ export default function PlayDateWizard() {
             </div>
           )}
 
-          {/* bottom nav for steps 2-4 */}
           {step >= 2 && step <= 4 && (
             <div className="pw-bottom-nav">
               <button className="btn btn-outline-secondary rounded-pill" onClick={handleBack}>
@@ -380,7 +377,6 @@ export default function PlayDateWizard() {
             </div>
           )}
 
-          {/* overlay for loading and safety check */}
           {(safetyChecking || generating) && (
             <div className="pw-overlay" role="status" aria-live="polite">
               <div className="spinner-border text-primary" role="status" />
@@ -393,7 +389,6 @@ export default function PlayDateWizard() {
         </main>
       </div>
 
-      {/* modal for viewing idea details */}
       {showModal &&
         createPortal(
           <>
@@ -405,10 +400,6 @@ export default function PlayDateWizard() {
             >
               <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
                 <div className="modal-content">
-                  {/* <div className="modal-header">
-                    <h5 className="modal-title">{activeIdea?.title || "details"}</h5>
-                    <button type="button" className="btn-close" aria-label="close" onClick={() => setShowModal(false)} />
-                  </div> */}
                   <div className="modal-body">
                     <div
                       id="plan-modal-content"

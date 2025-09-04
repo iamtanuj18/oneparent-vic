@@ -11,17 +11,17 @@ const CATEGORY_MAP = {
   "Wellbeing & Parenting": {
     eventfinda: { keywords: ["wellbeing", "parenting", "mental health", "mindfulness", "meditation", "wellness", "self-care", "parenting skills", "parent support", "yoga", "fitness", "health"] }
   },
-  "Learning, Development & Workshops": {
+  "Learning, Development & Exhibition": {
      ticketmaster: { keywords: ["exhibition"] },
-    eventfinda: { keywords: ["education", "child development", "early learning", "school readiness", "literacy", "numeracy", "STEM", "educational", "learning", "development", "skills", "workshop", "seminar"] }
+    eventfinda: { keywords: ["education", "exhibition", "child development", "early learning", "school readiness", "literacy", "numeracy", "STEM", "educational", "learning", "development", "skills", "workshop", "seminar"] }
   },
   "Arts & Entertainment": {
     ticketmaster: { keywords: ["theatre"] },
     eventfinda: { keywords: ["theatre", "show", "performance", "drama", "musical", "play", "art", "gallery", "craft"] }
   },
   "Markets & Local Events": {
-    ticketmaster: { keywords: ["exhibition"] },
-    eventfinda: { keywords: ["market", "local event", "community festival", "farmers market", "craft market", "cultural", "festival", "exhibition"] }
+    ticketmaster: { keywords: ["local event"] },
+    eventfinda: { keywords: ["market", "local event", "community festival", "farmers market", "craft market", "cultural", "festival",] }
   }
 };
 
