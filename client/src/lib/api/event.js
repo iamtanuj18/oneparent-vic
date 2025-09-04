@@ -1,25 +1,12 @@
-// src/lib/api/event.js
+// separate api functions for each provider
 import { apiFetch } from "./client";
 
-/**
- * Search events across multiple providers.
- * body: {
- *   city?: "Melbourne",
- *   freeOnly?: true,
- *   weekend?: true,
- *   ageRange?: "5-8",
- *   categories?: ["library","outdoors"],
- *   limit?: 20
- * }
- */
-export function searchEvents(body = {}) {
-  return apiFetch("/events/search", { method: "POST", body });
+// call ticketmaster events api
+export function getTicketmasterEvents(body = {}) {
+  return apiFetch("/ticketmaster", { method: "POST", body });
 }
 
-/**
- * Get event details. Using POST so backend can route to a provider.
- * body: { provider: "eventbrite" | "ticketmaster" , id: "abc123" }
- */
-export function fetchEventDetails(body) {
-  return apiFetch("/events/details", { method: "POST", body });
+// call eventfinda events api
+export function getEventfindaEvents(body = {}) {
+  return apiFetch("/eventfinda", { method: "POST", body });
 }

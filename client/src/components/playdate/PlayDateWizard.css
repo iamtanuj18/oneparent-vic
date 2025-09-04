@@ -1,0 +1,135 @@
+:root{
+  /* color and spacing variables for the playdate wizard */
+  --gray-50:#f8fafc;
+  --gray-100:#f3f4f6;
+  --gray-200:#e5e7eb;
+  --gray-600:#4b5563;
+  --gray-700:#374151;
+  --gray-900:#111827;
+  --blue-50:#eff6ff;
+  --blue-500:#3b82f6;
+  --blue-600:#2563eb;
+  --radius:1rem;
+  --radius-lg:1.25rem;
+  --shadow:0 1px 3px 0 rgb(0 0 0 / .08), 0 8px 24px rgb(0 0 0 / .06);
+  --shadow-lg:0 10px 30px rgb(0 0 0 / .10);
+}
+
+/* main section background and padding */
+.playdate-wizard-section{
+  background:var(--gray-50);
+  padding:2rem 0 4rem;
+}
+
+/* status bar styles */
+.pw-status{
+  max-width:1100px;
+  margin:0 auto 1rem;
+  padding:.75rem 1rem;
+  border-radius:.75rem;
+  font-size:.95rem;
+}
+.pw-status-warming{background:var(--blue-50); color:#1f2937; border:1px solid #dbeafe;}
+.pw-status-error{background:#fff7ed; color:#7c2d12; border:1px solid #fed7aa;}
+
+/* main layout grid */
+.pw-wrapper{
+  max-width:1100px;
+  margin:0 auto;
+  padding:0 1rem;
+  display:grid;
+  grid-template-columns:280px 1fr;
+  gap:2rem;
+}
+.pw-wrapper.plan-only{
+  grid-template-columns:1fr;
+  max-width:1280px;
+  padding:0 1.25rem;
+}
+
+/* sidebar and progress styles */
+.pw-sidebar{position:relative;}
+.pw-sidebar-inner{position:sticky; top:96px; display:flex; gap:1rem; align-items:flex-start;}
+.pw-progress-rail{width:6px; background:var(--gray-100); border-radius:999px; height:320px; position:relative; flex:none; margin-top:.35rem;}
+.pw-progress-thumb{position:absolute; left:0; bottom:0; width:100%; background:var(--blue-500); border-radius:999px; transition:height .3s ease;}
+
+/* step list styles */
+.pw-steps{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.75rem;}
+.pw-step-item{display:flex; align-items:center; gap:.6rem; color:var(--gray-600); font-weight:600;}
+.pw-step-item .pw-step-index{
+  width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  border:2px solid var(--gray-200); background:#fff; font-weight:700; color:#4b5563;
+}
+.pw-step-item.active .pw-step-index{border-color:var(--blue-500); color:#1769ff;}
+.pw-step-item.done .pw-step-index{border-color:#86efac; background:#dcfce7; color:#065f46;}
+.pw-step-title{white-space:nowrap}
+
+/* main card and content */
+.pw-main{position:relative; min-height:520px;}
+.pw-header-sm{display:none}
+
+.pw-card{
+  background:#fff;
+  border:1px solid var(--gray-200);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow);
+  padding:1.5rem;
+}
+
+/* action buttons */
+.pw-plan-actions.center{
+  display:flex;
+  justify-content:center;
+  gap:.5rem;
+  flex-wrap:wrap;
+}
+.pw-plan-title{font-size:1.25rem; font-weight:800; color:var(--gray-900); text-transform:none;}
+
+/* ideas grid and cards */
+.pw-ideas{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));
+  gap:24px;
+}
+.idea-card{
+  background:#fff;
+  border:1px solid var(--gray-200);
+  border-radius:12px; /* less roundy for result cards */
+  overflow:hidden;
+  box-shadow:var(--shadow);
+  display:flex;
+  flex-direction:column;
+}
+.idea-media{width:100%; height:220px; object-fit:cover;}
+.idea-body{padding:1rem; display:flex; flex-direction:column; gap:.5rem;}
+.idea-badges{display:flex; gap:.5rem; flex-wrap:wrap;}
+.idea-title{margin:0; color:var(--gray-900); font-weight:700;}
+.idea-text{margin:0; color:var(--gray-600);}
+
+/* bottom nav bar */
+.pw-bottom-nav{margin-top:1.25rem}
+
+/* overlay for loading or blocking */
+.pw-overlay{
+  position:absolute; inset:0; background:rgba(255,255,255,.75);
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  border-radius:12px; text-align:center; z-index:5;
+}
+
+/* fade in animation */
+.fade-in{animation:pfade .35s ease-out both}
+@keyframes pfade{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none}}
+
+/* mobile styles */
+@media (max-width: 991.98px){
+  .pw-wrapper{grid-template-columns:1fr;}
+  .pw-sidebar{display:none;}
+  .pw-header-sm{display:block; margin-bottom:1rem;}
+  .pw-header-title{font-weight:800; color:#111827;}
+  .pw-header-count{color:#4b5563; font-size:.95rem; margin-top:.25rem;}
+  .pw-bar{width:100%; height:8px; background:#f3f4f6; border-radius:999px; margin-top:.5rem;}
+  .pw-bar-fill{height:100%; background:#3b82f6; border-radius:999px;}
+
+  .pw-ideas{grid-template-columns:minmax(0,1fr); gap:20px;}
+  .idea-media{height:200px;}
+}

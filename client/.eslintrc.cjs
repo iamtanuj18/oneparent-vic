@@ -25,7 +25,13 @@ module.exports = {
     'plugin:react-hooks/recommended',
   ],
   rules: {
-    'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    'no-unused-vars': [
+      'warn',
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^(_|React)$',
+      },
+    ],
     'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
     'react/react-in-jsx-scope': 'off',
     'react/jsx-uses-react': 'off',

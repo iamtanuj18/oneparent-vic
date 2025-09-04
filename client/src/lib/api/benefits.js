@@ -2,7 +2,7 @@
 import { apiFetch } from "./client";
 
 /**
- * Match benefits & entitlements.
+ * benefits & entitlements.
  */
 export function matchBenefits(body) {
   return apiFetch("/benefits/match", { method: "POST", body });

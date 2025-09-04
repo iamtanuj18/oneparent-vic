@@ -1,8 +1,10 @@
+// use express for routing
 const express = require("express");
 const { CONFIG } = require("../config");
 
 const router = express.Router();
 
+// health check endpoint for the service
 router.get("/health", (_req, res) => {
   res.json({
     ok: true,
@@ -11,4 +13,5 @@ router.get("/health", (_req, res) => {
   });
 });
 
+// export the router
 module.exports = router;

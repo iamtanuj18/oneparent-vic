@@ -1,15 +1,22 @@
-// src/lib/api/playdate.js
 import { apiFetch } from "./client";
 
 /**
- * Generate PlayDate activity plans.
- * body: {
- *   ageBand: "3-5" | "6-8" | ...,
- *   durationMins: 30,
- *   budget: "low" | "medium" | "free",
- *   indoorOutdoor: "indoor" | "outdoor"
- * }
+ * PLaydate generate api call. 
  */
 export function generatePlaydatePlans(body) {
-  return apiFetch("/playdate/plans", { method: "POST", body });
+  return apiFetch("/playdate-generate", { method: "POST", body });
+}
+
+/**
+ * Gemini-backed safety validation for the full wizard payload.
+ */
+export function validatePlaydateInput(payload) {
+  return apiFetch("/playdate-safety-checks", { method: "POST", body: payload });
+}
+
+/**
+ * suburb list api
+ */
+export function fetchSuburbList(query) {
+  return apiFetch(`/suburb-list?q=${encodeURIComponent(query)}`, { method: "GET" });
 }

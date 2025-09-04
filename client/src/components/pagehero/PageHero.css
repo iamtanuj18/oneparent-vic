@@ -1,19 +1,22 @@
 /* src/components/pagehero/PageHero.css */
-
 .page-hero {
-  padding: 2rem 1rem;
-  background-color: #eff6ff;
+  /* pure white hero */
+  background-color: #ffffff;
   text-align: center;
+  padding: 2.5rem 1rem;
+  border-bottom: 1px solid #e5e7eb; 
 }
 
 .page-hero h1 {
-  font-size: 2rem;
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-  color: #1e3a8a;
+  color: #0f172a;            
+  font-size: 2.125rem;      
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin-bottom: 0.35rem;
 }
 
 .page-hero p {
-  font-size: 1.1rem;
-  color: #374151;
+  color: #334155;            
+  font-size: 1.05rem;
+  margin: 0;
 }

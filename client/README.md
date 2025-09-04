@@ -1,12 +1,65 @@
-# React + Vite
+# oneparent-vic client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+this is the frontend web app for the oneparent-vic project. it is built with react and vite. the app helps single parents in victoria, australia by providing tools, resources, and community features.
 
-Currently, two official plugins are available:
+## features
+- modern react app with vite for fast builds and hot reload
+- pages for events, playdates, benefits, childcare, wellbeing, transitions, about, and more
+- reusable components for navigation, footer, images, and forms
+- api calls to the backend server for dynamic data
+- responsive design for desktop and mobile
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## folder structure
+- `src/` - main react code
+  - `components/` - reusable ui components
+  - `pages/` - main app pages
+  - `lib/` - helper libraries and api calls
+  - `assets/` - images and icons
+  - `router/` - app routing
+- `public/` - static assets
 
-## Expanding the ESLint configuration
+## requirements
+- node.js 20 or newer
+- npm
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## install dependencies
+
+open a terminal in the `client` folder and run:
+
+npm install
+
+
+## running the app
+
+for development (with hot reload):
+
+npm run dev
+
+
+for production build:
+
+npm run build
+
+to preview the production build:
+
+npm run preview
+
+
+## environment variables
+
+create a `.env` file in the `client` folder if you need to set api endpoints or secrets. example:
+
+VITE_API_URL=https://oneparent-vic-prod-9a338acb8033.herokuapp.com/
+
+
+## deployment
+
+- deployed on netlify for production and development
+- see netlify.toml for build and security settings
+
+## api
+
+- connects to the backend server for all dynamic data
+- see `src/lib/api/` for api call details
+
+

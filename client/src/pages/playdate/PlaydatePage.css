@@ -1,4 +1,42 @@
-/* src/pages/playdate/PlaydatePage.css */
-.playdate-page {
-  padding: 1rem;
+/* color and shadow variables for playdate page */
+:root{
+  --bs-primary:#3b82f6;
+  --gray-50:#f8fafc;
+  --shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.10);
+}
+
+/* hero section styles */
+.hero-section{background:#fff;padding-top:.25rem;}
+.text-primary{color:var(--bs-primary)!important;}
+
+/* main button styles */
+.btn-primary{
+  background:var(--bs-primary);
+  border:none;border-radius:12px;font-weight:600;
+  box-shadow:var(--shadow);
+  transition:transform .2s, box-shadow .2s;
+}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--shadow-lg);}
+
+/* svg container on the right */
+.hero-art{display:flex;justify-content:center;align-items:center;}
+.hero-art-img{width:100%;max-width:520px;height:auto;display:block}
+
+/* fade and slide animations for entrance */
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{opacity:1;transition:opacity .45s ease}
+.fade-out{opacity:0;transition:opacity .45s ease}
+.animate-slide-up{animation:slideUp .55s ease-out forwards;opacity:0}
+.animate-delay-100{animation-delay:.1s}
+.animate-delay-200{animation-delay:.2s}
+.animate-delay-300{animation-delay:.3s}
+.animate-delay-400{animation-delay:.4s}
+
+/* wizard area background and spacing */
+.wizard-section{
+  background:#f8fafc;
+  min-height:100vh;
+  padding-top: 120px;
+  padding-bottom: 2rem;
 }

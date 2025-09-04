@@ -1,4 +1,57 @@
-/* src/pages/events/EventsPage.css */
-.events-page {
-  padding: 1rem;
+/* custom styles for events page, most layout uses bootstrap */
+
+/* letter spacing utility class */
+.ls-2 {
+  letter-spacing: 0.125em;
+}
+
+/* hover effect for event cards */
+.event-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* smooth transition for event cards */
+.event-card {
+  transition: all 0.2s ease !important;
+}
+
+/* keep event images aspect ratio */
+.card-img-top {
+  height: 200px;
+  object-fit: cover;
+}
+
+/* faded look for disabled buttons */
+.btn:disabled {
+  opacity: 0.65;
+}
+
+/* badge style for event tags */
+.badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* responsive adjustments for mobile */
+@media (max-width: 576px) {
+  .display-3 {
+    font-size: 2.5rem;
+  }
+  
+  .lead {
+    font-size: 1rem;
+  }
+  
+  .card-body {
+    padding: 1rem;
+  }
+}
+
+/* large loading spinner */
+.spinner-border-lg {
+  width: 3rem;
+  height: 3rem;
 }

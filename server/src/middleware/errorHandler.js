@@ -1,13 +1,15 @@
+// handle requests for routes that do not exist
 function notFound(req, res) {
-  res.status(404).json({ error: "Not found" });
+  res.status(404).json({ error: "not found" });
 }
 
-// Centralized error handler
+// handle errors from anywhere in the app
 function errorHandler(err, req, res, _next) {
   const status = err.status || 500;
-  const message = err.message || "Server error";
+  const message = err.message || "server error";
+  // only log errors in development
   if (process.env.NODE_ENV !== "production") {
-    console.error(err);
+    // console.error(err);
   }
   res.status(status).json({ error: message });
 }

@@ -5,13 +5,11 @@ import { Routes, Route } from "react-router-dom";
 // Home
 import HomePage from "../pages/HomePage";
 
-// Data Insights
-import DataInsightsPage from "../pages/datainsights/DataInsightsPage";
-
-// PlayDate & Outings
+// PlayDate & Events
 import PlaydatePage from "../pages/playdate/PlaydatePage";
+import EventsPage from "../pages/events/EventsPage";
 
-// Benefits & Childcare
+// Benefits Entitlement & Childcare Cost
 import BenefitsPage from "../pages/benefits/BenefitsPage";
 import ChildcarePlannerPage from "../pages/childcare/ChildcarePlannerPage";
 
@@ -23,38 +21,37 @@ import TransitionToolPage from "../pages/transition/TransitionToolPage";
 import AboutPage from "../pages/about/AboutPage";
 import DataPrivacyPage from "../pages/dataprivacy/DataPrivacyPage";
 
-// Not Found
-import NotFoundPage from "../pages/notfound/NotFoundPage";
-import EventsPage from "../pages/events/EventsPage";
+//Other 
 import ApitestPage from "../pages/apitest/ApitestPage";
 
+// Not Found
+import NotFoundPage from "../pages/notfound/NotFoundPage";
+
+// main app router
 const Router = () => {
   return (
     <Routes>
-      {/* Core */}
+      {/* home page */}
       <Route path="/" element={<HomePage />} />
-
-      {/* Iteration 1 */}
-      <Route path="/insights" element={<DataInsightsPage />} />
+      {/* playdate planner */}
       <Route path="/playdate" element={<PlaydatePage />} />
+      {/* events directory */}
       <Route path="/events" element={<EventsPage />} />
-
-      {/* Iteration 2 */}
+      {/* benefits entitlement */}
       <Route path="/benefits" element={<BenefitsPage />} />
+      {/* childcare cost planner */}
       <Route path="/childcare" element={<ChildcarePlannerPage />} />
-
-      {/* Iteration 3 */}
+      {/* wellbeing resources */}
       <Route path="/wellbeing" element={<WellbeingPage />} />
+      {/* transition tool */}
       <Route path="/transition" element={<TransitionToolPage />} />
-
-      {/* Additional Info */}
+      {/* about page */}
       <Route path="/about" element={<AboutPage />} />
-      <Route path="/privacy" element={<DataPrivacyPage />} />
-
-      {/* Server Health*/}
+      {/* data privacy info */}
+      <Route path="/data-privacy" element={<DataPrivacyPage />} />
+      {/* api health check */}
       <Route path="/api/health-check" element={<ApitestPage />} />
-
-      {/* 404 - NotFound */}
+      {/* not found page for unmatched routes */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
