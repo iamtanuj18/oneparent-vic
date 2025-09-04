@@ -49,7 +49,7 @@ app.use(health);
 app.use(events);
 app.use(playdate);
 app.use(address);
-// app.use(insights);
+app.use(insights);
 // app.use(benefits);
 // app.use(childcare);
 // app.use(wellbeing);

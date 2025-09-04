@@ -40,27 +40,44 @@ export default function PlayDateWizard() {
   const [step, setStep] = useState(1);
 
   const [serviceStatus, setServiceStatus] = useState("checking");
+  // try health check up to 3 times before failing
   const checkHealth = async () => {
-    try {
-      setServiceStatus("checking");
-      await getHealth();
-      setServiceStatus("ok");
-      setStep(1);
-    } catch {
-      setServiceStatus("error");
+    setServiceStatus("checking");
+    let tries = 0;
+    while (tries < 3) {
+      try {
+        await getHealth();
+        setServiceStatus("ok");
+        setStep(1);
+        return;
+      } catch (e) {
+        tries++;
+        if (tries >= 3) {
+          setServiceStatus("error");
+          return;
+        }
+      }
     }
   };
   useEffect(() => {
     let active = true;
     (async () => {
-      try {
-        await getHealth();
-        if (active) {
-          setServiceStatus("ok");
-          setStep(1);
+      let tries = 0;
+      while (tries < 3) {
+        try {
+          await getHealth();
+          if (active) {
+            setServiceStatus("ok");
+            setStep(1);
+          }
+          return;
+        } catch (e) {
+          tries++;
+          if (tries >= 3 && active) {
+            setServiceStatus("error");
+            return;
+          }
         }
-      } catch {
-        if (active) setServiceStatus("error");
       }
     })();
     return () => { active = false; };
@@ -109,31 +126,45 @@ export default function PlayDateWizard() {
     setSafetyChecking(false);
 
     setGenerating(true);
-    try {
-      const res = await generatePlaydatePlans(payload);
-      const ideas = Array.isArray(res?.ideas) ? res.ideas : [];
-      setPlan({ ideas });
-      setStep(5);
-    } catch (e) {
-      setSubmitError(e?.message || "failed to generate plan.");
-    } finally {
-      setGenerating(false);
+    // try generate up to 3 times before failing
+    let tries = 0;
+    while (tries < 3) {
+      try {
+        const res = await generatePlaydatePlans(payload);
+        const ideas = Array.isArray(res?.ideas) ? res.ideas : [];
+        setPlan({ ideas });
+        setStep(5);
+        break;
+      } catch (e) {
+        tries++;
+        if (tries >= 3) {
+          setSubmitError(e?.message || "failed to generate plan after multiple attempts.");
+        }
+      }
     }
+    setGenerating(false);
   };
 
   const handleRegenerate = async () => {
     setSubmitError("");
     setGenerating(true);
-    try {
-      const res = await generatePlaydatePlans(formData);
-      const ideas = Array.isArray(res?.ideas) ? res.ideas : [];
-      setPlan({ ideas });
-      setStep(5);
-    } catch (e) {
-      setSubmitError(e?.message || "failed to regenerate plan.");
-    } finally {
-      setGenerating(false);
+    // try regenerate up to 3 times before failing
+    let tries = 0;
+    while (tries < 3) {
+      try {
+        const res = await generatePlaydatePlans(formData);
+        const ideas = Array.isArray(res?.ideas) ? res.ideas : [];
+        setPlan({ ideas });
+        setStep(5);
+        break;
+      } catch (e) {
+        tries++;
+        if (tries >= 3) {
+          setSubmitError(e?.message || "failed to regenerate plan after multiple attempts.");
+        }
+      }
     }
+    setGenerating(false);
   };
 
   const handleEditAnswers = () => {

@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Step3_Setting.css";
-import { fetchSuburbList } from "../../lib/api/playdate";
+import { apiFetch } from "../../lib/api/client";
+import ReactDatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 // step 3 for setting up playdate activity
 const Step3_Setting = ({ onNext, data }) => {
@@ -20,7 +22,8 @@ const Step3_Setting = ({ onNext, data }) => {
   const [showList, setShowList] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
 
-  // state for remote suburb search
+  // state for all suburbs and filtered list
+  const [allSuburbs, setAllSuburbs] = useState([]);
   const [remoteSuburbs, setRemoteSuburbs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -34,12 +37,10 @@ const Step3_Setting = ({ onNext, data }) => {
   const timeOptions     = useMemo(() => ["15–30 mins", "30–60 mins", "1–2 hrs"], []);
   const budgetOptions   = useMemo(() => ["Free", "< $15", "< $30", "< $50"], []);
 
-  // helper to pad numbers for date
-  const pad2 = (n) => String(n).padStart(2, "0");
   // helper to format date as yyyy-mm-dd
-  const isoDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  // const isoDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; // removed, unused
   // helper to format date and time for australia
-  const formatAusDateTime = (dateStr, timeStr = null) => {
+  const formatAusDateTime = (dateStr, timeStr = null) => { // eslint-disable-line no-unused-vars
     if (!dateStr) return "";
     const date = new Date(dateStr + "T00:00:00");
     const day = date.getDate();
@@ -57,11 +58,7 @@ const Step3_Setting = ({ onNext, data }) => {
   };
 
   // set min and max date for planning
-  const now = new Date();
-  const minDT = new Date(now.getTime()); // no +1 hour
-  const maxDT = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
-  const minDateStr = isoDate(minDT);
-  const maxDateStr = isoDate(maxDT);
+  // removed min/max date limit
 
   // reset home type if outdoor is selected
   useEffect(() => {
@@ -78,34 +75,37 @@ const Step3_Setting = ({ onNext, data }) => {
   };
 
   // get selected date and time as date object
-  const selectedDT = (draft) =>
-    draft.plannedDate && draft.plannedTime ? new Date(`${draft.plannedDate}T${draft.plannedTime}`) : null;
+  // const selectedDT = (draft) => draft.plannedDate && draft.plannedTime ? new Date(`${draft.plannedDate}T${draft.plannedTime}`) : null; // removed, unused
 
-  // fetch suburb list when typing location
+  // fetch all suburbs once on mount
   useEffect(() => {
-    const q = locationInput.trim();
-    if (q.length < 3) {
-      setRemoteSuburbs([]);
-      setError("");
-      return;
-    }
-
-    const timer = setTimeout(async () => {
+    async function fetchAllSuburbs() {
       setLoading(true);
       setError("");
       try {
-        const res = await fetchSuburbList(q);
-        setRemoteSuburbs(res.items.map((r) => r.suburb));
+        const res = await apiFetch("/suburb-list-all", { method: "GET" });
+        setAllSuburbs(Array.isArray(res.items) ? res.items.map((r) => r.suburb) : []);
       } catch {
         setError("Failed to fetch suburbs");
-        setRemoteSuburbs([]);
+        setAllSuburbs([]);
       } finally {
         setLoading(false);
       }
-    }, 300);
+    }
+    fetchAllSuburbs();
+  }, []);
 
-    return () => clearTimeout(timer);
-  }, [locationInput]);
+  // filter suburbs locally as user types
+  useEffect(() => {
+    const q = locationInput.trim().toLowerCase();
+    if (q.length < 3) {
+      setRemoteSuburbs([]);
+      return;
+    }
+    setRemoteSuburbs(
+      allSuburbs.filter((sub) => sub.toLowerCase().includes(q)).slice(0, 8)
+    );
+  }, [locationInput, allSuburbs]);
 
   // select a suburb from the list
   const selectSuburb = (name) => {
@@ -147,17 +147,10 @@ const Step3_Setting = ({ onNext, data }) => {
     if (draft.place === "Indoor" && !draft.homeType) e.homeType = "Select home type.";
     if (!draft.timeAvailable) e.timeAvailable = "Select time available.";
     if (!draft.budget) e.budget = "Select your budget.";
-    if (!draft.plannedDate) e.plannedDate = "Pick a date.";
-    if (!draft.plannedTime) e.plannedTime = "Pick a start time.";
+  if (!draft.plannedDate) e.plannedDate = "please pick a date for your activity. this field is required.";
+  if (!draft.plannedTime) e.plannedTime = "please pick a start time for your activity. this field is required.";
 
-    const sel = selectedDT(draft);
-    if (sel) {
-      if (sel < minDT) {
-        e.plannedDate = `Pick ${formatAusDateTime(minDateStr)} or later.`;
-      } else if (sel > maxDT) {
-        e.plannedDate = `Pick ${formatAusDateTime(maxDateStr)} or earlier.`;
-      }
-    }
+  // removed date range validation
     return e;
   };
 
@@ -311,45 +304,37 @@ const Step3_Setting = ({ onNext, data }) => {
           <label htmlFor="pd-date" className="form-label">
             Planned date <span className="text-danger">*</span>
           </label>
-          <div style={{ position: 'relative' }} onClick={() => document.getElementById('pd-date').showPicker && document.getElementById('pd-date').showPicker()}>
-            <input
-              id="pd-date"
-              type="date"
-              lang="en-AU"
-              className={`form-control ${errors.plannedDate ? "is-invalid" : ""}`}
-              value={form.plannedDate}
-              onChange={(e) => setField("plannedDate", e.target.value)}
-              min={minDateStr}
-              max={maxDateStr}
-              aria-invalid={!!errors.plannedDate}
-              style={{ cursor: 'pointer' }}
-            />
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, cursor: 'pointer' }} />
-          </div>
+          <ReactDatePicker
+            id="pd-date"
+            selected={form.plannedDate ? new Date(form.plannedDate) : null}
+            onChange={date => setField("plannedDate", date ? date.toISOString().slice(0, 10) : "")}
+            dateFormat="yyyy-MM-dd"
+            className={`form-control ${errors.plannedDate ? "is-invalid" : ""}`}
+            placeholderText="Select date"
+            aria-invalid={!!errors.plannedDate}
+            style={{ cursor: 'pointer' }}
+          />
           {errors.plannedDate && <div className="invalid-feedback">{errors.plannedDate}</div>}
-          <small className="text-muted d-block mt-1">
-            Earliest: {formatAusDateTime(minDateStr)} • Latest: {formatAusDateTime(maxDateStr)}
-          </small>
         </div>
 
         <div className="col-md-6 mb-3">
           <label htmlFor="pd-time" className="form-label">
             Start time <span className="text-danger">*</span>
           </label>
-          <div style={{ position: 'relative' }} onClick={() => document.getElementById('pd-time').showPicker && document.getElementById('pd-time').showPicker()}>
-            <input
-              id="pd-time"
-              type="time"
-              lang="en-AU"
-              className={`form-control ${errors.plannedTime ? "is-invalid" : ""}`}
-              value={form.plannedTime}
-              onChange={(e) => setField("plannedTime", e.target.value)}
-              step="300"
-              aria-invalid={!!errors.plannedTime}
-              style={{ cursor: 'pointer' }}
-            />
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, cursor: 'pointer' }} />
-          </div>
+          <ReactDatePicker
+            id="pd-time"
+            selected={form.plannedTime ? new Date(`1970-01-01T${form.plannedTime}`) : null}
+            onChange={date => setField("plannedTime", date ? date.toTimeString().slice(0,5) : "")}
+            showTimeSelect
+            showTimeSelectOnly
+            timeIntervals={5}
+            timeCaption="Time"
+            dateFormat="HH:mm"
+            className={`form-control ${errors.plannedTime ? "is-invalid" : ""}`}
+            placeholderText="Select time"
+            aria-invalid={!!errors.plannedTime}
+            style={{ cursor: 'pointer' }}
+          />
           {errors.plannedTime && <div className="invalid-feedback">{errors.plannedTime}</div>}
         </div>
       </div>

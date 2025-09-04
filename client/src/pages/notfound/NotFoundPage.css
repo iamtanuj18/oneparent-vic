@@ -1,5 +1,93 @@
 /* src/pages/notfound/NotFoundPage.css */
 .notfound-page {
-  padding: 1rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+  background: #f8f9fa;
+  padding: 2rem 1rem;
+}
+
+.notfound-logo {
+  position: absolute;
+  top: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.logo-text {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  letter-spacing: -0.02em;
+}
+
+.logo-sub {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #00b7ff;
+  letter-spacing: -0.02em;
+}
+
+.notfound-content {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.notfound-title {
+  font-family: Inter, system-ui, sans-serif;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.notfound-subtitle {
+  font-size: 1.1rem;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.notfound-description {
+  font-size: 1rem;
+  color: #6b7280;
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.notfound-btn {
+  background: #00b7ff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-block;
+  transition: all 0.3s ease;
+}
+
+.notfound-btn:hover {
+  background: #0099cc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 183, 255, 0.3);
+}
+
+@media (max-width: 768px) {
+  .notfound-logo {
+    top: 1rem;
+  }
+  
+  .logo-text, .logo-sub {
+    font-size: 1.25rem;
+  }
 }

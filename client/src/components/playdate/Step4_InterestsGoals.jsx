@@ -163,10 +163,11 @@ const Step4_InterestsGoals = ({
 
       {/* interests input and chips */}
       <div className="mb-4">
-        <label className="form-label d-flex align-items-center gap-2">
-          what are your and your child’s interests?
-          <span className="text-muted small">{interests.length}/{MAX_ITEMS}</span>
-        </label>
+        <div className="mb-3">
+          <label className="form-label">
+            what are your and your child&apos;s interests? <span className="text-muted">(add at least three items for better activity plans)</span>
+          </label>
+        </div>
 
         <div className="chip-row">
           {interests.map((item) => (
@@ -201,15 +202,16 @@ const Step4_InterestsGoals = ({
 
         {interestsAtMax && <div className="form-text">max {MAX_ITEMS} items reached.</div>}
         {errors.interests && <div className="error-text" aria-live="polite">{errors.interests}</div>}
-        {attemptedSubmit && interests.length < 3 && <div className="error-text" aria-live="polite">please add at least three interests.</div>}
+    {attemptedSubmit && interests.length < 3 && <div className="error-text" aria-live="polite">please add at least three interests. adding more interests helps us generate better and more relevant activity ideas for you.</div>}
       </div>
 
       {/* goals input and chips */}
       <div className="mb-4">
-        <label className="form-label d-flex align-items-center gap-2">
-          what’s your goal for this activity?
-          <span className="text-muted small">{goals.length}/{MAX_ITEMS}</span>
-        </label>
+        <div className="mb-3">
+          <label className="form-label">
+            what&apos;s your goal for this activity? <span className="text-muted">(add at least three items for better activity plans)</span>
+          </label>
+        </div>
 
         <div className="chip-row">
           {goals.map((item) => (
@@ -244,7 +246,7 @@ const Step4_InterestsGoals = ({
 
         {goalsAtMax && <div className="form-text">max {MAX_ITEMS} items reached.</div>}
         {errors.goals && <div className="error-text" aria-live="polite">{errors.goals}</div>}
-        {attemptedSubmit && goals.length < 3 && <div className="error-text" aria-live="polite">please add at least three goals.</div>}
+    {attemptedSubmit && goals.length < 3 && <div className="error-text" aria-live="polite">please add at least three goals. adding more goals helps us personalize your activity plan and get more creative suggestions.</div>}
       </div>
 
       {/* next button */}

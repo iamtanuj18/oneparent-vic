@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import "./NavBar.css";
 
+// Updated NavBar to reflect a professional, industrial-level design with improved hover effects and active states
 const NavBar = () => {
   const { pathname } = useLocation();
 
   const isActivitiesActive = ["/playdate", "/events"].some((p) =>
     pathname.startsWith(p)
   );
-  const isMoreActive = ["/about", "/privacy", "/data-privacy"].some((p) =>
+  const isMoreActive = ["/about", "/data-privacy"].some((p) =>
     pathname.startsWith(p)
   );
 
@@ -41,7 +42,11 @@ const NavBar = () => {
   return (
     <nav
       className="navbar navbar-expand-lg navbar-light sticky-top border-bottom"
-      style={{ minHeight: "82px", background: "#eef1f5" }}
+      style={{
+        minHeight: "82px",
+        background: "#ffffff",
+        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+      }}
     >
       <div className="container-xl">
         {/* Brand */}
@@ -102,11 +107,24 @@ const NavBar = () => {
           <span className="toggler-icon bottom-bar"></span>
         </button>
 
-        {/* Collapse (in-flow so it "expands" the header on mobile) */}
+        {/* Collapse */}
         <div className="collapse navbar-collapse" id="mainNavbar">
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
             <li className="nav-item">
-              <NavLink to="/" end className="nav-link">
+              <NavLink
+                to="/"
+                end
+                className="nav-link"
+                style={({ isActive }) =>
+                  isActive
+                    ? {
+                        color: "#18b6ff",
+                        fontWeight: 600,
+                        borderBottom: "2px solid #18b6ff",
+                      }
+                    : { color: "#444b5a", fontWeight: 500 }
+                }
+              >
                 Home
               </NavLink>
             </li>
@@ -122,6 +140,7 @@ const NavBar = () => {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 data-bs-auto-close="outside"
+                style={{ color: "#444b5a", fontWeight: 500 }}
               >
                 Events & Activities
               </a>
@@ -140,8 +159,7 @@ const NavBar = () => {
                   >
                     <span>Playdate</span>
                     <span className="desc">
-                      Planning activity for kids is now easy with our AI activity
-                      planner.
+                      AI-powered planner to help you plan activities with your kids.
                     </span>
                   </NavLink>
                 </li>
@@ -159,53 +177,11 @@ const NavBar = () => {
                   >
                     <span>Find Events</span>
                     <span className="desc">
-                      All family, kids, and wellbeing events in one place from many
-                      sources.
+                      Discover family-friendly events across Victoria.
                     </span>
                   </NavLink>
                 </li>
               </ul>
-            </li>
-
-            {/* Hover info items (desktop popovers) */}
-            <li className="nav-item nav-hover-info">
-              <NavLink to="/benefits" className="nav-link">
-                Benefits
-              </NavLink>
-              <div className="nav-hover-box">
-                Use our tool to find what benefits you are entitled for and other
-                resources.
-              </div>
-            </li>
-
-            <li className="nav-item nav-hover-info">
-              <NavLink to="/childcare" className="nav-link">
-                Childcare
-              </NavLink>
-              <div className="nav-hover-box">
-                Get help with childcare costs, projections, resources, and more.
-              </div>
-            </li>
-
-            <li className="nav-item nav-hover-info">
-              <NavLink to="/wellbeing" className="nav-link">
-                Wellbeing
-              </NavLink>
-              <div className="nav-hover-box">
-                Wellbeing resources based on simple quizzes that can help with
-                stress, mental peace, and your overall wellbeing.
-              </div>
-            </li>
-
-            <li className="nav-item nav-hover-info">
-              <NavLink to="/transition" className="nav-link">
-                Your Journey
-              </NavLink>
-              <div className="nav-hover-box">
-                Find yourself on where you stand after becoming a single parent—see
-                where you lag and how things are, based on research by many
-                institutes.
-              </div>
             </li>
 
             {/* More */}
@@ -219,6 +195,7 @@ const NavBar = () => {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 data-bs-auto-close="outside"
+                style={{ color: "#444b5a", fontWeight: 500 }}
               >
                 More
               </a>
