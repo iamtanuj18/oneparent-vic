@@ -11,7 +11,7 @@ const CATEGORY_MAP = {
   "Wellbeing & Parenting": {
     eventfinda: { keywords: ["wellbeing", "parenting", "mental health", "mindfulness", "meditation", "wellness", "self-care", "parenting skills", "parent support", "yoga", "fitness", "health"] }
   },
-  "Learning & Development": {
+  "Learning, Development & Workshops": {
      ticketmaster: { keywords: ["exhibition"] },
     eventfinda: { keywords: ["education", "child development", "early learning", "school readiness", "literacy", "numeracy", "STEM", "educational", "learning", "development", "skills", "workshop", "seminar"] }
   },

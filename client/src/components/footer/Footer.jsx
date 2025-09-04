@@ -1,88 +1,86 @@
 import "./Footer.css";
-import logoUrl from "../../assets/Logo.svg";
 import { Link } from "react-router-dom";
 
+
+// footer component
 export default function Footer() {
   return (
-    <footer className="footer bg-light border-top mt-auto">
+    <footer className="footer">
       <div className="container">
         <div className="row py-5">
-          
-          {/* Logo & Description */}
+          {/* brand and description */}
           <div className="col-lg-4 col-md-12 mb-4 mb-lg-0">
-            <div className="d-flex align-items-start">
-              <img src={logoUrl} alt="OneParent VIC Logo" width={52} height={52} className="me-3" />
-              <div>
-                <h4 className="brand-title mb-2">
-                  OneParent <span className="brand-accent">VIC</span>
-                </h4>
-                <p className="footer-desc mb-0">
-                  Empowering single-parent families across Victoria by providing essential resources, 
-                  community connections, and support to navigate parenting challenges with confidence.
-                </p>
-              </div>
+            <div>
+              {/* wordmark links to home but has no underline or highlight */}
+              <h4 className="brand-title mb-3">
+                <Link to="/" style={{ textDecoration: "none", color: "inherit", pointerEvents: "auto" }}>
+                  oneparent <span className="brand-accent">vic</span>
+                </Link>
+              </h4>
+              <p className="footer-desc mb-0">
+                empowering single parent families across victoria by providing essential resources, 
+                community connections, and support to navigate parenting challenges with confidence.
+              </p>
             </div>
           </div>
 
-          {/* Footer Links */}
+          {/* footer links */}
           <div className="col-lg-8 col-md-12">
             <div className="row">
-              
-              {/* Events & Activities */}
+              {/* events and activities links */}
               <div className="col-6 col-md-3 mb-4">
-                <h6 className="footer-heading">Events & Activities</h6>
+                <h6 className="footer-heading mb-3">events & activities</h6>
                 <ul className="list-unstyled footer-links">
-                  <li><Link to="/playdate" className="footer-link">Playdate Planner</Link></li>
-                  <li><Link to="/events" className="footer-link">Find Events</Link></li>
+                  <li><Link to="/playdate" className="footer-link">playdate planner</Link></li>
+                  <li><Link to="/events" className="footer-link">find events</Link></li>
                 </ul>
               </div>
 
-              {/* Support Services */}
+              {/* support services links */}
               <div className="col-6 col-md-3 mb-4">
-                <h6 className="footer-heading">Support</h6>
+                <h6 className="footer-heading mb-3">support</h6>
                 <ul className="list-unstyled footer-links">
-                  <li><Link to="/benefits" className="footer-link">Benefits Entitlement</Link></li>
-                  <li><Link to="/childcare" className="footer-link">Childcare Cost</Link></li>
-                  <li><Link to="/wellbeing" className="footer-link">Wellbeing</Link></li>
+                  <li><Link to="/benefits" className="footer-link">benefits entitlement</Link></li>
+                  <li><Link to="/childcare" className="footer-link">childcare cost</Link></li>
+                  <li><Link to="/wellbeing" className="footer-link">wellbeing</Link></li>
                 </ul>
               </div>
 
-              {/* Resources */}
+              {/* resources links */}
               <div className="col-6 col-md-3 mb-4">
-                <h6 className="footer-heading">Resources</h6>
+                <h6 className="footer-heading mb-3">resources</h6>
                 <ul className="list-unstyled footer-links">
-                  <li><Link to="/transition" className="footer-link">Single Parent&apos;s Transition Journey</Link></li>
-                  <li><Link to="/about" className="footer-link">About Us</Link></li>
+                  <li><Link to="/transition" className="footer-link">single parent&apos;s transition journey</Link></li>
+                  <li><Link to="/about" className="footer-link">about us</Link></li>
                 </ul>
               </div>
 
-              {/* Data Privacy */}
+              {/* data privacy links */}
               <div className="col-6 col-md-3 mb-4">
-                <h6 className="footer-heading">Data Privacy</h6>
+                <h6 className="footer-heading mb-3">data privacy</h6>
                 <ul className="list-unstyled footer-links">
-                  <li><Link to="/data-privacy" className="footer-link">Learn More</Link></li>
+                  <li><Link to="/data-privacy" className="footer-link">learn more</Link></li>
                 </ul>
               </div>
-
             </div>
           </div>
         </div>
 
-        {/* Copyright Section */}
+        {/* copyright and attribution section */}
         <div className="border-top pt-4 pb-3">
           <div className="row align-items-center">
             <div className="col-md-8">
               <p className="copyright-text mb-0">
-                {/* © {new Date().getFullYear()} OneParent VIC. All rights reserved.  */} OneParent VIC. 
-                Supporting single parents across Victoria.
+                oneparent vic • supporting single parents across victoria.
               </p>
             </div>
             <div className="col-md-4 text-md-end mt-2 mt-md-0">
-              <small className="text-muted">Made with ❤️ for Victorian families by Team GitGood</small>
+              <small className="attribution-text">
+                made with <span className="heart">❤️</span> for victorian families by team <a href="https://eportfolio.monash.edu/view/view.php?t=926064abe60f91f12a8f" target="_blank" rel="noopener noreferrer" style={{ color: "#00b7ff", textDecoration: "none" }}>gitgood</a>
+              </small>
             </div>
           </div>
         </div>
-        
       </div>
     </footer>
   );

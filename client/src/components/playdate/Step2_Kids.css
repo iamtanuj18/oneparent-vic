@@ -1,15 +1,43 @@
-/* src/components/playdate/Step2_Kids.css */
+/* tabs for switching between children */
+.child-tabs{
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+  margin-bottom:1rem;
+}
+.child-tab{
+  border-radius:999px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  padding:.45rem .9rem;
+  font-weight:700;
+  color:#374151;
+}
+.child-tab.active{
+  border-color:#3b82f6;
+  background:#eff6ff;
+  color:#1d4ed8;
+}
+.child-tab.ok{
+  position:relative;
+}
+.child-tab.ok::after{
+  content:"";
+  width:8px;height:8px;border-radius:50%;
+  background:#10b981;
+  position:absolute; right:8px; top:8px;
+}
 
-/* card for each child */
-.child-block{
+/* panel for child details */
+.child-panel{
   background:#f8f9fa;
-  padding:1.5rem;
+  padding:1.25rem;
   border-radius:1rem;
   border:1px solid #e0e0e0;
   box-shadow:0 2px 5px rgba(0,0,0,.03);
 }
 
-/* option rows */
+/* options for energy and learning style */
 .energy-options,
 .learning-style-options{
   display:flex;
@@ -18,18 +46,16 @@
   margin-top:.35rem;
 }
 
-/* reuse .energy-btn from step1 for both groups */
-
-/* next button */
+/* next button styles */
 .btn-next{
   background-color:#198754;
   color:#fff;
   border:none;
   border-radius:2rem;
-  padding:.5rem 1.5rem;
+  padding:.6rem 1.5rem;
 }
 .btn-next:hover{ background-color:#157347; }
 
-/* inline error look */
+/* error text styles */
 .text-danger.small,
 .invalid-feedback{ font-size:.85rem; }

@@ -1,3 +1,4 @@
+/* main container for api test page */
 .apitest-container {
   max-width: 600px;
   margin: 100px auto;
@@ -9,6 +10,7 @@
   font-family: sans-serif;
 }
 
+/* input styles for password form */
 .password-form input {
   padding: 10px;
   width: 70%;
@@ -17,6 +19,7 @@
   border: 1px solid #ccc;
 }
 
+/* button styles for password form */
 .password-form button {
   padding: 10px 20px;
   background-color: #3d5afe;
@@ -26,6 +29,7 @@
   cursor: pointer;
 }
 
+/* box for showing result */
 .result-box {
   text-align: left;
   margin-top: 20px;
@@ -36,6 +40,7 @@
   font-family: monospace;
 }
 
+/* box for showing error */
 .error-box {
   background: #ffebee;
   border-left: 5px solid #e53935;

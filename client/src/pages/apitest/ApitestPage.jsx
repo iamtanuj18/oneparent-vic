@@ -2,14 +2,20 @@ import { useState } from "react";
 import { getHealth } from "../../lib/api/client";
 import "./ApitestPage.css";
 
+// password for api test page
 const CORRECT_PASSWORD = "apitest@check"; 
 
 export default function ApitestPage() {
+  // state for password input
   const [inputPassword, setInputPassword] = useState("");
+  // state for authentication
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // state for api result
   const [apiResult, setApiResult] = useState(null);
+  // state for error message
   const [error, setError] = useState(null);
 
+  // handle password form submit
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
     if (inputPassword !== CORRECT_PASSWORD) {
@@ -19,13 +25,14 @@ export default function ApitestPage() {
 
     setIsAuthenticated(true);
     try {
-      const data = await getHealth(); // call to /health - api testing route
+      const data = await getHealth(); // call to /health api route
       setApiResult(data);
     } catch (err) {
       setError(err.message);
     }
   };
 
+  // main ui for api test page
   return (
     <div className="apitest-container">
       {!isAuthenticated ? (

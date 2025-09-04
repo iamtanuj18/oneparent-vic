@@ -1,33 +1,33 @@
-/* minimal custom styles since we're using bootstrap */
+/* custom styles for events page, most layout uses bootstrap */
 
-/* custom letter spacing utility */
+/* letter spacing utility class */
 .ls-2 {
   letter-spacing: 0.125em;
 }
 
-/* event card hover effects */
+/* hover effect for event cards */
 .event-card:hover {
   transform: translateY(-2px) !important;
   box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
 }
 
-/* smooth transitions for cards */
+/* smooth transition for event cards */
 .event-card {
   transition: all 0.2s ease !important;
 }
 
-/* ensure images maintain aspect ratio */
+/* keep event images aspect ratio */
 .card-img-top {
   height: 200px;
   object-fit: cover;
 }
 
-/* loading button animation */
+/* faded look for disabled buttons */
 .btn:disabled {
   opacity: 0.65;
 }
 
-/* custom badge positioning */
+/* badge style for event tags */
 .badge {
   font-size: 0.7rem;
   font-weight: 600;
@@ -35,7 +35,7 @@
   letter-spacing: 0.5px;
 }
 
-/* responsive adjustments */
+/* responsive adjustments for mobile */
 @media (max-width: 576px) {
   .display-3 {
     font-size: 2.5rem;
@@ -50,7 +50,7 @@
   }
 }
 
-/* loading spinner size */
+/* large loading spinner */
 .spinner-border-lg {
   width: 3rem;
   height: 3rem;

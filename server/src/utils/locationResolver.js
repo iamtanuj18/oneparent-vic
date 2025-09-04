@@ -1,6 +1,7 @@
-// src/utils/locationResolver.js
+// resolve location info for different providers
 function resolveLocation(provider) {
   if (provider === "ticketmaster") {
+    // ticketmaster needs country and state codes
     return {
       countryCode: "AU",
       stateCode: "VIC",
@@ -8,6 +9,7 @@ function resolveLocation(provider) {
   }
 
   if (provider === "eventfinda") {
+    // eventfinda needs city, region, and country
     return {
       city: "Melbourne",
       region: "Victoria",
@@ -15,7 +17,9 @@ function resolveLocation(provider) {
     };
   }
 
+  // fallback for unknown provider
   return {};
 }
 
+// export the resolver
 module.exports = { resolveLocation };

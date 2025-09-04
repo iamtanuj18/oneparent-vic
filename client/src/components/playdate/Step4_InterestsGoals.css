@@ -1,24 +1,46 @@
-/* src/components/playdate/Step4_InterestsGoals.css */
-
-/* keep animation same as other steps */
+/* animation for step entrance */
 .interests-goals-step { animation: fadeIn .25s ease-out; }
 @keyframes fadeIn { from { opacity:0; transform: translateY(6px) } to { opacity:1; transform: none } }
 
-/* rows */
+/* group for option pills */
 .pill-group { display:flex; flex-wrap:wrap; gap:.6rem; }
+/* row for selected chips */
 .chip-row  { display:flex; flex-wrap:wrap; gap:.6rem; margin-bottom:.5rem; }
 
-/* chips reuse .energy-btn pill look; add small x */
+/* chip styles for selected interests/goals */
 .chip { display:inline-flex; align-items:center; gap:.4rem; }
 .chip .chip-x {
   border:none; background:transparent; line-height:1; font-size:1rem;
   cursor:pointer; padding:0 .1rem; color:inherit;
 }
 
-/* input + add */
+/* input row for adding chips */
 .chip-input { display:flex; align-items:center; gap:.5rem; max-width:520px; }
 .add-btn { border-radius:999px; }
 
-/* errors */
+/* error text styles */
 .error-text { color:#dc3545; font-size:.9rem; margin-top:.25rem; }
 
+/* button styles for energy pills */
+.energy-btn{
+  border-radius:999px;
+  border:1px solid #e5e7eb;
+  background:#fff;
+  color:#111827;
+  font-weight:600;
+  padding:.55rem .9rem;
+  line-height:1;
+}
+.energy-btn.active{ background:#eff6ff; border-color:#3b82f6; color:#1d4ed8; }
+
+/* next button styles */
+.btn-next{
+  background:#2563eb;
+  color:#fff;
+  border:none;
+  border-radius:12px;
+  padding:.7rem 1.25rem;
+  font-weight:700;
+  box-shadow:0 1px 3px rgb(0 0 0 / .08), 0 8px 24px rgb(0 0 0 / .06);
+}
+.btn-next:hover{background:#3b82f6;}

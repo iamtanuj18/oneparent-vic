@@ -1,4 +1,5 @@
-// server/src/server.js
+
+// import main modules
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
@@ -8,7 +9,7 @@ const { limiter } = require("./middleware/rateLimit");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
 const { ping, close } = require("./db");
 
-// Routes
+// import route handlers
 const health = require("./routes/health");
 const insights = require("./routes/insights");
 const events = require("./routes/events");
@@ -21,13 +22,13 @@ const address = require("./routes/address");
 
 const app = express();
 
-// security, compression, body limits
+// set security headers and limits
 security(app);
 
-// logging
+// log all requests
 app.use(morgan("combined"));
 
-// CORS
+// set up cors for allowed origins
 const allowed = CONFIG.CORS_ORIGINS;
 app.use(
   cors({
@@ -40,10 +41,10 @@ app.use(
   })
 );
 
-// rate limiting
+// limit requests to prevent abuse
 app.use(limiter);
 
-// routes
+// connect main routes
 app.use(health);
 app.use(events);
 app.use(playdate);
@@ -54,18 +55,18 @@ app.use(address);
 // app.use(wellbeing);
 // app.use(transition);
 
-// 404 + errors
+// handle not found and errors
 app.use(notFound);
 app.use(errorHandler);
 
-// start
+// start the server
 const server = app.listen(CONFIG.PORT, async () => {
   console.log(`[server] ${CONFIG.NODE_ENV} listening on :${CONFIG.PORT}`);
   const ok = await ping();
   console.log(ok ? "[db] connected" : "[db] not available");
 });
 
-//  shutdown
+// shutdown the server gracefully
 async function shutdown(signal) {
   console.log(`[server] ${signal} received, shutting down...`);
   await close();

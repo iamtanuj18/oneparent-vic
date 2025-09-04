@@ -1,17 +1,18 @@
+// import config and helpers
 const { CONFIG } = require("../config");
 const { resolveLocation } = require("../utils/locationResolver");
 const CATEGORY_MAP = require("../utils/categoryMapping");
 
-// default image when event has no image
+// default image if event has no image
 const DEFAULT_IMAGE_URL = "https://www.ausleisure.com.au/images/ausleisure/files/Eventfinda_lr.jpg";
 
-// cache so we dont call api multiple times for same things
+// cache for location and category ids
 const _cache = {
   locationId: new Map(),
   categoryId: new Map(),
 };
 
-// trim description 
+// trim description and remove html tags
 function trimDescription(description, maxLength = 120) {
   if (!description) return "";
   
@@ -27,7 +28,7 @@ function trimDescription(description, maxLength = 120) {
   return lastSpace > 0 ? trimmed.substring(0, lastSpace) + '...' : trimmed + '...';
 }
 
-// check if event date is within our filter range
+// check if event date is within filter range
 function isEventInDateRange(eventStartDate, filterDateFrom, filterDateTo) {
   if (!eventStartDate) return false;
   
@@ -46,7 +47,7 @@ function isEventInDateRange(eventStartDate, filterDateFrom, filterDateTo) {
   return true;
 }
 
-// make date look like 06/09/2025 same as ticketmaster
+// format date to australian style
 function formatToAustralianDate(isoDate) {
   if (!isoDate) return "N/A";
   const d = new Date(isoDate);
@@ -65,14 +66,14 @@ const toQS = (obj) =>
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join("&");
 
-// get keywords for category from our category map
+// get keywords for category from category map
 function getCategoryKeywords(category) {
   if (!category) return []; // return empty if no category
   const catCfg = CATEGORY_MAP?.[category]?.eventfinda;
   return Array.isArray(catCfg?.keywords) ? catCfg.keywords : [];
 }
 
-// make location query using our location resolver
+// build location query using location resolver
 function buildLocationQuery() {
   const locationConfig = resolveLocation("eventfinda");
   if (locationConfig.city && locationConfig.region && locationConfig.country) {
@@ -81,7 +82,7 @@ function buildLocationQuery() {
   return "Victoria Australia";
 }
 
-// extract best image from eventfinda response
+// get best image from eventfinda response
 function extractEventImage(eventData) {
   if (!eventData.images || !eventData.images.images || !Array.isArray(eventData.images.images)) {
     return null;
@@ -128,7 +129,7 @@ function extractEventImage(eventData) {
   return null;
 }
 
-// call eventfinda api with auth
+// call eventfinda api with authentication
 async function callEventfinda(pathAndQuery) {
   const { EVENTFINDA_BASE, EVENTFINDA_USERNAME, EVENTFINDA_PASSWORD } = CONFIG;
   const url = `${EVENTFINDA_BASE}${pathAndQuery.startsWith("/") ? "" : "/"}${pathAndQuery}`;
@@ -156,7 +157,7 @@ async function callEventfinda(pathAndQuery) {
   }
 }
 
-// find location id by searching location name
+// get location id by searching location name
 async function resolveLocationId(locationQuery) {
   if (_cache.locationId.has(locationQuery)) {
     return _cache.locationId.get(locationQuery);
@@ -183,7 +184,7 @@ async function resolveLocationId(locationQuery) {
   }
 }
 
-// find category id by searching keywords
+// get category id by searching keywords
 async function resolveCategoryId(keywords) {
   if (!keywords || keywords.length === 0) return null;
   
@@ -213,7 +214,7 @@ async function resolveCategoryId(keywords) {
   }
 }
 
-// main function to get events from eventfinda
+// get events from eventfinda using filters
 async function getEventfindaEvents(filters = {}) {
   const {
     category, // will be null for load more calls
@@ -302,4 +303,5 @@ async function getEventfindaEvents(filters = {}) {
   }
 }
 
+// export the eventfinda events function
 module.exports = { getEventfindaEvents };

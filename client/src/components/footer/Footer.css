@@ -1,19 +1,19 @@
-/* src/components/footer/Footer.css */
+/* footer css file */
 
-/* Footer Theme */
+/* footer main background and text color */
 .footer {
-  background-color: #7abdff;
-  color: #475569;
+  background-color: #1e293b;
+  color: #e2e8f0;
   font-size: 14px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  border-top: 1px solid #e2e8f0;
+  border-top: none;
 }
 
-/* Brand styling in footer */
+/* brand title styles */
 .brand-title {
   font-weight: 700;
   font-size: 1.5rem;
-  color: #1e293b;
+  color: #ffffff;
   letter-spacing: -0.02em;
   line-height: 1.2;
 }
@@ -23,53 +23,71 @@
   font-weight: 800;
 }
 
-/* Footer description */
+/* description text in footer */
 .footer-desc {
-  color: #64748b;
+  color: #cbd5e1;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.6;
   max-width: 280px;
 }
 
-/* Footer section headings */
+/* section headings in footer */
 .footer-heading {
   font-weight: 600;
-  color: #334155;
-  margin-bottom: 1rem;
-  font-size: 15px;
+  color: #ffffff;
+  font-size: 16px;
   letter-spacing: -0.01em;
 }
 
-/* Footer links styling */
+/* footer links list styles */
 .footer-links {
   margin: 0;
 }
 
 .footer-links li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .footer-link {
-  color: #64748b;
+  color: #cbd5e1;
   text-decoration: none;
   font-size: 14px;
   transition: all 0.2s ease;
   display: inline-block;
+  line-height: 1.4;
 }
 
 .footer-link:hover {
-  color: #00b7ff;
+  color: #ffffff;
   text-decoration: none;
   transform: translateX(3px);
 }
 
-/* Copyright section */
+/* copyright section styles */
+.footer .border-top {
+  border-color: #334155 !important;
+}
+
 .copyright-text {
-  color: #64748b;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.attribution-text {
+  color: #94a3b8;
   font-size: 13px;
 }
 
-/* Sticking footer at bottom */
+.heart {
+  color: #ef4444;
+}
+
+.team-name {
+  color: #00b7ff;
+  font-weight: 500;
+}
+
+/* make footer stick to bottom */
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -90,13 +108,13 @@ html, body, #root {
   flex-direction: column;
 }
 
-/* always at bottom */
+/* footer always at bottom */
 .footer {
   flex-shrink: 0;
   margin-top: auto;
 }
 
-/* Responsive adjustments */
+/* responsive styles for footer */
 @media (max-width: 767.98px) {
   .footer-desc {
     max-width: 100%;
@@ -107,7 +125,7 @@ html, body, #root {
   }
   
   .footer-heading {
-    font-size: 14px;
+    font-size: 15px;
     margin-bottom: 0.75rem;
   }
   
@@ -116,6 +134,11 @@ html, body, #root {
   }
   
   .copyright-text {
+    font-size: 13px;
+    text-align: center;
+  }
+  
+  .attribution-text {
     font-size: 12px;
     text-align: center;
   }
@@ -123,8 +146,8 @@ html, body, #root {
 
 @media (max-width: 575.98px) {
   .footer .py-5 {
-    padding-top: 2rem !important;
-    padding-bottom: 2rem !important;
+    padding-top: 2.5rem !important;
+    padding-bottom: 2.5rem !important;
   }
   
   .footer .d-flex.align-items-start {
@@ -139,7 +162,7 @@ html, body, #root {
   }
 }
 
-/* Hover animations */
+/* hover underline animation for links */
 .footer-link {
   position: relative;
 }
@@ -151,7 +174,7 @@ html, body, #root {
   height: 1px;
   bottom: -2px;
   left: 0;
-  background-color: #00b7ff;
+  background-color: #ffffff;
   transition: width 0.2s ease;
 }
 
@@ -159,9 +182,14 @@ html, body, #root {
   width: 100%;
 }
 
-/* Focus accessibility */
+/* focus style for accessibility on links */
 .footer-link:focus-visible {
   outline: 2px solid #00b7ff;
   outline-offset: 2px;
   border-radius: 2px;
+}
+
+/* logo image style for dark theme */
+.footer img {
+  filter: brightness(1.2);
 }

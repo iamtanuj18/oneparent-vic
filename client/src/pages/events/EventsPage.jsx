@@ -14,28 +14,23 @@ const CATEGORIES = [
   "Markets & Local Events",
 ];
 
-// order by dropdown
-const ORDER_OPTIONS = [
-  { value: "none", label: "no ordering" },
-  { value: "date-asc", label: "date: earliest first" },
-  { value: "date-desc", label: "date: latest first" },
-];
-
-// how many per fetch
+// how many events to fetch per source
 const TM_PAGE_SIZE = 6;
 const EF_PAGE_SIZE = 6;
 const TARGET_TOTAL = TM_PAGE_SIZE + EF_PAGE_SIZE; // 12
 
-// utils
+// helper to format date as yyyy-mm-dd
 const ymd = (d) => {
   const z = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${z(d.getMonth() + 1)}-${z(d.getDate())}`;
 };
+// helper to add days to a date
 const addDays = (d, n) => {
   const x = new Date(d);
   x.setDate(x.getDate() + n);
   return x;
 };
+// helper to format date for display
 const toHumanDate = (input) => {
   if (!input) return "TBA";
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(input);
@@ -51,21 +46,7 @@ const toHumanDate = (input) => {
     ? d.toLocaleDateString("en-AU", { month: "long", day: "2-digit", year: "numeric" })
     : input;
 };
-const parseEventDate = (dateStr) => {
-  if (!dateStr) return new Date(0);
-  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateStr);
-  if (m) return new Date(`${m[3]}-${m[2]}-${m[1]}`);
-  const parsed = Date.parse(dateStr);
-  return Number.isNaN(parsed) ? new Date(0) : new Date(parsed);
-};
-const sortByOrder = (events, order) => {
-  if (order === "none") return events;
-  return [...events].sort((a, b) => {
-    const da = parseEventDate(a.date);
-    const db = parseEventDate(b.date);
-    return order === "date-desc" ? db - da : da - db;
-  });
-};
+// remove duplicate events
 const dedupe = (events) => {
   const norm = (s) =>
     (s || "")
@@ -87,40 +68,39 @@ const dedupe = (events) => {
 };
 
 export default function EventsPage() {
-  // filter ui
+  // state for filter ui
   const [category, setCategory] = useState("Family & Kids Activities");
   const [startDate, setStartDate] = useState(() => ymd(addDays(new Date(), 1)));
   const [endDate, setEndDate] = useState(() => ymd(addDays(new Date(), 45)));
-  const [orderBy, setOrderBy] = useState("none");
 
-  // applied filters
+  // state for applied filters
   const [applied, setApplied] = useState({
     category: "Family & Kids Activities",
     startDate: ymd(addDays(new Date(), 1)),
     endDate: ymd(addDays(new Date(), 45)),
   });
 
-  // results + pagination
+  // state for event results and pagination
   const [items, setItems] = useState([]);
   const [tmPage, setTmPage] = useState(0);
   const [efPage, setEfPage] = useState(0);
   const [tmHasMore, setTmHasMore] = useState(true);
   const [efHasMore, setEfHasMore] = useState(true);
 
-  // ui flags
+  // ui loading and error flags
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [err, setErr] = useState("");
 
-  // track requests
+  // track requests to avoid race conditions
   const reqRef = useRef(0);
 
-  // ensure end date is valid
+  // make sure end date is not before start date
   useEffect(() => {
     if (endDate < startDate) setEndDate(startDate);
   }, [startDate, endDate]);
 
-  // main fetch
+  // fetch events from apis
   const runFetch = async (isLoadMore = false, filters = applied) => {
     const reqId = ++reqRef.current;
     const payload = { category: filters.category, startDate: filters.startDate, endDate: filters.endDate };
@@ -141,6 +121,7 @@ export default function EventsPage() {
       let tmEvents = [];
       let efEvents = [];
 
+      // fetch ticketmaster events
       if (!isLoadMore || tmHasMore) {
         const tmRes = await getTicketmasterEvents({
           ...payload,
@@ -153,6 +134,7 @@ export default function EventsPage() {
         else setTmHasMore(false);
       }
 
+      // fetch eventfinda events
       let efSize = !isLoadMore ? TARGET_TOTAL - tmEvents.length : tmHasMore ? TARGET_TOTAL - tmEvents.length : TARGET_TOTAL;
 
       if (efSize > 0 && (!isLoadMore || efHasMore)) {
@@ -167,6 +149,7 @@ export default function EventsPage() {
         else setEfHasMore(false);
       }
 
+      // combine and dedupe events
       const combined = dedupe([...tmEvents, ...efEvents]);
 
       if (reqId !== reqRef.current) return;
@@ -191,11 +174,13 @@ export default function EventsPage() {
     }
   };
 
+  // fetch events on mount
   useEffect(() => {
     runFetch(false, applied);
     // eslint-disable-next-line
   }, []);
 
+  // handle filter apply
   const handleApply = async (e) => {
     e.preventDefault();
     const filters = { category, startDate, endDate };
@@ -203,91 +188,100 @@ export default function EventsPage() {
     await runFetch(false, filters);
   };
 
+  // handle load more button
   const handleLoadMore = async () => {
     if (loadingMore) return;
     await runFetch(true, applied);
   };
 
+  // open event url in new tab
   const handleEventClick = (url) => {
     if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const sortedItems = sortByOrder(items, orderBy);
+  // sorted items for display
+  const sortedItems = items;
   const todayMin = ymd(new Date());
   const hasMore = tmHasMore || efHasMore;
   const isAnyLoading = initialLoading || loadingMore;
 
+  // main ui for events page
   return (
     <>
       <Helmet>
         <title>Events Directory — OneParent VIC</title>
       </Helmet>
 
-      <div className="bg-light py-5 text-center">
+      {/* header section */}
+      <div className="bg-light py-5 text-center border-bottom">
         <div className="container">
           <div className="row justify-content-center">
             <div className="col-lg-8">
-              <p className="text-danger fw-bold text-uppercase ls-2 mb-3">see you there!</p>
-              <h1 className="display-3 fw-bold text-dark mb-4">Events</h1>
-              <p className="lead text-muted">a single hub for curated family wellbeing and education events across victoria</p>
+              <p className="text-primary fw-bold text-uppercase ls-2 mb-2" style={{letterSpacing:2}}>See you there!</p>
+              <h1 className="display-3 fw-bold text-dark mb-3">Events</h1>
+              <p className="lead text-muted">A single hub for curated family wellbeing and education events across Victoria</p>
             </div>
           </div>
         </div>
       </div>
 
-      <section className="bg-white py-4 border-bottom">
+      {/* filter section */}
+      <section className="bg-white py-3 border-bottom">
         <div className="container">
-          <form className="row g-3 align-items-end" onSubmit={handleApply}>
-            <div className="col-12 col-md-3">
-              <label className="form-label fw-semibold">Category</label>
-              <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)} disabled={isAnyLoading}>
-                {CATEGORIES.map((c) => (
-                  <option key={c}>{c}</option>
-                ))}
-              </select>
+          <div className="row justify-content-center">
+            <div className="col-lg-10">
+              <form className="row g-3 align-items-end justify-content-center" onSubmit={handleApply}>
+                <div className="col-12 col-md-4">
+                  <label className="form-label fw-semibold">Category</label>
+                  <select className="form-select" value={category} onChange={(e) => setCategory(e.target.value)} disabled={isAnyLoading}>
+                    {CATEGORIES.map((c) => (
+                      <option key={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="col-6 col-md-3">
+                  <label className="form-label fw-semibold">Start date</label>
+                  <input type="date" className="form-control" min={todayMin} value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={isAnyLoading} />
+                </div>
+                <div className="col-6 col-md-3">
+                  <label className="form-label fw-semibold">End date</label>
+                  <input type="date" className="form-control" min={startDate || todayMin} value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={isAnyLoading} />
+                </div>
+                <div className="col-12 col-md-2 d-grid">
+                  <button className="btn btn-primary fw-semibold shadow" type="submit" disabled={isAnyLoading}>
+                    {initialLoading ? "loading..." : "apply"}
+                  </button>
+                </div>
+              </form>
             </div>
-            <div className="col-6 col-md-2">
-              <label className="form-label fw-semibold">Start date</label>
-              <input type="date" className="form-control" min={todayMin} value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={isAnyLoading} />
-            </div>
-            <div className="col-6 col-md-2">
-              <label className="form-label fw-semibold">End date</label>
-              <input type="date" className="form-control" min={startDate || todayMin} value={endDate} onChange={(e) => setEndDate(e.target.value)} disabled={isAnyLoading} />
-            </div>
-            <div className="col-12 col-md-3">
-              <label className="form-label fw-semibold">Order by</label>
-              <select className="form-select" value={orderBy} onChange={(e) => setOrderBy(e.target.value)} disabled={isAnyLoading}>
-                {ORDER_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="col-12 col-md-2 d-grid">
-              <button className="btn btn-primary fw-semibold" type="submit" disabled={isAnyLoading}>
-                {initialLoading ? "loading..." : "apply"}
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
       </section>
 
-      <section className="bg-light py-5">
+      {/* events list section */}
+      <section className="bg-light py-4">
         <div className="container">
           {initialLoading && (
             <div className="text-center py-5">
               <div className="spinner-border text-primary" style={{ width: "3rem", height: "3rem" }} role="status" />
-              <p className="mt-3 text-muted">loading events...</p>
+              <p className="mt-3 text-muted">Loading events...</p>
             </div>
           )}
 
-          {err && !initialLoading && <div className="text-center py-5 text-danger">{err}</div>}
+          {err && !initialLoading && (
+            <div className="text-center py-5">
+              <div className="bg-danger bg-opacity-10 rounded p-4 shadow-sm border border-danger">
+                <h5 className="text-danger mb-2">Something went wrong</h5>
+                <p className="text-secondary">{err}</p>
+              </div>
+            </div>
+          )}
 
           {!initialLoading && !err && sortedItems.length === 0 && (
             <div className="text-center py-5">
               <div className="bg-white rounded p-5 shadow-sm border border-2 border-dashed">
-                <h5 className="text-muted mb-2">no events found</h5>
+                <h5 className="text-muted mb-2">No events found</h5>
+                <p className="text-secondary">Try changing the category or date range to view more events.</p>
               </div>
             </div>
           )}
@@ -296,25 +290,25 @@ export default function EventsPage() {
             <div className="row g-4">
               {sortedItems.map((ev, i) => (
                 <div key={`${ev.source}-${ev.id}-${i}`} className="col-12 col-sm-6 col-lg-4">
-                  <div className="card h-100 shadow-sm event-card" onClick={() => handleEventClick(ev.url)}>
+                  <div className="card h-100 shadow event-card border-0" style={{transition:'box-shadow .2s',cursor:'pointer'}} onClick={() => handleEventClick(ev.url)} onMouseEnter={e=>e.currentTarget.style.boxShadow='0 4px 24px rgba(0,0,0,0.12)'} onMouseLeave={e=>e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}>
                     <div className="position-relative">
-                      <EventImage src={ev.image} alt={ev.title} className="card-img-top" />
-                      <span className="badge bg-primary position-absolute top-0 start-0 m-2 rounded-pill">{applied.category}</span>
+                      <EventImage src={ev.image} alt={ev.title} className="card-img-top rounded-top" />
+                      <span className="badge bg-primary position-absolute top-0 start-0 m-2 rounded-pill shadow">{applied.category}</span>
                     </div>
                     <div className="card-body d-flex flex-column">
-                      <h5 className="card-title">{ev.title}</h5>
+                      <h5 className="card-title fw-bold text-dark">{ev.title}</h5>
                       {ev.description && <p className="card-text text-muted small fst-italic">{ev.description}</p>}
                       <div className="mt-auto">
                         <div className="mb-2">
-                          <small className="text-muted fw-semibold">event date:</small>
+                          <small className="text-muted fw-semibold">Event date:</small>
                           <div>{toHumanDate(ev.date)}</div>
                         </div>
                         <div className="mb-3">
-                          <small className="text-muted fw-semibold">event location:</small>
+                          <small className="text-muted fw-semibold">Event location:</small>
                           <div className="small">{ev.location}</div>
                         </div>
-                        <button className="btn btn-outline-dark btn-sm w-100" onClick={(e) => { e.stopPropagation(); handleEventClick(ev.url); }}>
-                          view event
+                        <button className="btn btn-outline-primary btn-sm w-100 fw-semibold" onClick={(e) => { e.stopPropagation(); handleEventClick(ev.url); }}>
+                          View event
                         </button>
                       </div>
                     </div>
@@ -324,15 +318,17 @@ export default function EventsPage() {
             </div>
           )}
 
+          {/* load more button or no more events message */}
           {!initialLoading && sortedItems.length > 0 && (
             <div className="text-center mt-5 pt-4 border-top">
               {hasMore ? (
-                <button className="btn btn-primary btn-lg px-5 rounded-pill" onClick={handleLoadMore} disabled={loadingMore}>
-                  {loadingMore ? "loading more..." : "load more events"}
+                <button className="btn btn-primary btn-lg px-5 rounded-pill shadow" onClick={handleLoadMore} disabled={loadingMore}>
+                  {loadingMore ? "Loading more..." : "Load more events"}
                 </button>
               ) : (
-                <div className="bg-white rounded p-4 text-center border border-2 border-dashed">
-                  <p className="text-muted mb-2">no more events available</p>
+                <div className="py-4">
+                  <h5 className="text-muted mb-2">No more events available</h5>
+                  <p className="text-secondary">Try changing the category or date range to view more events.</p>
                 </div>
               )}
             </div>

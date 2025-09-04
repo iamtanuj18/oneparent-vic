@@ -1,134 +1,42 @@
-/* anchor scrolling */
-html { scroll-behavior: smooth; }
-
+/* color and shadow variables for playdate page */
 :root{
-  --ink:#0f172a;
-  --body:#374151;
-  --accent:#111827;
-  --beige1:#f8efe6;
-  --beige2:#f3e4d8;
-  --ivory:#fffbf7;
-  --line:#efe7df;
-  --radius:20px;
-  --shadow:0 20px 40px rgba(15,23,42,.08);
+  --bs-primary:#3b82f6;
+  --gray-50:#f8fafc;
+  --shadow:0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.10);
 }
 
-/* hero bg */
-.playdate-hero{
-  background:
-    radial-gradient(1800px 800px at 85% -200px,#fff 0%,transparent 60%),
-    linear-gradient(180deg,var(--beige1),var(--beige2));
-  border-bottom:1px solid var(--line);
-  padding:72px 0 80px;
-}
+/* hero section styles */
+.hero-section{background:#fff;padding-top:.25rem;}
+.text-primary{color:var(--bs-primary)!important;}
 
-/* left copy */
-.playdate-title{
-  font-family:"Fraunces", Georgia, serif;
-  font-weight:900;
-  line-height:1.05;
-  letter-spacing:-.6px;
-  font-size:clamp(2.6rem,5.2vw,4.6rem);
-  color:var(--ink);
-  margin:0 0 10px;
-}
-.playdate-subtitle{ font-family:"Fraunces", Georgia, serif; }
-.playdate-body{
-  color:var(--body);
-  font-size:1.06rem;
-  line-height:1.6;
-  max-width:64ch;
-  margin-top:6px;
-}
-
-/* cta look */
-.playdate-cta{
-  margin-top:26px;
-  padding:.9rem 1.6rem;
-  border-radius:var(--radius);
+/* main button styles */
+.btn-primary{
+  background:var(--bs-primary);
+  border:none;border-radius:12px;font-weight:600;
   box-shadow:var(--shadow);
-  font-weight:800;
-  text-decoration:none !important;
-  transition:all .3s ease;
+  transition:transform .2s, box-shadow .2s;
 }
-.playdate-cta:hover,
-.playdate-cta:focus{ 
-  transform:translateY(-3px); 
-  box-shadow:0 25px 50px rgba(15,23,42,.15);
-}
+.btn-primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--shadow-lg);}
 
-/* right visual */
-.playdate-visual{ position:relative; text-align:center; padding-top:62px; }
-.playdate-visual-label{
-  position:absolute; top:0; left:0; right:0;
-  text-align:center; font-weight:900; font-size:.95rem;
-  letter-spacing:.6px; color:var(--accent); text-transform:uppercase;
-}
-.playdate-visual-svg{ display:block; width:min(100%,560px); height:auto; }
+/* svg container on the right */
+.hero-art{display:flex;justify-content:center;align-items:center;}
+.hero-art-img{width:100%;max-width:520px;height:auto;display:block}
 
-/* wizard shell */
-.playdate-wizard{ padding:40px 0 64px; background:var(--ivory); }
+/* fade and slide animations for entrance */
+@keyframes slideUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+.fade-in{opacity:1;transition:opacity .45s ease}
+.fade-out{opacity:0;transition:opacity .45s ease}
+.animate-slide-up{animation:slideUp .55s ease-out forwards;opacity:0}
+.animate-delay-100{animation-delay:.1s}
+.animate-delay-200{animation-delay:.2s}
+.animate-delay-300{animation-delay:.3s}
+.animate-delay-400{animation-delay:.4s}
 
-/* sub under the label */
-.playdate-visual-sub{
-  margin: 6px auto 18px;
-  max-width: 520px;
-  font-size: .98rem;
-  color: var(--body);
-}
-
-/* animations  */
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes bounce {
-  0%, 20%, 60%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-3px); }
-  80% { transform: translateY(-1px); }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-}
-
-/* animation classes */
-.animate-fadeIn {
-  animation: fadeIn 0.8s ease-out forwards;
-}
-
-.animate-slideUp {
-  animation: slideUp 0.8s ease-out forwards;
-}
-
-.animate-bounce:hover {
-  animation: bounce 0.6s ease-in-out;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-/* animation delays */
-.animate-delay-200 {
-  animation-delay: 0.2s;
-  opacity: 0;
-}
-
-.animate-delay-400 {
-  animation-delay: 0.4s;
-  opacity: 0;
-}
-
-/* subtle hover effects */
-.playdate-visual:hover .playdate-visual-svg {
-  transform: scale(1.02);
-  transition: transform 0.3s ease;
+/* wizard area background and spacing */
+.wizard-section{
+  background:#f8fafc;
+  min-height:100vh;
+  padding-top: 120px;
+  padding-bottom: 2rem;
 }

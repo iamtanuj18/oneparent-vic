@@ -1,20 +1,22 @@
-// server/src/services/gemini.js
+// gemini api service for generating and validating json
 
+// get api key and base url
 const API_KEY = process.env.GEMINI_API_KEY || "";
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-// Default models as placed in .env
+// model names from env or defaults
 const MODEL_DEFAULT        = process.env.GEMINI_MODEL            || "models/gemini-2.5-flash";
 const MODEL_VALIDATE       = process.env.GEMINI_MODEL_VALIDATE   || "models/gemini-2.5-flash-lite";
 const MODEL_GENERATE       = process.env.GEMINI_MODEL_GENERATE   || "models/gemini-2.5-flash";
 const MODEL_FALLBACKS_JSON = (process.env.GEMINI_MODEL_FALLBACKS || "models/gemini-2.0-flash,models/gemini-2.0-flash-lite")
   .split(",").map(s => s.trim()).filter(Boolean);
 
+// warn if api key is missing
 if (!API_KEY) {
-  console.warn("[gemini] GEMINI_API_KEY not set — routes will return 501.");
+  // console.warn("[gemini] GEMINI_API_KEY not set — routes will return 501.");
 }
 
-// Parse google.rpc.RetryInfo from Gemini error body to milliseconds
+// get retry time from gemini error body
 function extractRetryAfterMs(errBodyText) {
   try {
     const body = JSON.parse(errBodyText);
@@ -30,6 +32,7 @@ function extractRetryAfterMs(errBodyText) {
   }
 }
 
+// call gemini api once and return json
 async function callGeminiOnce({ model, prompt, jsonSchemaNote = "", temperature = 0.4, maxOutputTokens }) {
   const url = `${BASE}/${model}:generateContent?key=${API_KEY}`;
 
@@ -76,7 +79,7 @@ async function callGeminiOnce({ model, prompt, jsonSchemaNote = "", temperature 
   return JSON.parse(out);
 }
 
-// Exponential backoff with jitter, plus model fallbacks
+// call gemini with retries and model fallbacks
 async function geminiJson({
   prompt,
   jsonSchemaNote = "",
@@ -118,17 +121,18 @@ async function geminiJson({
   throw lastErr;
 }
 
-// Specialised helpers so routes can be explicit
+// helper for validation requests
 function geminiValidateJson(args) {
   return geminiJson({ ...args, model: MODEL_VALIDATE, retries: 1 });
 }
+// helper for generation requests
 function geminiGenerateJson(args) {
   return geminiJson({ ...args, model: MODEL_GENERATE, retries: 2 });
 }
 
+// export helpers and model names
 module.exports = {
   geminiValidateJson,
   geminiGenerateJson,
   MODEL_DEFAULT, MODEL_VALIDATE, MODEL_GENERATE
 };
-

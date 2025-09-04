@@ -1,4 +1,3 @@
-// src/components/playdate/PlayDateWizard.jsx
 import React, { useEffect, useRef, useState } from "react";
 import Step1_Family from "./Step1_Family";
 import Step2_Kids from "./Step2_Kids";
@@ -11,10 +10,10 @@ import "./PlayDateWizard.css";
 import PlaydateImage from "../../assets/playdate.png";
 import { createPortal } from "react-dom";
 
-// basic nav numbers
-const NAV_OFFSET = 96;
+// total number of steps in the wizard
 const TOTAL_STEPS = 4;
 
+// step titles for sidebar and header
 const STEP_TITLES = {
   1: "About you",
   2: "About your kid(s)",
@@ -22,6 +21,7 @@ const STEP_TITLES = {
   4: "Interests & goals",
 };
 
+// initial form state
 const initialForm = {
   parentType: "",
   parentAge: "",
@@ -39,55 +39,53 @@ const initialForm = {
   plannedTime: "",
 };
 
-const PlayDateWizard = () => {
-  const [step, setStep] = useState(0);
-  const [checking, setChecking] = useState(false);
-  const [healthError, setHealthError] = useState("");
+export default function PlayDateWizard() {
+  // wizard step state
+  const [step, setStep] = useState(1);
 
+  // service status for backend health
+  const [serviceStatus, setServiceStatus] = useState("idle");
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        setServiceStatus("warming");
+        await getHealth();
+        if (active) setServiceStatus("ok");
+      } catch {
+        if (active) setServiceStatus("error");
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  // main form data state
   const [formData, setFormData] = useState(initialForm);
 
+  // status for safety and plan generation
   const [safetyChecking, setSafetyChecking] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [safetyIssues, setSafetyIssues] = useState(null);
 
+  // generated plan and modal state
   const [plan, setPlan] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [activeIdea, setActiveIdea] = useState(null);
   const [exportingPdf, setExportingPdf] = useState(false);
 
-  const cardRef = useRef(null);
+  // ref for main content
+  const mainRef = useRef(null);
 
-  // start service health then step 1
-  const startWizard = async () => {
-    try {
-      setChecking(true);
-      setHealthError("");
-      await getHealth();
-      setStep(1);
-    } catch (err) {
-      setHealthError("Service unavailable, Please try again later");
-    } finally {
-      setChecking(false);
-    }
-  };
-
-  // collect and move step
+  // go to next step and update form
   const handleNext = (delta = {}) => {
     setFormData((prev) => ({ ...prev, ...delta }));
-    setStep((prev) => prev + 1);
+    setStep((prev) => Math.min(TOTAL_STEPS, prev + 1));
   };
-  const handleBack = () => setStep((prev) => Math.max(0, prev - 1));
+  // go to previous step
+  const handleBack = () => setStep((prev) => Math.max(1, prev - 1));
 
-  // scroll on step change
-  useEffect(() => {
-    if (step >= 1 && cardRef.current) {
-      const y = cardRef.current.getBoundingClientRect().top + window.pageYOffset - NAV_OFFSET;
-      window.scrollTo({ top: y, behavior: "smooth" });
-    }
-  }, [step]);
-
-  // run safety then generation
+  // generate plan after validating inputs
   const handleGenerate = async (finalDelta) => {
     const payload = { ...formData, ...finalDelta };
     setFormData(payload);
@@ -99,12 +97,12 @@ const PlayDateWizard = () => {
       const verdict = await validatePlaydateInput(payload);
       if (verdict && verdict.ok === false) {
         setSafetyIssues(verdict.issues || []);
-        setSubmitError(verdict.message || "Some items need attention.");
+        setSubmitError(verdict.message || "some items need attention.");
         setSafetyChecking(false);
         return;
       }
     } catch (e) {
-      setSubmitError(e?.message || "Validation failed.");
+      setSubmitError(e?.message || "validation failed.");
       setSafetyChecking(false);
       return;
     }
@@ -117,12 +115,13 @@ const PlayDateWizard = () => {
       setPlan({ ideas });
       setStep(5);
     } catch (e) {
-      setSubmitError(e?.message || "Failed to generate plan.");
+      setSubmitError(e?.message || "failed to generate plan.");
     } finally {
       setGenerating(false);
     }
   };
 
+  // regenerate plan with current answers
   const handleRegenerate = async () => {
     setSubmitError("");
     setGenerating(true);
@@ -132,18 +131,20 @@ const PlayDateWizard = () => {
       setPlan({ ideas });
       setStep(5);
     } catch (e) {
-      setSubmitError(e?.message || "Failed to regenerate plan.");
+      setSubmitError(e?.message || "failed to regenerate plan.");
     } finally {
       setGenerating(false);
     }
   };
 
+  // go back to edit answers
   const handleEditAnswers = () => {
     setSubmitError("");
     setSafetyIssues(null);
     setStep(4);
   };
 
+  // reset wizard and start over
   const handleStartOver = () => {
     setSubmitError("");
     setSafetyIssues(null);
@@ -154,314 +155,299 @@ const PlayDateWizard = () => {
     setStep(1);
   };
 
+  // open modal for idea details
   const openIdea = (idea) => {
     setActiveIdea(idea);
     setShowModal(true);
   };
 
-  // export current idea to pdf (client-side)
-const exportModalToPdf = async () => {
-  if (!activeIdea) return;
-  const source = document.getElementById("plan-modal-content");
-  if (!source) return;
+  // export modal content to pdf
+  const exportModalToPdf = async () => {
+    if (!activeIdea) return;
+    const source = document.getElementById("plan-modal-content");
+    if (!source) return;
 
-  const safeName = String(activeIdea.title || "PlayDate Plan").trim().replace(/[^a-z0-9-_]+/gi, "_");
+    const safeName = String(activeIdea.title || "PlayDate Plan").trim().replace(/[^a-z0-9-_]+/gi, "_");
 
-  setExportingPdf(true);
-  try {
-    const html2pdf = (await import("html2pdf.js")).default;
+    setExportingPdf(true);
+    try {
+      const html2pdf = (await import("html2pdf.js")).default;
 
-    const wrapper = document.createElement("div");
-    wrapper.style.padding = "20px";
-    wrapper.style.margin = "0";
-    wrapper.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial,Noto Sans,sans-serif";
-    wrapper.style.background = "#ffffff";
-    wrapper.style.lineHeight = "1.5";
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "20px";
+      wrapper.style.margin = "0";
+      wrapper.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial,Noto Sans,sans-serif";
+      wrapper.style.background = "#ffffff";
+      wrapper.style.lineHeight = "1.5";
 
-    const clone = source.cloneNode(true);
-    clone.style.width = "100%";
-    
-    // Add classes to prevent page breaks on important elements
-    const headings = clone.querySelectorAll('h1, h2, h3, h4, h5, h6');
-    headings.forEach(heading => {
-      heading.classList.add('no-page-break');
-    });
-    
-    const steps = clone.querySelectorAll('ol li, ul li, .step, .section');
-    steps.forEach(step => {
-      step.classList.add('no-page-break');
-    });
+      const clone = source.cloneNode(true);
+      clone.style.width = "100%";
 
-    wrapper.appendChild(clone);
+      const headings = clone.querySelectorAll("h1, h2, h3, h4, h5, h6");
+      headings.forEach((h) => h.classList.add("no-page-break"));
+      const steps = clone.querySelectorAll("ol li, ul li, .step, .section");
+      steps.forEach((s) => s.classList.add("no-page-break"));
 
-    await html2pdf()
-      .from(wrapper)
-      .set({
-        margin: [15, 15, 15, 15],
-        filename: `${safeName}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          backgroundColor: "#ffffff", 
-          letterRendering: true 
-        },
-        jsPDF: { 
-          unit: "mm", 
-          format: "a4", 
-          orientation: "portrait" 
-        },
-        pagebreak: { 
-          mode: ["css", "legacy"],
-          avoid: ['.no-page-break', 'h1', 'h2', 'h3', 'table', 'ul', 'ol']
-        }
-      })
-      .save();
-  } catch (err) {
-    console.error('PDF export failed:', err);
-  } finally {
-    setExportingPdf(false);
-  }
-};
+      wrapper.appendChild(clone);
 
+      await html2pdf()
+        .from(wrapper)
+        .set({
+          margin: [15, 15, 15, 15],
+          filename: `${safeName}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff", letterRendering: true },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+          pagebreak: { mode: ["css", "legacy"], avoid: [".no-page-break", "h1", "h2", "h3", "table", "ul", "ol"] },
+        })
+        .save();
+    } catch (err) {
+      console.error("pdf export failed:", err);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
-  // overlay panel
-  const Overlay = ({ text, sub }) => (
-    <div
-      className="pw-overlay d-flex flex-column align-items-center justify-content-center bg-white bg-opacity-75 rounded"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="spinner-border text-primary pw-spinner" role="status" />
-      <div className="mt-3 fw-semibold">{text}</div>
-      {sub && <div className="text-muted small mt-1">{sub}</div>}
-    </div>
-  );
-
-  // derived flags
+  // check if plan exists
   const hasExistingPlan = !!plan?.ideas?.length;
+  // check if in plan mode
+  const planMode = step === 5;
 
-  // render
+  // main render
   return (
-    <section className="py-5" id="playdate-wizard">
-      <div className="container">
-        <div ref={cardRef} className="card shadow-sm border-0 mx-auto" style={{ maxWidth: 820 }}>
-          <div className="card-body position-relative">
-          {step === 0 && !checking && !healthError && (
-            <div className="d-flex flex-column align-items-center justify-content-center text-center p-5 bg-white">
-              <h2 
-                className="fw-bold mb-3" 
-                style={{ fontFamily: 'Fraunces, serif', fontSize: '2.5rem', color: '#0f172a' }}
-              >
-                PlayDate
-              </h2>
-              <p 
-                className="text-muted mb-4" 
-                style={{ fontSize: '1.125rem', lineHeight: '1.6' }}
-              >
-                A 2-minute start to 3 fun, doable ideas.
-              </p>
-              <button
-                className="btn btn-primary btn-lg rounded-pill px-5"
-                style={{ 
-                  boxShadow: 'none',
-                  fontWeight: 'bold',
-                  fontSize: '1.125rem'
-                }}
-                onClick={startWizard}
-                aria-label="Start the PlayDate planner"
-              >
-                Start
-              </button>
+    <section className="playdate-wizard-section" id="playdate-wizard">
+      {/* show service status messages */}
+      {serviceStatus === "warming" && (
+        <div className="pw-status pw-status-warming" role="status" aria-live="polite">
+          warming up playdate services…
+        </div>
+      )}
+      {serviceStatus === "error" && (
+        <div className="pw-status pw-status-error" role="alert">
+          having trouble connecting. you can still fill the form and try again later.
+        </div>
+      )}
+
+      <div className={`pw-wrapper ${planMode ? "plan-only" : ""}`}>
+        {/* sidebar with progress and steps */}
+        {!planMode && (
+          <aside className="pw-sidebar">
+            <div className="pw-sidebar-inner">
+              <div className="pw-progress-rail">
+                <div
+                  className="pw-progress-thumb"
+                  style={{ height: `${(Math.min(step, TOTAL_STEPS) / TOTAL_STEPS) * 100}%` }}
+                />
+              </div>
+
+              <ol className="pw-steps">
+                {[1, 2, 3, 4].map((num) => {
+                  const state = step === num ? "active" : step > num ? "done" : "pending";
+                  return (
+                    <li key={num} className={`pw-step-item ${state}`}>
+                      <span className="pw-step-index">{num}</span>
+                      <span className="pw-step-title">{STEP_TITLES[num]}</span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </div>
+          </aside>
+        )}
+
+        <main className="pw-main" ref={mainRef}>
+          {/* show header for mobile */}
+          {!planMode && (
+            <div className="pw-header-sm">
+              <div className="pw-header-title">{STEP_TITLES[Math.min(step, TOTAL_STEPS)]}</div>
+              <div className="pw-header-count">step {Math.min(step, TOTAL_STEPS)} of {TOTAL_STEPS}</div>
+              <div className="pw-bar">
+                <div
+                  className="pw-bar-fill"
+                  style={{ width: `${(Math.min(step, TOTAL_STEPS) / TOTAL_STEPS) * 100}%` }}
+                />
+              </div>
             </div>
           )}
-            {checking && <Overlay text="Warming up PlayDate AI" sub="This may take up to 30 seconds." />}
 
-            {step === 0 && !checking && !!healthError && (
-              <div className="text-center">
-                <div className="alert alert-warning" role="alert">{healthError}</div>
-                <button className="btn btn-primary rounded-pill px-4" onClick={startWizard}>
-                  Retry
-                </button>
+          {/* step 1: family info */}
+          {step === 1 && (
+            <div className="pw-card">
+              <Step1_Family onNext={handleNext} data={formData} />
+            </div>
+          )}
+
+          {/* step 2: kids info */}
+          {step === 2 && (
+            <div className="pw-card">
+              <Step2_Kids onNext={handleNext} onBack={handleBack} data={formData} />
+            </div>
+          )}
+
+          {/* step 3: setting and time */}
+          {step === 3 && (
+            <div className="pw-card">
+              <Step3_Setting onNext={handleNext} onBack={handleBack} data={formData} />
+            </div>
+          )}
+
+          {/* step 4: interests and goals */}
+          {step === 4 && (
+            <div className="pw-card">
+              <div className="d-flex justify-content-end mb-2">
+                {hasExistingPlan && (
+                  <button
+                    className="btn btn-outline-primary rounded-pill"
+                    onClick={() => setStep(5)}
+                    title="View your current generated plan"
+                  >
+                    View already generated activities
+                  </button>
+                )}
               </div>
-            )}
-
-            {step >= 1 && step <= TOTAL_STEPS && (
-              <>
-                <div className="mb-2 d-flex align-items-center justify-content-between">
-                  <div className="fw-bold h5 mb-0">{STEP_TITLES[step]}</div>
-                  <div className="d-flex align-items-center gap-2">
-                    <span className="badge rounded-pill bg-light text-dark">
-                      Step {step} of {TOTAL_STEPS}
-                    </span>
-                    {step === 4 && hasExistingPlan && (
-                      <button
-                        className="btn btn-outline-primary btn-sm rounded-pill"
-                        onClick={() => setStep(5)}
-                        title="View your current generated plan"
-                      >
-                        View generated plan
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="progress mb-4" style={{ height: 10 }}>
-                  <div
-                    className="progress-bar bg-primary"
-                    role="progressbar"
-                    style={{ width: `${(step / TOTAL_STEPS) * 100}%` }}
-                    aria-valuenow={(step / TOTAL_STEPS) * 100}
-                    aria-valuemin="0"
-                    aria-valuemax="100"
-                    aria-label={`Step ${step} of ${TOTAL_STEPS}`}
-                  />
-                </div>
-              </>
-            )}
-
-            {step === 1 && <Step1_Family onNext={handleNext} data={formData} />}
-
-            {step === 2 && <Step2_Kids onNext={handleNext} onBack={handleBack} data={formData} />}
-
-            {step === 3 && <Step3_Setting onNext={handleNext} onBack={handleBack} data={formData} />}
-
-            {step === 4 && (
               <Step4_InterestsGoals
                 onNext={handleGenerate}
-                onBack={handleBack}
                 data={formData}
                 submitError={submitError}
                 safetyIssues={safetyIssues}
                 hasExistingPlan={hasExistingPlan}
               />
-            )}
+            </div>
+          )}
 
-            {step === 5 && (
-              <>
-                <div className="mb-3 d-flex align-items-center justify-content-between">
-                  <div className="fw-bold h5 mb-0">Your activity plan</div>
-                  <div className="d-flex gap-2">
-                    <button className="btn btn-outline-secondary rounded-pill" onClick={handleEditAnswers}>
-                      Edit answers
+          {/* plan mode: show generated ideas */}
+          {planMode && (
+            <div className="pw-plan fade-in">
+              <div className="pw-plan-actions center">
+                <button className="btn btn-outline-secondary rounded-pill" onClick={handleEditAnswers}>
+                  edit answers
+                </button>
+                <button className="btn btn-outline-primary rounded-pill" onClick={handleRegenerate}>
+                  regenerate
+                </button>
+                <button className="btn btn-outline-danger rounded-pill" onClick={handleStartOver}>
+                  start over
+                </button>
+              </div>
+
+              <h2 className="pw-plan-title text-center mt-3 mb-3">your activity plan</h2>
+
+              {/* always clean gemini html before showing it for safety */}
+              {plan?.geminiHtml && (
+                <div
+                  className="gemini-html-response"
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(plan.geminiHtml) }}
+                />
+              )}
+
+              {(!plan || !plan.ideas || plan.ideas.length === 0) && (
+                <div className="alert alert-info">no ideas returned. try regenerate or edit answers with more details</div>
+              )}
+
+              <div className="pw-ideas">
+                {plan?.ideas?.slice(0, 3).map((idea, idx) => (
+                  <article className="idea-card" key={idx}>
+                    <img
+                      src={PlaydateImage}
+                      className="idea-media"
+                      alt={idea.cardTitle || idea.title || `activity ${idx + 1}`}
+                    />
+                    <div className="idea-body">
+                      <div className="idea-badges">
+                        <span className="badge bg-secondary">family activity</span>
+                        <span className="badge bg-info text-dark">curated idea</span>
+                      </div>
+                      <h5 className="idea-title">{idea.cardTitle || idea.title || `idea ${idx + 1}`}</h5>
+                      <p className="idea-text">{idea.cardExcerpt || idea.summary || "tap for full details."}</p>
+                      <div className="idea-actions">
+                        <button className="btn btn-outline-primary rounded-pill" onClick={() => openIdea(idea)}>
+                          view details
+                        </button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* bottom nav for steps 2-4 */}
+          {step >= 2 && step <= 4 && (
+            <div className="pw-bottom-nav">
+              <button className="btn btn-outline-secondary rounded-pill" onClick={handleBack}>
+                ← previous step
+              </button>
+            </div>
+          )}
+
+          {/* overlay for loading and safety check */}
+          {(safetyChecking || generating) && (
+            <div className="pw-overlay" role="status" aria-live="polite">
+              <div className="spinner-border text-primary" role="status" />
+              <div className="mt-3 fw-semibold">
+                {safetyChecking ? "checking your inputs for safety…" : "generating activity plans - sit tight…"}
+              </div>
+              <div className="text-muted small mt-1">this can take upto 2 minutes, thank you for your patience.</div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* modal for viewing idea details */}
+      {showModal &&
+        createPortal(
+          <>
+            <div
+              className="modal fade show"
+              style={{ display: "block", position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 1050 }}
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div className="modal-content">
+                  {/* <div className="modal-header">
+                    <h5 className="modal-title">{activeIdea?.title || "details"}</h5>
+                    <button type="button" className="btn-close" aria-label="close" onClick={() => setShowModal(false)} />
+                  </div> */}
+                  <div className="modal-body">
+                    <div
+                      id="plan-modal-content"
+                      dangerouslySetInnerHTML={{
+                        __html: DOMPurify.sanitize(activeIdea?.html || "<p>no content.</p>", {
+                          ADD_TAGS: ["style"],
+                          ADD_ATTR: ["style"],
+                        }),
+                      }}
+                    />
+                  </div>
+                  <div className="modal-footer">
+                    <button type="button" className="btn btn-outline-danger" onClick={() => setShowModal(false)}>
+                      close
                     </button>
-                    <button className="btn btn-outline-primary rounded-pill" onClick={handleRegenerate}>
-                      Regenerate
-                    </button>
-                    <button className="btn btn-outline-danger rounded-pill" onClick={handleStartOver}>
-                      Start over
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={exportModalToPdf}
+                      disabled={exportingPdf}
+                      aria-busy={exportingPdf}
+                    >
+                      {exportingPdf ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
+                          generating pdf…
+                        </>
+                      ) : (
+                        "export as pdf"
+                      )}
                     </button>
                   </div>
                 </div>
-
-                {(!plan || !plan.ideas || plan.ideas.length === 0) && (
-                  <div className="alert alert-info">No ideas returned. Try Regenerate or Edit answers.</div>
-                )}
-
-                <div className="row g-4">
-                  {plan?.ideas?.slice(0, 3).map((idea, idx) => (
-                    <div className="col-lg-4" key={idx}>
-                      <div className="card h-100 shadow-sm">
-                        <img
-                          src={PlaydateImage}
-                          className="card-img-top"
-                          alt={idea.cardTitle || idea.title || `Activity ${idx + 1}`}
-                        />
-                        <div className="card-body d-flex flex-column">
-                          <div className="mb-2">
-                            <span className="badge bg-secondary me-2">Family Activity</span>
-                            <span className="badge bg-info text-dark me-2">Curated Idea</span>
-                          </div>
-                          <h5 className="card-title">
-                            {idea.cardTitle || idea.title || `Idea ${idx + 1}`}
-                          </h5>
-                          <p className="card-text text-muted">
-                            {idea.cardExcerpt || idea.summary || "Tap for full details."}
-                          </p>
-                          <div className="mt-auto">
-                            <button
-                              className="btn btn-outline-primary rounded-pill"
-                              onClick={() => openIdea(idea)}
-                            >
-                              View details
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {step >= 1 && step <= TOTAL_STEPS && (
-              <div className="mt-4">
-                <button className="btn btn-outline-secondary rounded-pill" onClick={handleBack}>
-                  ← Back
-                </button>
               </div>
-            )}
-
-            {safetyChecking && (
-              <Overlay text="Checking your inputs for safety…" sub="This may take up to 30 seconds." />
-            )}
-            {generating && (
-              <Overlay text="Generating your activity plan…" sub="This may take up to 2 minutes." />
-            )}
-
-            {showModal && createPortal(
-  <>
-    <div className="modal fade show" style={{ display: "block", position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 1050 }} role="dialog" aria-modal="true">
-      <div className="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div className="modal-content">
-          <div className="modal-header">
-            <h5 className="modal-title">{activeIdea?.title || "Details"}</h5>
-            <button type="button" className="btn-close" aria-label="Close" onClick={() => setShowModal(false)} />
-          </div>
-          <div className="modal-body">
-            <div
-              id="plan-modal-content"
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(activeIdea?.html || "<p>No content.</p>", {
-                  ADD_TAGS: ["style"],
-                  ADD_ATTR: ["style"],
-                }),
-              }}
-            />
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="btn btn-outline-secondary" onClick={() => setShowModal(false)}>
-              Close
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={exportModalToPdf}
-              disabled={exportingPdf}
-              aria-busy={exportingPdf}
-            >
-              {exportingPdf ? (
-                <>
-                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" />
-                  Generating…
-                </>
-              ) : (
-                "Export as PDF"
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div className="modal-backdrop fade show" style={{ position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", backgroundColor: "rgba(0, 0, 0, 0.5)", zIndex: 1040 }} />
-  </>,
-  document.body // This renders the modal at the body level
-)}
-          </div>
-        </div>
-      </div>
+            </div>
+            <div className="modal-backdrop fade show" style={{ position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,.5)", zIndex: 1040 }} />
+          </>,
+          document.body
+        )}
     </section>
   );
-};
-
-export default PlayDateWizard;
+}

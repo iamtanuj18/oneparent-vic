@@ -27,30 +27,31 @@ import ApitestPage from "../pages/apitest/ApitestPage";
 // Not Found
 import NotFoundPage from "../pages/notfound/NotFoundPage";
 
+// main app router
 const Router = () => {
   return (
     <Routes>
-      {/* Iteration 1 */}
+      {/* home page */}
       <Route path="/" element={<HomePage />} />
+      {/* playdate planner */}
       <Route path="/playdate" element={<PlaydatePage />} />
+      {/* events directory */}
       <Route path="/events" element={<EventsPage />} />
-
-      {/* Iteration 2 */}
+      {/* benefits entitlement */}
       <Route path="/benefits" element={<BenefitsPage />} />
+      {/* childcare cost planner */}
       <Route path="/childcare" element={<ChildcarePlannerPage />} />
-
-      {/* Iteration 3 */}
+      {/* wellbeing resources */}
       <Route path="/wellbeing" element={<WellbeingPage />} />
+      {/* transition tool */}
       <Route path="/transition" element={<TransitionToolPage />} />
-
-      {/* Additional Info */}
+      {/* about page */}
       <Route path="/about" element={<AboutPage />} />
+      {/* data privacy info */}
       <Route path="/data-privacy" element={<DataPrivacyPage />} />
-
-      {/* Server Health*/}
+      {/* api health check */}
       <Route path="/api/health-check" element={<ApitestPage />} />
-
-      {/* 404 - NotFound */}
+      {/* not found page for unmatched routes */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

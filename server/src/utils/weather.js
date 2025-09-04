@@ -1,11 +1,13 @@
-//src/utils/weather.js
+// weather utility functions for forecasts and geocoding
 
+// use undici for fetch
 const { fetch } = require("undici");
 
+// timezone and api url
 const MELBOURNE_TZ = "Australia/Melbourne";
 const OPEN_METEO = "https://api.open-meteo.com/v1/forecast";
 
-// simple map of weather codes
+// map of weather codes to text
 const WMO = {
   0: "clear sky",
   1: "mainly clear",
@@ -30,7 +32,7 @@ const WMO = {
   99: "severe thunderstorm"
 };
 
-// helper to bias search to victoria, australia
+// add victoria bias to place name
 function addVicBias(place) {
   var s = String(place || "").trim();
   if (!s) return "";
@@ -38,12 +40,12 @@ function addVicBias(place) {
   return s + ", Victoria, Australia";
 }
 
-// use nominatim (osm) to turn place name into lat/lon
+// get lat/lon from place name using nominatim
 async function geocodeNominatim(placeRaw) {
   var place = addVicBias(placeRaw);
   var url = "https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&q=" + encodeURIComponent(place);
 
-  console.log("[weather] geocode url:", url);
+  // console.log("[weather] geocode url:", url);
 
   var res = await fetch(url, {
     headers: {
@@ -53,7 +55,7 @@ async function geocodeNominatim(placeRaw) {
   if (!res.ok) throw new Error("geocode failed " + res.status);
 
   var data = await res.json();
-  console.log("[weather] geocode raw result:", JSON.stringify(data, null, 2));
+  // console.log("[weather] geocode raw result:", JSON.stringify(data, null, 2));
 
   if (!Array.isArray(data) || data.length === 0) throw new Error("no geocode result");
 
@@ -61,7 +63,7 @@ async function geocodeNominatim(placeRaw) {
     return /victoria/i.test(r.display_name) && /australia/i.test(r.display_name);
   }) || data[0];
 
-  console.log("[weather] geocode chosen:", best.display_name, best.lat, best.lon);
+  // console.log("[weather] geocode chosen:", best.display_name, best.lat, best.lon);
 
   return {
     name: best.display_name,
@@ -70,7 +72,7 @@ async function geocodeNominatim(placeRaw) {
   };
 }
 
-// fetch weather from open-meteo using lat/lon and a date (yyyy-mm-dd)
+// fetch weather forecast from open-meteo
 async function fetchForecast(coords, date) {
   var url = OPEN_METEO
     + "?latitude=" + coords.lat
@@ -82,21 +84,21 @@ async function fetchForecast(coords, date) {
     + "&start_date=" + date
     + "&end_date=" + date;
 
-  console.log("[weather] forecast url:", url);
+  // console.log("[weather] forecast url:", url);
 
   var res = await fetch(url);
   if (!res.ok) throw new Error("forecast failed " + res.status);
   var data = await res.json();
 
-  console.log("[weather] forecast raw result (truncated):", {
-    hourlyTimes: data.hourly && data.hourly.time ? data.hourly.time.slice(0, 3) : [],
-    daily: data.daily
-  });
+  // console.log("[weather] forecast raw result (truncated):", {
+  //   hourlyTimes: data.hourly && data.hourly.time ? data.hourly.time.slice(0, 3) : [],
+  //   daily: data.daily
+  // });
 
   return data;
 }
 
-// main exported function: build weather context
+// get weather context for a place and date
 async function getWeatherContext(place, date, timeOpt) {
   var g = await geocodeNominatim(place);
   var fc = await fetchForecast(g, date);
@@ -150,11 +152,12 @@ async function getWeatherContext(place, date, timeOpt) {
   var contextString = labelParts.join(" · ");
 
   var finalPayload = { place: g, hour: hour, day: day, contextString: contextString };
-  console.log("[weather] final context:", JSON.stringify(finalPayload, null, 2));
+  // console.log("[weather] final context:", JSON.stringify(finalPayload, null, 2));
 
   return finalPayload;
 }
 
+// export weather context function
 module.exports = {
   getWeatherContext
 };

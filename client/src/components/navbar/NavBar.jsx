@@ -1,8 +1,6 @@
-// src/components/navbar/NavBar.jsx
 import { useEffect } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import "./NavBar.css";
-import logoUrl from "../../assets/Logo.svg";
 
 const NavBar = () => {
   const { pathname } = useLocation();
@@ -14,7 +12,7 @@ const NavBar = () => {
     pathname.startsWith(p)
   );
 
-  // auto-close collapse + reset burger + close open dropdowns on route change
+  // Close collapse & any open dropdowns on route change
   useEffect(() => {
     const collapseEl = document.getElementById("mainNavbar");
     const toggler = document.querySelector('[data-bs-target="#mainNavbar"]');
@@ -22,14 +20,18 @@ const NavBar = () => {
 
     if (collapseEl) {
       if (BS) {
-        const inst = BS.getInstance(collapseEl) || new BS(collapseEl, { toggle: false });
+        const inst =
+          BS.getInstance(collapseEl) || new BS(collapseEl, { toggle: false });
         inst.hide();
       }
       collapseEl.classList.remove("show");
     }
     if (toggler) toggler.setAttribute("aria-expanded", "false");
+
     document
-      .querySelectorAll(".dropdown-menu.show, .dropdown-toggle[aria-expanded='true']")
+      .querySelectorAll(
+        ".dropdown-menu.show, .dropdown-toggle[aria-expanded='true']"
+      )
       .forEach((el) => {
         el.classList.remove("show");
         el.setAttribute?.("aria-expanded", "false");
@@ -37,17 +39,55 @@ const NavBar = () => {
   }, [pathname]);
 
   return (
-    <nav className="navbar navbar-expand-lg navbar-light bg-white sticky-top border-bottom">
+    <nav
+      className="navbar navbar-expand-lg navbar-light sticky-top border-bottom"
+      style={{ minHeight: "82px", background: "#eef1f5" }}
+    >
       <div className="container-xl">
-        {/* brand */}
-        <Link to="/" className="navbar-brand d-flex align-items-center gap-3" aria-label="OneParent VIC home">
-          <img src={logoUrl} alt="" width={60} height={60} />
-          <span className="brand-title">
-            OneParent <span className="brand-accent">VIC</span>
+        {/* Brand */}
+        <Link
+          to="/"
+          className="navbar-brand d-flex align-items-center gap-3"
+          aria-label="OneParent VIC home"
+          style={{ marginLeft: "18px" }}
+        >
+          <span
+            style={{
+              fontFamily: "Inter, Montserrat, Arial, sans-serif",
+              fontWeight: 900,
+              fontSize: "1.7rem",
+              letterSpacing: "1.5px",
+              color: "#22223b",
+              textTransform: "uppercase",
+              display: "inline-block",
+              lineHeight: 1.1,
+              position: "relative",
+            }}
+          >
+            <span style={{ color: "#444b5a" }}>OneParent</span>
+            <span
+              style={{
+                position: "absolute",
+                right: 0,
+                bottom: "-1.1rem",
+                fontSize: "0.95rem",
+                fontWeight: 700,
+                fontFamily: "Montserrat, Inter, Arial, sans-serif",
+                color: "#18b6ff",
+                background: "rgba(24,182,255,0.07)",
+                padding: "2px 12px",
+                borderRadius: "8px",
+                letterSpacing: "2.5px",
+                boxShadow: "0 1px 4px rgba(24,182,255,0.08)",
+                fontStyle: "italic",
+              }}
+            >
+              VIC
+            </span>
           </span>
         </Link>
 
-        {/* hamburger */}
+        {/* Toggler */}
         <button
           className="navbar-toggler"
           type="button"
@@ -61,87 +101,165 @@ const NavBar = () => {
           <span className="toggler-icon middle-bar"></span>
           <span className="toggler-icon bottom-bar"></span>
         </button>
-      </div>
 
-      {/* links (note: outside the container so we can full-bleed on mobile) */}
-      <div className="collapse navbar-collapse full-bleed" id="mainNavbar">
-        <ul className="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center container-xl px-lg-0">
-          <li className="nav-item">
-            <NavLink to="/" end className="nav-link">Home</NavLink>
-          </li>
+        {/* Collapse (in-flow so it "expands" the header on mobile) */}
+        <div className="collapse navbar-collapse" id="mainNavbar">
+          <ul className="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
+            <li className="nav-item">
+              <NavLink to="/" end className="nav-link">
+                Home
+              </NavLink>
+            </li>
 
-          {/* Events & Activities */}
-          <li className="nav-item dropdown">
-            <a
-              href="#"
-              className={`nav-link dropdown-toggle ${isActivitiesActive ? "active" : ""}`}
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              Events & Activities
-            </a>
-            <ul className="dropdown-menu dropdown-box">
-              <li>
-                <NavLink
-                  to="/playdate"
-                  className={({ isActive }) => `dropdown-item ${isActive ? "is-active" : ""}`}
-                >
-                  <span className="title">Playdate Planner</span>
-                  <span className="desc">Use our AI activity generator to plan fun, age-fit playdates.</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/events"
-                  className={({ isActive }) => `dropdown-item ${isActive ? "is-active" : ""}`}
-                >
-                  <span className="title">Find Events</span>
-                  <span className="desc">Family & children-friendly events across Victoria in one place.</span>
-                </NavLink>
-              </li>
-            </ul>
-          </li>
+            {/* Events & Activities */}
+            <li className="nav-item dropdown">
+              <a
+                href="#"
+                className={`nav-link dropdown-toggle ${
+                  isActivitiesActive ? "active" : ""
+                }`}
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                data-bs-auto-close="outside"
+              >
+                Events & Activities
+              </a>
+              <ul className="dropdown-menu dropdown-box">
+                <li>
+                  <NavLink
+                    to="/playdate"
+                    className={({ isActive }) =>
+                      `dropdown-item${isActive ? " active" : ""}`
+                    }
+                    style={({ isActive }) =>
+                      isActive
+                        ? { background: "#e3f3ff", color: "#22223b", fontWeight: 500 }
+                        : { fontWeight: 400 }
+                    }
+                  >
+                    <span>Playdate</span>
+                    <span className="desc">
+                      Planning activity for kids is now easy with our AI activity
+                      planner.
+                    </span>
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/events"
+                    className={({ isActive }) =>
+                      `dropdown-item${isActive ? " active" : ""}`
+                    }
+                    style={({ isActive }) =>
+                      isActive
+                        ? { background: "#e3f3ff", color: "#22223b", fontWeight: 500 }
+                        : { fontWeight: 400 }
+                    }
+                  >
+                    <span>Find Events</span>
+                    <span className="desc">
+                      All family, kids, and wellbeing events in one place from many
+                      sources.
+                    </span>
+                  </NavLink>
+                </li>
+              </ul>
+            </li>
 
-          {/* Singles */}
-          <li className="nav-item"><NavLink to="/benefits" className="nav-link">Benefits</NavLink></li>
-          <li className="nav-item"><NavLink to="/childcare" className="nav-link">Childcare</NavLink></li>
-          <li className="nav-item"><NavLink to="/wellbeing" className="nav-link">Wellbeing</NavLink></li>
-          <li className="nav-item"><NavLink to="/transition" className="nav-link">Your Journey</NavLink></li>
+            {/* Hover info items (desktop popovers) */}
+            <li className="nav-item nav-hover-info">
+              <NavLink to="/benefits" className="nav-link">
+                Benefits
+              </NavLink>
+              <div className="nav-hover-box">
+                Use our tool to find what benefits you are entitled for and other
+                resources.
+              </div>
+            </li>
 
-          {/* More */}
-          <li className="nav-item dropdown">
-            <a
-              href="#"
-              className={`nav-link dropdown-toggle ${isMoreActive ? "active" : ""}`}
-              role="button"
-              data-bs-toggle="dropdown"
-              aria-expanded="false"
-            >
-              More
-            </a>
-            <ul className="dropdown-menu dropdown-box dropdown-menu-end">
-              <li>
-                <NavLink
-                  to="/about"
-                  className={({ isActive }) => `dropdown-item ${isActive ? "is-active" : ""}`}
-                >
-                  <span className="title">About Us</span>
-                  <span className="desc">Learn more about OneParent VIC.</span>
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="/data-privacy"
-                  className={({ isActive }) => `dropdown-item ${isActive ? "is-active" : ""}`}
-                >
-                  <span className="title">Data Privacy</span>
-                  <span className="desc">Learn how we process data.</span>
-                </NavLink>
-              </li>
-            </ul>
-          </li>
-        </ul>
+            <li className="nav-item nav-hover-info">
+              <NavLink to="/childcare" className="nav-link">
+                Childcare
+              </NavLink>
+              <div className="nav-hover-box">
+                Get help with childcare costs, projections, resources, and more.
+              </div>
+            </li>
+
+            <li className="nav-item nav-hover-info">
+              <NavLink to="/wellbeing" className="nav-link">
+                Wellbeing
+              </NavLink>
+              <div className="nav-hover-box">
+                Wellbeing resources based on simple quizzes that can help with
+                stress, mental peace, and your overall wellbeing.
+              </div>
+            </li>
+
+            <li className="nav-item nav-hover-info">
+              <NavLink to="/transition" className="nav-link">
+                Your Journey
+              </NavLink>
+              <div className="nav-hover-box">
+                Find yourself on where you stand after becoming a single parent—see
+                where you lag and how things are, based on research by many
+                institutes.
+              </div>
+            </li>
+
+            {/* More */}
+            <li className="nav-item dropdown">
+              <a
+                href="#"
+                className={`nav-link dropdown-toggle ${
+                  isMoreActive ? "active" : ""
+                }`}
+                role="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                data-bs-auto-close="outside"
+              >
+                More
+              </a>
+              <ul className="dropdown-menu dropdown-box dropdown-menu-end">
+                <li>
+                  <NavLink
+                    to="/about"
+                    className={({ isActive }) =>
+                      `dropdown-item${isActive ? " active" : ""}`
+                    }
+                    style={({ isActive }) =>
+                      isActive
+                        ? { background: "#e3f3ff", color: "#22223b", fontWeight: 500 }
+                        : { fontWeight: 400 }
+                    }
+                  >
+                    <span>About Us</span>
+                    <span className="desc">Learn more about OneParent VIC.</span>
+                  </NavLink>
+                </li>
+                <li>
+                  <NavLink
+                    to="/data-privacy"
+                    className={({ isActive }) =>
+                      `dropdown-item${isActive ? " active" : ""}`
+                    }
+                    style={({ isActive }) =>
+                      isActive
+                        ? { background: "#e3f3ff", color: "#22223b", fontWeight: 500 }
+                        : { fontWeight: 400 }
+                    }
+                  >
+                    <span>Data Privacy</span>
+                    <span className="desc">Learn how we process data.</span>
+                  </NavLink>
+                </li>
+              </ul>
+            </li>
+          </ul>
+        </div>
+        {/* /collapse */}
       </div>
     </nav>
   );

@@ -1,38 +1,39 @@
-// src/components/playdate/Step4_InterestsGoals.jsx
 import React, { useState, useEffect } from "react";
 import "./Step4_InterestsGoals.css";
 
-// limits
+// max items and characters for interests/goals
 const MAX_ITEMS = 8;
 const MAX_CHARS = 24;
 
+// step 4 for interests and goals
 const Step4_InterestsGoals = ({
   onNext,
-  // onBack,
   data,
   submitError,
   safetyIssues,
   hasExistingPlan,
   triggerValidate = false,
 }) => {
-  // local state
+  // state for interests and goals
   const [interests, setInterests] = useState(data.interests || []);
   const [goals, setGoals] = useState(data.goals || []);
+  // input state for adding items
   const [interestInput, setInterestInput] = useState("");
   const [goalInput, setGoalInput] = useState("");
+  // error state for validation
   const [errors, setErrors] = useState({ interests: "", goals: "" });
-  // eslint-disable-next-line
-  const [touched, setTouched] = useState({ interests: false, goals: false });
+  // track if user tried to submit
   const [attemptedSubmit, setAttemptedSubmit] = useState(triggerValidate || false);
 
-  // keep attemptedSubmit in sync if parent toggles triggerValidate while mounted (rare, safe)
   useEffect(() => {
     if (triggerValidate) setAttemptedSubmit(true);
   }, [triggerValidate]);
 
-  // helpers
+  // normalize input by trimming and removing extra spaces
   const normalize = (s) => s.trim().replace(/\s+/g, " ");
+  // check if value exists in array (case insensitive)
   const existsInsensitive = (arr, v) => arr.some((x) => x.toLowerCase() === v.toLowerCase());
+  // validate item for empty and length
   const validateItem = (value) => {
     const v = normalize(value);
     if (!v) return "can't be empty";
@@ -40,13 +41,13 @@ const Step4_InterestsGoals = ({
     return "";
   };
 
-  // derived
+  // check if max items reached
   const interestsAtMax = interests.length >= MAX_ITEMS;
   const goalsAtMax = goals.length >= MAX_ITEMS;
-  const canSubmit =
-    interests.length >= 3 && goals.length >= 3 && !errors.interests && !errors.goals;
+  // can submit if at least 3 interests and 3 goals
+  const canSubmit = interests.length >= 3 && goals.length >= 3 && !errors.interests && !errors.goals;
 
-  // actions
+  // add interest or goal
   const addItem = (type, value) => {
     const v = normalize(value);
     if (!v) return;
@@ -55,15 +56,11 @@ const Step4_InterestsGoals = ({
     const list = isInterests ? interests : goals;
     const atMax = isInterests ? interestsAtMax : goalsAtMax;
     const key = isInterests ? "interests" : "goals";
-
     if (atMax) return;
-
-    setTouched((t) => ({ ...t, [key]: true }));
 
     const err = validateItem(v);
     if (err) return setErrors((e) => ({ ...e, [key]: err }));
-    if (existsInsensitive(list, v))
-      return setErrors((e) => ({ ...e, [key]: "already added" }));
+    if (existsInsensitive(list, v)) return setErrors((e) => ({ ...e, [key]: "already added" }));
 
     const setList = isInterests ? setInterests : setGoals;
     setList((prev) => [...prev, v]);
@@ -71,6 +68,7 @@ const Step4_InterestsGoals = ({
     setErrors((e) => ({ ...e, [key]: "" }));
   };
 
+  // remove interest or goal
   const removeItem = (type, value) => {
     const isInterests = type === "interests";
     const setList = isInterests ? setInterests : setGoals;
@@ -84,9 +82,9 @@ const Step4_InterestsGoals = ({
       setErrors((e) => ({ ...e, [key]: dup ? "already added" : "" }));
       return next;
     });
-    setTouched((t) => ({ ...t, [key]: true }));
   };
 
+  // handle enter or comma to add item
   const handleKeyDown = (type, e) => {
     if (e.key === "Enter" || e.key === ",") {
       e.preventDefault();
@@ -96,6 +94,7 @@ const Step4_InterestsGoals = ({
     }
   };
 
+  // handle input change and validate
   const handleInputChange = (type, e) => {
     let v = e.target.value;
     if (v.length > MAX_CHARS) v = v.slice(0, MAX_CHARS);
@@ -104,32 +103,25 @@ const Step4_InterestsGoals = ({
     const norm = normalize(v);
 
     let nextErr = "";
-    if (v.length === MAX_CHARS) {
-      nextErr = `max ${MAX_CHARS} characters reached`;
-    }
+    if (v.length === MAX_CHARS) nextErr = `max ${MAX_CHARS} characters reached`;
     if (!nextErr) {
-      if (!norm) {
-        nextErr = "";
-      } else if (existsInsensitive(list, norm)) {
-        nextErr = "already added";
-      }
+      if (!norm) nextErr = "";
+      else if (existsInsensitive(list, norm)) nextErr = "already added";
     }
 
     setErrors((prev) => ({ ...prev, [type]: nextErr }));
-    setTouched((t) => ({ ...t, [type]: true }));
     type === "interests" ? setInterestInput(v) : setGoalInput(v);
   };
 
+  // handle submit button
   const handleSubmit = () => {
     setAttemptedSubmit(true);
     if (canSubmit) onNext({ interests, goals });
   };
 
-  // small inline red list for flagged items
+  // show unsafe or gibberish items
   const InlineRedList = ({ issues }) => {
-    const vals = Array.from(
-      new Set((issues || []).map((i) => normalize(i.value || "")).filter(Boolean))
-    );
+    const vals = Array.from(new Set((issues || []).map((i) => normalize(i.value || "")).filter(Boolean)));
     if (!vals.length) return null;
     return (
       <>
@@ -143,25 +135,22 @@ const Step4_InterestsGoals = ({
     );
   };
 
-  // render
+  // main form ui
   return (
     <div className="step-form animate-fade-in interests-goals-step">
+      {/* warning for unsafe or gibberish items */}
       {((Array.isArray(safetyIssues) && safetyIssues.length > 0) || submitError) && (
         <div className="alert alert-warning">
           <div className="mb-1">
             {Array.isArray(safetyIssues) && safetyIssues.length > 0 ? (
-              <>
-                we found unsafe or gibberish items. please replace <InlineRedList issues={safetyIssues} /> and similar.
-              </>
+              <>we found unsafe or gibberish items. please replace <InlineRedList issues={safetyIssues} /> and similar.</>
             ) : (
               (() => {
                 const text = String(submitError || "some items need attention.");
                 const parts = text.split(/('.*?')/g);
                 return parts.map((p, i) =>
                   /^'.*'$/.test(p) ? (
-                    <span key={i} className="text-danger">
-                      {p}
-                    </span>
+                    <span key={i} className="text-danger">{p}</span>
                   ) : (
                     <React.Fragment key={i}>{p}</React.Fragment>
                   )
@@ -172,27 +161,18 @@ const Step4_InterestsGoals = ({
         </div>
       )}
 
-      {/* interests */}
+      {/* interests input and chips */}
       <div className="mb-4">
         <label className="form-label d-flex align-items-center gap-2">
           what are your and your child’s interests?
-          <span className="text-muted small">
-            {interests.length}/{MAX_ITEMS}
-          </span>
+          <span className="text-muted small">{interests.length}/{MAX_ITEMS}</span>
         </label>
 
         <div className="chip-row">
           {interests.map((item) => (
             <span key={item} className="chip energy-btn active">
               {item}
-              <button
-                className="chip-x"
-                type="button"
-                aria-label={`remove ${item}`}
-                onClick={() => removeItem("interests", item)}
-              >
-                ×
-              </button>
+              <button className="chip-x" type="button" aria-label={`remove ${item}`} onClick={() => removeItem("interests", item)}>×</button>
             </span>
           ))}
         </div>
@@ -220,39 +200,22 @@ const Step4_InterestsGoals = ({
         </div>
 
         {interestsAtMax && <div className="form-text">max {MAX_ITEMS} items reached.</div>}
-        {errors.interests && (
-          <div className="error-text" aria-live="polite">
-            {errors.interests}
-          </div>
-        )}
-        {attemptedSubmit && interests.length < 3 && (
-          <div className="error-text" aria-live="polite">
-            please add at least three interests.
-          </div>
-        )}
+        {errors.interests && <div className="error-text" aria-live="polite">{errors.interests}</div>}
+        {attemptedSubmit && interests.length < 3 && <div className="error-text" aria-live="polite">please add at least three interests.</div>}
       </div>
 
-      {/* goals */}
+      {/* goals input and chips */}
       <div className="mb-4">
         <label className="form-label d-flex align-items-center gap-2">
           what’s your goal for this activity?
-          <span className="text-muted small">
-            {goals.length}/{MAX_ITEMS}
-          </span>
+          <span className="text-muted small">{goals.length}/{MAX_ITEMS}</span>
         </label>
 
         <div className="chip-row">
           {goals.map((item) => (
             <span key={item} className="chip energy-btn active">
               {item}
-              <button
-                className="chip-x"
-                type="button"
-                aria-label={`remove ${item}`}
-                onClick={() => removeItem("goals", item)}
-              >
-                ×
-              </button>
+              <button className="chip-x" type="button" aria-label={`remove ${item}`} onClick={() => removeItem("goals", item)}>×</button>
             </span>
           ))}
         </div>
@@ -280,18 +243,11 @@ const Step4_InterestsGoals = ({
         </div>
 
         {goalsAtMax && <div className="form-text">max {MAX_ITEMS} items reached.</div>}
-        {errors.goals && (
-          <div className="error-text" aria-live="polite">
-            {errors.goals}
-          </div>
-        )}
-        {attemptedSubmit && goals.length < 3 && (
-          <div className="error-text" aria-live="polite">
-            please add at least three goals.
-          </div>
-        )}
+        {errors.goals && <div className="error-text" aria-live="polite">{errors.goals}</div>}
+        {attemptedSubmit && goals.length < 3 && <div className="error-text" aria-live="polite">please add at least three goals.</div>}
       </div>
 
+      {/* next button */}
       <div className="d-flex justify-content-between">
         <span></span>
         <button type="button" className="btn btn-next" onClick={handleSubmit}>

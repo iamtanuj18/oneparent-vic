@@ -1,29 +1,176 @@
+// use express for routing
 const express = require("express");
 const router = express.Router();
+// import gemini and weather helpers
 const { geminiValidateJson, geminiGenerateJson } = require("../services/gemini");
 const { getWeatherContext } = require("../utils/weather");
 
+// max items and max characters allowed
 const MAX_ITEMS = 8;
 const MAX_CHARS = 24;
 
-// function to convert inputs into string and remove any trailing whitespace
+// trim and convert input to string
 function trimStr(s) { return (s || "").toString().trim(); }
 
-// helpers 
+// sleep for a given time
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-const toIdeas = (result, weather) =>
+
+// base css for generated ideas
+const BASE_CSS = String.raw`
+/* ===== PlayDate Base (scoped to .pd-doc; you may vary --accent etc. per idea) ===== */
+.pd-doc{--bg:#ffffff;--ink:#0f172a;--muted:#475569;--line:#e5e7eb;--chip:#f1f5f9;--accent:#2563eb;--accent2:#22c55e;--warn:#f59e0b;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,Noto Sans,sans-serif;color:var(--ink);background:var(--bg);
+  max-width:780px;margin:0 auto;line-height:1.55}
+.pd-hero{border-radius:16px 16px 0 0;padding:20px 22px;color:#fff;background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%)}
+.pd-title{margin:0;font-size:28px;font-weight:800}
+.pd-sub{margin:6px 0 0;opacity:.95;font-weight:600}
+.pd-badges{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
+.pd-pill{display:inline-flex;align-items:center;gap:.4rem;background:#0b1220;opacity:.9;color:#fff;border-radius:999px;
+  padding:.35rem .7rem;font-size:.92rem}
+.pd-body{border:1px solid var(--line);border-top:none;border-radius:0 0 16px 16px;padding:16px 18px;background:var(--bg)}
+.pd-section{padding:14px 0;border-top:1px dashed var(--line)}
+.pd-h2{margin:0 0 8px;font-size:18px}
+.pd-chips{display:flex;flex-wrap:wrap;gap:.5rem}
+.pd-chip{background:var(--chip);border:1px dashed #cbd5e1;border-radius:999px;padding:.35rem .6rem}
+.pd-checks{display:grid;grid-template-columns:1fr 1fr;gap:.6rem .8rem}
+.pd-check{border:1px solid var(--line);border-radius:10px;padding:.55rem .7rem}
+.pd-steps{display:flex;flex-direction:column;gap:12px}
+.pd-step{border:1px solid var(--line);border-radius:12px;padding:12px 14px;position:relative}
+.pd-num{position:absolute;left:-10px;top:-10px;background:#fff;border:2px solid var(--ink);width:24px;height:24px;border-radius:999px;
+  display:flex;align-items:center;justify-content:center;font-weight:700}
+.pd-meta{color:var(--muted);font-size:.9rem;margin-top:4px}
+.pd-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.pd-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.pd-footer{margin-top:10px;padding-top:10px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center}
+@media (max-width:600px){.pd-checks{grid-template-columns:1fr}.pd-grid{grid-template-columns:1fr}}
+@media print{.pd-doc{max-width:100%}.pd-hero{border-radius:0}.pd-body{border-radius:0}}
+`;
+
+// accent color combinations for variety
+const ACCENT_THEMES = [
+  { accent: '#2563eb', accent2: '#22c55e' }, // Blue to Green
+  { accent: '#6d28d9', accent2: '#db2777' }, // Purple to Pink
+  { accent: '#dc2626', accent2: '#f59e0b' }, // Red to Orange
+  { accent: '#059669', accent2: '#0891b2' }, // Green to Cyan
+  { accent: '#7c3aed', accent2: '#3b82f6' }, // Violet to Blue
+];
+
+// escape html to prevent injection
+function escapeHtml(s = "") {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// convert content structure to html for display
+function contentToHtml(content, weather, body, plannedLabel, suburb, placeType, themeIndex = 0) {
+  const theme = ACCENT_THEMES[themeIndex % ACCENT_THEMES.length];
+  const customCSS = BASE_CSS.replace('--accent:#2563eb;--accent2:#22c55e', `--accent:${theme.accent};--accent2:${theme.accent2}`);
+  
+  // build badges 
+  const badges = [
+    `🗓️ Planned: ${plannedLabel || (body.plannedDate + " " + body.plannedTime)}`,
+    `📍 Place: ${placeType || "indoor"}`,
+    `💰 Budget: ${body.budget || "Free"}`,
+    `🗺️ Location: ${suburb || "-"}`,
+    `⏱️ ${body.timeAvailable || "30-60 mins"}`,
+    `👧 Ages ${content.ageRange || "All"}`
+  ].map(badge => `<span class='pd-pill'>${escapeHtml(badge)}</span>`).join('');
+
+  // build mission rewards chips
+  const chips = (content.missionRewards || [])
+    .map(reward => `<span class='pd-chip'>${escapeHtml(reward)}</span>`)
+    .join('');
+
+  // build materials checklist
+  const materials = (content.materials || [])
+    .map(material => `<span class='pd-check'>${escapeHtml(material)}</span>`)
+    .join('');
+
+  // build steps
+  const steps = (content.steps || [])
+    .map((step, i) => `
+      <div class='pd-step'>
+        <div class='pd-num'>${i + 1}</div>
+        <strong>${escapeHtml(step.title)} (${escapeHtml(step.duration)})</strong>
+        <p class='pd-meta'>${escapeHtml(step.description)}</p>
+      </div>
+    `).join('');
+
+  // weather section
+  const weatherSection = weather ? `
+    <div class='pd-section'>
+      <h2 class='pd-h2'>Weather Insight</h2>
+      <p>${escapeHtml(content.weatherInsight || weather.contextString)}</p>
+    </div>` : '';
+
+  // budget notes
+  const budgetSection = content.budgetNotes ? `
+    <div class='pd-section'>
+      <h2 class='pd-h2'>Budget Notes</h2>
+      <p>${escapeHtml(content.budgetNotes)}</p>
+    </div>` : '';
+
+  return `<article class='pd-doc'>
+    <style>${customCSS}</style>
+    <div class='pd-hero'>
+      <h1 class='pd-title'>${escapeHtml(content.title)}</h1>
+      <p class='pd-sub'>${escapeHtml(content.subtitle || 'Your Activity Plan')}</p>
+      <div class='pd-badges'>${badges}</div>
+    </div>
+    <div class='pd-body'>
+      ${weatherSection}
+      <div class='pd-section'>
+        <h2 class='pd-h2'>Mission Rewards</h2>
+        <div class='pd-chips'>${chips}</div>
+      </div>
+      <div class='pd-section'>
+        <h2 class='pd-h2'>Materials Checklist</h2>
+        <div class='pd-checks'>${materials}</div>
+      </div>
+      <div class='pd-section'>
+        <h2 class='pd-h2'>Steps</h2>
+        <div class='pd-steps'>${steps}</div>
+      </div>
+      <div class='pd-section'>
+        <h2 class='pd-h2'>Parent Power-Ups</h2>
+        <div class='pd-grid'>
+          <div class='pd-card'>
+            <strong>Bonding Tips</strong>
+            <p class='pd-meta'>${escapeHtml(content.bondingTips || 'Focus on fun and connection rather than perfection.')}</p>
+          </div>
+          <div class='pd-card'>
+            <strong>Safety Notes</strong>
+            <p class='pd-meta'>${escapeHtml(content.safetyNotes || 'Ensure the activity area is safe and age-appropriate.')}</p>
+          </div>
+        </div>
+      </div>
+      ${budgetSection}
+      <div class='pd-footer'>
+        <span>Generated by <strong>PlayDate AI Planner</strong></span>
+        <span>• oneparentvic.me • A4 print-ready</span>
+      </div>
+    </div>
+  </article>`;
+}
+
+// process ideas from gemini response
+const toIdeas = (result, weather, body, plannedLabel, suburb, placeType) =>
   Array.isArray(result?.ideas)
-    ? result.ideas.slice(0, 3).map((idea) => ({
-        ...idea,
-        html: ensureWeatherInHtml(String(idea?.html || ''), weather).replace(
-          /Playdate Planner\s*•.*?print-ready/i,
-          'Generated by <strong>PlayDate AI Planner</strong> • oneparentvic.me • A4 print-ready'
-        ),
+    ? result.ideas.slice(0, 3).map((idea, index) => ({
+        title: idea.title,
+        cardTitle: idea.cardTitle,
+        cardExcerpt: idea.cardExcerpt,
+        summary: idea.summary,
+        html: contentToHtml(idea.content, weather, body, plannedLabel, suburb, placeType, index),
       }))
     : [];
 
-
-// formatting date and time into better readbility, eg 28 August, 2025 (Melbourne time zone)
+// format date and time for display
 function formatPlannedLabel(dateISO, time24) {
   if (!trimStr(dateISO)) return "";
   try {
@@ -44,66 +191,24 @@ function formatPlannedLabel(dateISO, time24) {
   }
 }
 
-/**
- * Escapes special HTML characters in a string so it is safe to insert
- * into an HTML context (prevents tags or scripts from being interpreted).
- * Converts &, <, >, " and ' into their corresponding HTML entities.
- */
-function escapeHtml(s = "") {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-// If weather exists but LLM forgot to include it, inject a section
-function ensureWeatherInHtml(html, weather) {
-  if (!weather) return html;
-  if (/weather insight/i.test(html)) return html;
-
-  const block = `
-  <div class="pd-section">
-    <h2 class="pd-h2">Weather insight</h2>
-    <p>${escapeHtml(weather.contextString)}</p>
-  </div>`;
-
-  const marker = '<div class="pd-body">';
-  const idx = html.indexOf(marker);
-  if (idx !== -1) {
-    const insertPos = idx + marker.length;
-    return html.slice(0, insertPos) + block + html.slice(insertPos);
-  }
-  return html + block;
-}
-
-/**
- * Performs lightweight validation of the request body before
- * sending data to Gemini. It checks only the "shape" of inputs:
- *   - Required fields exist and are not empty.
- *   - Child objects have valid age, gender, energy, learning style.
- *   - Interests/goals arrays have at least one valid string, within limits.
- *   - Date and time are present.
- */
+// validate playdate input
 function quickValidate(body) {
   const issues = [];
   const push = (field, value, reason, index, type = "format") =>
     issues.push({ field, value, reason, index, type });
 
-  //  Parent age 
+  // parent age 
   const parentAge = Number(body.parentAge);
   if (!Number.isFinite(parentAge)) {
     push("parentAge", body.parentAge, "Parent age required");
   }
 
-  //  Children 
+  // children 
   const kids = Array.isArray(body.children) ? body.children : [];
   if (!kids.length) {
     push("children", body.children, "At least one child required");
   }
 
-  // maxChildAge ensures children aren't unrealistically old compared to parent
   const maxChildAge = Number.isFinite(parentAge)
     ? Math.min(20, Math.max(1, parentAge - 20))
     : 15;
@@ -112,12 +217,10 @@ function quickValidate(body) {
     if (!c || typeof c !== "object") {
       return push("children", c, "Invalid child object", i);
     }
-
     const age = Number(c.age);
     if (!Number.isFinite(age) || age < 1 || age > maxChildAge) {
       push("children.age", c.age, `Age must be 1–${maxChildAge}`, i, "range");
     }
-
     if (!trimStr(c.gender)) {
       push("children.gender", c.gender, "Gender required", i, "missing");
     }
@@ -129,17 +232,15 @@ function quickValidate(body) {
     }
   });
 
-  //  Interests & Goals
+  // interests & goals
   [["interests", body.interests], ["goals", body.goals]].forEach(([field, list]) => {
     const arr = Array.isArray(list) ? list : [];
-
     if (!arr.length) {
       push(field, arr.length, "At least one item required", undefined, "missing");
     }
     if (arr.length > MAX_ITEMS) {
       push(field, arr.length, `Max ${MAX_ITEMS} items`, undefined, "range");
     }
-
     arr.forEach((v, i) => {
       const s = trimStr(v);
       if (!s) return push(field, v, "Must be a non-empty string", i, "missing");
@@ -147,7 +248,7 @@ function quickValidate(body) {
     });
   });
 
-  //  Planned date & time 
+  // planned date & time 
   if (!trimStr(body.plannedDate)) {
     push("plannedDate", body.plannedDate, "Date required", undefined, "missing");
   }
@@ -158,20 +259,11 @@ function quickValidate(body) {
   return issues;
 }
 
-/**
- * Lightweight server-side safety screen for user-provided Interests/Goals.
- * - First, run local "shape" validation (quickValidate). If that fails, bail early.
- * - If shape is OK, ask Gemini to classify each interest/goal as:
- *     unsafe | gibberish | off_topic  (or OK)
- * - If Gemini flags anything, return 400 with a short banner message and per-item issues.
- * - If Gemini is not configured (NO_KEY), return 501 to indicate server-side capability is off.
- * - Otherwise, return { ok: true }.
- */
+// check playdate input for safety issues
 router.post("/playdate-safety-checks", async (req, res) => {
   try {
     const body = req.body ?? {};
-
-    //  Step 1: local "shape" checks
+    
     const localIssues = quickValidate(body);
     if (localIssues.length) {
       return res.status(400).json({
@@ -181,7 +273,6 @@ router.post("/playdate-safety-checks", async (req, res) => {
       });
     }
 
-    //  Step 2: LLM check for unsafe / gibberish / off-topic items
     try {
       const jsonSchemaNote = `
         Schema:
@@ -202,30 +293,28 @@ router.post("/playdate-safety-checks", async (req, res) => {
 
       const prompt = `
         Evaluate interests/goals for a family activity planner.
-
         For EACH item:
-        - unsafe for children -> type="unsafe"
-        - nonsense/gibberish -> type="gibberish"
-        - off-topic for family-friendly planning -> type="off_topic"
-
+        - unsafe for children -> type="unsafe" - Not just for children in general that involes risk or something illegal or something check if some interest or goal could lead to someting like this, interest could be anything in the sense eating, movies, some genre like kpop anime etc which could make sense in making the activity after all
+        - nonsense/gibberish -> type="gibberish" - this only mean the word even after typo doesnt make sense I mean it not even a word. small typing errors you can ignore
+        - off-topic for family-friendly planning -> type="off_topic" - but remember interests and goals could be anything off topic when its totally irrelevant
         Write a single user-facing summary "bannerMessage" in plain English, max 20 words and include 'and similar items' if needed.
         Keep it simple and actionable (e.g., "Unsafe or gibberish items found. Please replace: 'killing', 'fdsfdsf'").
-        Ignore the typing errors made by the users for words that you can understands. 
-        Additionaly, off topic has to be very particular eg. relaxation, stress out, bonding etc are not off topic they can be used to formulate good activity plans.
+        Ignore the typing errors made by the users for words that you can understand. 
+        Additionally, off topic has to be very particular eg. relaxation, stress out, bonding etc are not off topic they can be used to formulate good activity plans.
         Return ok=false if ANY issues exist.
-
         Parent age: ${body.parentAge}
         Children: ${JSON.stringify(body.children || [])}
         Interests: ${JSON.stringify(body.interests || [])}
         Goals: ${JSON.stringify(body.goals || [])}
         `.trim();
-        const result = await geminiValidateJson({
-          jsonSchemaNote,
-          prompt,
-          temperature: 0,
-          maxOutputTokens: 512,
-        });
-      // If Gemini reports any issues, normalise and return 400
+
+      const result = await geminiValidateJson({
+        jsonSchemaNote,
+        prompt,
+        temperature: 0,
+        maxOutputTokens: 512,
+      });
+
       if (result && result.ok === false) {
         const llmIssues = Array.isArray(result.issues) ? result.issues : [];
         const banner =
@@ -235,46 +324,27 @@ router.post("/playdate-safety-checks", async (req, res) => {
         return res.status(400).json({ ok: false, message: banner, issues: llmIssues });
       }
 
-      // Passed both local + LLM checks
       return res.json({ ok: true });
-
     } catch (e) {
-      // Explicit capability signal if server is not configured for Gemini
       if (e && e.code === "NO_KEY") {
         return res.status(501).json({
           ok: false,
           message: "Server not configured for safety validation (missing GEMINI_API_KEY).",
         });
       }
-      // Any other upstream error 502 (bad gateway/upstream)
       return res.status(502).json({ ok: false, message: e?.message || "Safety check failed" });
     }
-
   } catch (e) {
-    // Internal error in the route itself
-    console.error(e);
+  // console.error(e);
     return res.status(500).json({ ok: false, message: "Validation error" });
   }
 });
 
-/**
- * Generates exactly 3 personalised activity ideas as HTML cards.
- * Inputs come from the frontend wizard (see formData structure).
- *  - Validates basic shape (quickValidate). If fails  400.
- *  - Builds a Melbourne-tz planned label for display.
- *  - Fetches weather context for the provided suburb (VIC-biased).
- *  - Hard-requires Gemini to respect:
- *      • place ("indoor" | "outdoor") strictly,
- *      • budget (as a constraint AND shown in the HTML),
- *      • weather section when weather exists,
- *      • fixed HTML scaffold with a visible “Budget” + “Planned” badges.
- *  - On model omission of weather, injects a minimal weather section.
- *  - If GEMINI_API_KEY is missing, returns a local-dev stub.
- */
+// generate playdate ideas using gemini
 router.post("/playdate-generate", async (req, res) => {
   const body = req.body ?? {};
-
-  // Basic shape checks 
+  
+  // basic shape checks 
   const localIssues = quickValidate(body);
   if (localIssues.length) {
     return res
@@ -282,139 +352,49 @@ router.post("/playdate-generate", async (req, res) => {
       .json({ ok: false, message: "Invalid input.", issues: localIssues });
   }
 
-  // Normalise user intent fields
+  // normalize user intent fields
   const suburb = (body.location || "").trim();           
   const placeType = String(body.place || "").toLowerCase(); 
   const plannedLabel = formatPlannedLabel(body.plannedDate, body.plannedTime);
 
-  // Weather context
+  // weather context
   let weather = null;
   try {
-    // getWeatherContext(place, date, time) returns { place, hour, day, contextString }
     weather = await getWeatherContext(suburb, body.plannedDate, body.plannedTime);
   } catch {
     weather = null;
   }
 
-  // Local dev fallback
+  // local dev fallback
   if (!process.env.GEMINI_API_KEY) {
     return res.json({
       ideas: [
         {
           title: "Living-room Obstacle Course",
           cardTitle: "Living-room Obstacle Course",
-          cardExcerpt:
-            "A quick indoor course with cushions and chairs; fun, low-mess, and great for 30–45 mins.",
-          summary:
-            "A quick indoor course with cushions and chairs; fun, low-mess, and great for 30–45 mins.",
-          html: `<article class="pd-doc">
-          <style>
-          .pd-doc{--bg:#fff;--ink:#0f172a;--muted:#475569;--line:#e5e7eb;--chip:#f1f5f9;--accent:#2563eb;--accent2:#22c55e;
-          font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,Noto Sans,sans-serif;color:var(--ink);max-width:780px;margin:0 auto;line-height:1.55}
-          .pd-hero{border-radius:16px 16px 0 0;padding:20px 22px;color:#fff;background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%)}
-          .pd-title{margin:0;font-size:28px;font-weight:800}
-          .pd-body{border:1px solid var(--line);border-top:none;border-radius:0 0 16px 16px;padding:16px 18px}
-          .pd-section{padding:14px 0;border-top:1px dashed var(--line)}
-          .pd-h2{margin:0 0 8px;font-size:18px}
-          </style>
-
-          <div class="pd-hero">
-            <h1 class="pd-title">Living-room Obstacle Course</h1>
-          </div>
-
-          <div class="pd-body">
-            <div class="pd-section">
-              <h2 class="pd-h2">At a glance</h2>
-              <ul>
-                <li><b>Planned:</b> ${plannedLabel || (body.plannedDate + " " + body.plannedTime)}</li>
-                <li><b>Place:</b> ${placeType || "indoor"}</li>
-                <li><b>Location:</b> ${suburb || "-"}</li>
-                <li><b>Duration:</b> ${body.timeAvailable || "30–60 mins"}</li>
-                <li><b>Budget:</b> ${body.budget || "Free"}</li>
-                ${weather ? `<li><b>Weather insight:</b> ${escapeHtml(weather.contextString)}</li>` : ""}
-              </ul>
-            </div>
-
-            <div class="pd-section">
-              <h2 class="pd-h2">Checklist</h2>
-              <ul><li>Pillows/cushions</li><li>Masking tape</li></ul>
-            </div>
-
-            <div class="pd-section"><h2 class="pd-h2">Bonding Tips</h2><p>Let kids design one obstacle. Celebrate every run with high-fives.</p></div>
-            <div class="pd-section"><h2 class="pd-h2">Safety</h2><p>Keep pathways clear; avoid slippery rugs; supervise climbing.</p></div>
-
-            <footer class="pd-section" style="border-top:1px solid #e5e7eb;color:#475569;font-size:.9rem">
-              Generated by <strong>PlayDate AI Planner</strong> • oneparentvic.me • A4 print-ready
-            </footer>
-          </div>
-        </article>`,
-        },
-        {
-          title: "Idea 2",
-          cardTitle: "Idea 2",
-          cardExcerpt: "Short teaser.",
-          summary: "Short teaser.",
-          html: `<article class="pd-doc"><style>.pd-doc{font-family:system-ui}</style>
-          <div class="pd-hero"><h1 class="pd-title">Idea 2</h1></div>
-          <div class="pd-body"><p>Placeholder.</p>
-            <footer class="pd-section" style="border-top:1px solid #e5e7eb;color:#475569;font-size:.9rem">
-              Generated by <strong>PlayDate AI Planner</strong> • oneparentvic.me • A4 print-ready
-            </footer>
-          </div>
-        </article>`,
-        },
-        {
-          title: "Idea 3",
-          cardTitle: "Idea 3",
-          cardExcerpt: "Short teaser.",
-          summary: "Short teaser.",
-          html: `<article class="pd-doc"><style>.pd-doc{font-family:system-ui}</style>
-          <div class="pd-hero"><h1 class="pd-title">Idea 3</h1></div>
-          <div class="pd-body"><p>Placeholder.</p>
-            <footer class="pd-section" style="border-top:1px solid #e5e7eb;color:#475569;font-size:.9rem">
-              Generated by <strong>PlayDate AI Planner</strong> • oneparentvic.me • A4 print-ready
-            </footer>
-          </div>
-        </article>`,
-        },
+          cardExcerpt: "A quick indoor course with cushions and chairs; fun, low-mess, and great for 30–45 mins.",
+          summary: "A quick indoor course with cushions and chairs; fun, low-mess, and great for 30–45 mins.",
+          html: contentToHtml({
+            title: "Living-room Obstacle Course",
+            subtitle: "Your Home Activity",
+            ageRange: "All Ages",
+            missionRewards: ["Fun", "Physical Activity", "Creativity"],
+            materials: ["Pillows/cushions", "Masking tape", "Chairs"],
+            steps: [
+              { title: "Setup", duration: "10 mins", description: "Arrange cushions and tape pathways" },
+              { title: "Play", duration: "20 mins", description: "Navigate the obstacle course" }
+            ],
+            bondingTips: "Let kids design one obstacle. Celebrate every run with high-fives.",
+            safetyNotes: "Keep pathways clear; avoid slippery rugs; supervise climbing.",
+            budgetNotes: "Free using household items"
+          }, weather, body, plannedLabel, suburb, placeType, 0)
+        }
       ],
     });
   }
 
   try {
-    //CSS scaffold used by Gemini in each idea's HTML 
-    const BASE_CSS = String.raw`
-      /* ===== PlayDate Base (scoped to .pd-doc; you may vary --accent etc. per idea) ===== */
-      .pd-doc{--bg:#ffffff;--ink:#0f172a;--muted:#475569;--line:#e5e7eb;--chip:#f1f5f9;--accent:#2563eb;--accent2:#22c55e;--warn:#f59e0b;
-        font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,Noto Sans,sans-serif;color:var(--ink);background:var(--bg);
-        max-width:780px;margin:0 auto;line-height:1.55}
-      .pd-hero{border-radius:16px 16px 0 0;padding:20px 22px;color:#fff;background:linear-gradient(135deg,var(--accent) 0%,var(--accent2) 100%)}
-      .pd-title{margin:0;font-size:28px;font-weight:800}
-      .pd-sub{margin:6px 0 0;opacity:.95;font-weight:600}
-      .pd-badges{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}
-      .pd-pill{display:inline-flex;align-items:center;gap:.4rem;background:#0b1220;opacity:.9;color:#fff;border-radius:999px;
-        padding:.35rem .7rem;font-size:.92rem}
-      .pd-body{border:1px solid var(--line);border-top:none;border-radius:0 0 16px 16px;padding:16px 18px;background:var(--bg)}
-      .pd-section{padding:14px 0;border-top:1px dashed var(--line)}
-      .pd-h2{margin:0 0 8px;font-size:18px}
-      .pd-chips{display:flex;flex-wrap:wrap;gap:.5rem}
-      .pd-chip{background:var(--chip);border:1px dashed #cbd5e1;border-radius:999px;padding:.35rem .6rem}
-      .pd-checks{display:grid;grid-template-columns:1fr 1fr;gap:.6rem .8rem}
-      .pd-check{border:1px solid var(--line);border-radius:10px;padding:.55rem .7rem}
-      .pd-steps{display:flex;flex-direction:column;gap:12px}
-      .pd-step{border:1px solid var(--line);border-radius:12px;padding:12px 14px;position:relative}
-      .pd-num{position:absolute;left:-10px;top:-10px;background:#fff;border:2px solid var(--ink);width:24px;height:24px;border-radius:999px;
-        display:flex;align-items:center;justify-content:center;font-weight:700}
-      .pd-meta{color:var(--muted);font-size:.9rem;margin-top:4px}
-      .pd-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-      .pd-card{border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-      .pd-footer{margin-top:10px;padding-top:10px;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);
-        display:flex;justify-content:space-between;align-items:center}
-      @media (max-width:600px){.pd-checks{grid-template-columns:1fr}.pd-grid{grid-template-columns:1fr}}
-      @media print{.pd-doc{max-width:100%}.pd-hero{border-radius:0}.pd-body{border-radius:0}}
-      `;
-
-    // Strict weather block mirroring utils/weather.js output 
+    // weather block
     const weatherBlock = weather
       ? `
         WEATHER_CONTEXT:
@@ -427,9 +407,9 @@ router.post("/playdate-generate", async (req, res) => {
                 } mm
         - Summary: ${weather.contextString}
         `.trim()
-              : "WEATHER_CONTEXT: unavailable";
+      : "WEATHER_CONTEXT: unavailable";
 
-    // JSON schema for Gemini's response 
+    //  json schema 
     const schemaNote = `
       Schema:
       {
@@ -439,32 +419,38 @@ router.post("/playdate-generate", async (req, res) => {
             "summary": string,
             "cardTitle": string,
             "cardExcerpt": string,
-            "html": string
+            "content": {
+              "title": string,
+              "subtitle": string,
+              "ageRange": string,
+              "missionRewards": [string],
+              "materials": [string],
+              "steps": [
+                {
+                  "title": string,
+                  "duration": string,
+                  "description": string
+                }
+              ],
+              "bondingTips": string,
+              "safetyNotes": string,
+              "weatherInsight": string,
+              "budgetNotes": string
+            }
           }
         ]
       }`;
 
-    //Strong prompt with ALL frontend inputs + strict indoor/outdoor + budget + location + sensible weather use
+    // streamlined prompt 
     const prompt = `
       You are creating polished, SAFE, **strictly ${placeType || "indoor"}** activity ideas for a single parent with kids in Victoria, Australia.
-      Return EXACTLY 3 ideas as JSON. Each idea must embed the CSS scaffold below and may vary its theme by overriding --accent/--accent2 in .pd-doc.
+      Return EXACTLY 3 ideas as JSON with structured content (no HTML generation needed).
+      
       DEFINITIONS (read carefully):
       • placeType='indoor' means: the activity occurs strictly at the user's dwelling (home/apartment/other private dwelling as provided). 
        Do NOT suggest external venues (libraries, museums, malls, gyms, pools, aquatics, community centres, cafes, shopping centres, play areas, etc.) when placeType='indoor'.
-      • placeType='outdoor' may include public places (parks, libraries, museums, pools, centres, etc.) as appropriate.
-
-       WEATHER INSIGHT REQUIREMENTS:
-       • Do not copy the raw weather string. Summarise 1–2 tailored implications for THIS activity (gear, timing, tweaks).
-       • Insert the Weather insight section INSIDE the main article (after the badges, before Materials), not as a footer.
-       • Keep it to one short paragraph or 2 bullets max.
-       • If weather is mild/irrelevant, write a one-line reassurance (e.g., “Conditions look comfortable—no changes needed.”).
-
-       HTML QUOTES RULE:
-       • In the JSON, use single quotes inside all HTML (attributes and inline CSS). Never use double quotes in HTML.
-       Base CSS to embed inside <style> in each html:
-
-      ${BASE_CSS}
-
+      • placeType='outdoor' may include public places (parks, libraries, museums, pools, centres, etc.) as appropriate. You may use emojis if it makes sense for any of the sections
+      
       User context (from the frontend form; use ALL of it):
       - Parent type: ${body.parentType || "-"}
       - Parent age: ${body.parentAge || "-"}
@@ -474,156 +460,95 @@ router.post("/playdate-generate", async (req, res) => {
       - Place type (MUST respect): ${placeType || "indoor"}
       - Home type: ${body.homeType || "-"}
       - Time available: ${body.timeAvailable || "-"}
-      - Budget (from frontend): ${body.budget || "-"} — MUST be respected and displayed; only incur costs if appropriate; if not "Free", clearly note where the money goes (e.g., entry, transport, materials) and how it’s used.
+      - Budget (from frontend): ${body.budget || "-"} — MUST be respected and displayed; only incur costs if appropriate; if not "Free", clearly note where the money goes
       - Interests: ${JSON.stringify(body.interests || [])}
       - Goals: ${JSON.stringify(body.goals || [])}
       - Planned start (Melbourne time): ${plannedLabel || (body.plannedDate + " " + body.plannedTime)}
       ${weatherBlock}
-
-      HTML requirements for each idea:
-      - Use: <article class="pd-doc"><style>…BASE_CSS…(optional accent overrides)…</style> …content… </article>
-      - Sections (all required):
-        • Hero banner with <h1> title and a subtitle (may mention "${suburb}").
-        • A badge row that **visibly includes**:
-            - “Planned: ${plannedLabel || (body.plannedDate + " " + body.plannedTime)}”
-            - “Place: ${placeType || "indoor"}”
-            - “Budget: ${body.budget || "-"}”
-            - “Location: ${suburb || "-"}”
-            - duration and an age band derived from children (e.g., “Ages 5–7”)
-        • "Mission Rewards" (chips aligned to the provided interests/goals; reference at least one user-provided item).
-        • "Materials Checklist" (minimal/cheap; match the **${placeType || "indoor"}** constraint).
-        • "Steps" (numbered blocks; include rough minutes per step).
-        • "Parent Power-Ups": two cards -> Bonding Tips, Safety Notes.
-        • If Budget ≠ "Free", add a one-line **Budget notes** sentence clarifying where the money goes (AUD; e.g., “$10 for craft materials”).
-        • Footer note: “Generated by PlayDate AI Planner • oneparentvic.me • A4 print-ready”.
-
+      
+      Content requirements for each idea:
+      - title: Main activity name
+      - subtitle: Location context (e.g., "Your Home, ${suburb}")
+      - ageRange: Age range suitable for the children (e.g., "5-10", "All Ages")
+      - missionRewards: Array of 3-6 benefits aligned with user interests/goals
+      - materials: Array of required items (minimal/cheap; match the **${placeType || "indoor"}** constraint)
+      - steps: Array of 3-5 step objects with title, duration (e.g., "10 mins"), and description
+      - bondingTips: One paragraph of parent-child connection advice
+      - safetyNotes: One paragraph of safety considerations
+      - weatherInsight: If weather exists, 1-2 sentences on how weather affects this activity, otherwise null
+      - budgetNotes: If budget ≠ "Free", explain where money goes (AUD), otherwise null
+      
       Location selection rules (best-fit):
       - Always remain **${placeType || "indoor"}**.
-      - Recommend the **best-fit location** based on ages, energy, time, budget, interests, and WEATHER_CONTEXT:
-        • For indoor: at home/backyard, community centres, libraries, museums, sports halls, pools, shopping-centre play areas, etc.
-        • For outdoor: backyard/home, local parks/ovals/courts, community gardens, beaches, nature trails, skate/scooter paths, or paid venues when budget allows.
-      - If recommending home/private: say “at home” or “in the backyard” — **do not include any address**.
-      - If recommending public or commercial: list 1–2 plausible **local examples** in or near "${suburb}", using category/name level (e.g., “Central Park Playground, Oakleigh” or “Monash Aquatic Centre”), **no street numbers** and no private addresses.
-
-      Weather use (sensible, not forced but always show insights):
-      - Consider WEATHER_CONTEXT and adapt only when it materially affects feasibility, comfort, safety, timing, or venue choice.
-        • Outdoor + high rain/wind → suggest sheltered/wet-friendly options, shorter sessions, or waterproof tweaks. If conditions are mild, proceed normally.
-        • Outdoor + heat/cold extremes → add shade/warmth, hydration/gear notes, or adjust time of day.
-        • Indoor plans may briefly justify (“Great for a wet afternoon”) but stay indoor-focused.
-      - Keep the “Weather insight” section concise and aligned with the plan; do not over-index on weather if it’s not impactful.
-
+      - Recommend the **best-fit location** based on ages, energy, time, budget, interests, and WEATHER_CONTEXT
+      - If recommending home/private: say "at home" or "in the backyard" — **do not include any address**
+      - If recommending public or commercial: list 1–2 plausible **local examples** in or near "${suburb}", using category/name level, **no street numbers**
+      
+      Weather use (sensible, not forced but always provide insights when available):
+      - Consider WEATHER_CONTEXT and adapt only when it materially affects feasibility, comfort, safety, timing, or venue choice
+      - Keep weatherInsight concise and directly relevant to the activity
+      
       Constraints:
-      - The plan MUST be **${placeType || "indoor"}**; do not propose the opposite environment.
-      - Match difficulty to kids’ ages and parent's energy.
-      - Respect the stated **Budget** (e.g., Free / Low / $15 / etc.). Keep cost within that and reflect it in materials/venue choices.
-      - Personalise clearly using at least one provided interest/goal in each idea (not generic).
-      - No adult themes, risky challenges, or personal data exposure.
-      - Keep "cardExcerpt" <= 160 chars and "summary" to 1–2 sentences.
+      - The plan MUST be **${placeType || "indoor"}**; do not propose the opposite environment
+      - Match difficulty to kids' ages and parent's energy
+      - Respect the stated **Budget** and keep cost within that
+      - Personalise clearly using at least one provided interest/goal in each idea
+      - No adult themes, risky challenges, or personal data exposure
+      - Keep "cardExcerpt" <= 160 chars and "summary" to 1–2 sentences
       `.trim();
 
-    // // call Gemini
-    // const result = await geminiGenerateJson({
-    //   prompt,
-    //   jsonSchemaNote: schemaNote,
-    //   temperature: 0.7,
-    // });
+  // console.log("\nUpdated prompt (content-only):", prompt);
 
-    // // Post-process ideas: ensure weather section + normalise footer 
-    // const ideas = Array.isArray(result?.ideas)
-    //   ? result.ideas.slice(0, 3).map((idea) => ({
-    //       ...idea,
-    //       html: ensureWeatherInHtml(String(idea.html || ""), weather).replace(
-    //         /Playdate Planner\s*•.*?print-ready/i,
-    //         'Generated by <strong>PlayDate AI Planner</strong> • oneparentvic.me • A4 print-ready'
-    //       ),
-    //     }))
-    //   : [];
-    // console.log(ideas);
-    // if(ideas.length===0)
-    // {
-    //   const result = await geminiGenerateJson({
-    //   prompt,
-    //   jsonSchemaNote: schemaNote,
-    //   temperature: 0.7,
-    // });
-    //     const ideas = Array.isArray(result?.ideas)
-    //   ? result.ideas.slice(0, 3).map((idea) => ({
-    //       ...idea,
-    //       html: ensureWeatherInHtml(String(idea.html || ""), weather).replace(
-    //         /Playdate Planner\s*•.*?print-ready/i,
-    //         'Generated by <strong>PlayDate AI Planner</strong> • oneparentvic.me • A4 print-ready'
-    //       ),
-    //     }))
-    //   : [];
-
-    //     return res.json({ ideas });
-
-    // }
-    
-    // return res.json({ ideas });
-    console.log("\nprompt:", prompt);
-
-    // generate with 2 lightweight local retry if empty ideas
+    // generate with multiple lightweight retries if empty ideas
     let result = await geminiGenerateJson({
       prompt,
       jsonSchemaNote: schemaNote,
       temperature: 0.7,
     });
-
-    let ideas = toIdeas(result, weather)
-
-    if (ideas.length === 0) {
-      console.warn('[playdate-generate] Empty ideas on first try. Retrying...');
-      await sleep(400); 
-      result = await geminiGenerateJson({
-        // small nudge so the model doesn't repeat the same empty output
-        prompt: `${prompt}\n\nRETRY: previous response had no ideas. Return EXACTLY 3 complete ideas.`,
-        jsonSchemaNote: schemaNote,
-        temperature: 0.6, // more deterministic
-      });
-      ideas = toIdeas(result, weather);
-    }
-
+    
+    let ideas = toIdeas(result, weather, body, plannedLabel, suburb, placeType);
     
     if (ideas.length === 0) {
-      console.warn('[playdate-generate] Empty ideas on first try. Retrying...');
+  // console.warn('[playdate-generate] Empty ideas on first try. Retrying...');
       await sleep(400); 
       result = await geminiGenerateJson({
-        // small nudge so the model doesn't repeat the same empty output
         prompt: `${prompt}\n\nRETRY: previous response had no ideas. Return EXACTLY 3 complete ideas.`,
         jsonSchemaNote: schemaNote,
-        temperature: 0.6, // more deterministic
+        temperature: 0.6,
       });
-      ideas = toIdeas(result, weather);
+      ideas = toIdeas(result, weather, body, plannedLabel, suburb, placeType);
+    }
+    
+    if (ideas.length === 0) {
+  // console.warn('[playdate-generate] Empty ideas on second try. Final retry...');
+      await sleep(400); 
+      result = await geminiGenerateJson({
+        prompt: `${prompt}\n\nFINAL RETRY: Return EXACTLY 3 complete structured ideas with all required content fields.`,
+        jsonSchemaNote: schemaNote,
+        temperature: 0.5,
+      });
+      ideas = toIdeas(result, weather, body, plannedLabel, suburb, placeType);
     }
 
-    // // final fallback so client never gets []
-    // if (ideas.length === 0) {
-    //   return res.json({
-    //     ideas: [{
-    //       title: 'At-home Build & Play',
-    //       cardTitle: 'At-home Build & Play',
-    //       cardExcerpt: 'Simple, low-mess indoor fun for 45–60 mins.',
-    //       summary: 'Easy at-home activity using common household items.',
-    //       html: `<article class='pd-doc'><style>${BASE_CSS}</style>
-    //         <div class='pd-hero'><h1 class='pd-title'>At-home Build & Play</h1></div>
-    //         <div class='pd-body'>
-    //           <div class='pd-section'><h2 class='pd-h2'>Steps</h2><p>Use cushions and boxes to build a mini world…</p></div>
-    //           <footer class='pd-section pd-footer'>Generated by <strong>PlayDate AI Planner</strong> • oneparentvic.me • A4 print-ready</footer>
-    //         </div>
-    //       </article>`
-    //     }]
-    //   });
-    // }
+    // third retry as requested - most deterministic settings
+    if (ideas.length === 0) {
+  // console.warn('[playdate-generate] Empty ideas on third try. Last attempt...');
+      await sleep(500); 
+      result = await geminiGenerateJson({
+        prompt: `${prompt}\n\nLAST ATTEMPT: Generate exactly 3 activity ideas. Do not return empty response.`,
+        jsonSchemaNote: schemaNote,
+        temperature: 0.3,
+      });
+      ideas = toIdeas(result, weather, body, plannedLabel, suburb, placeType);
+    }
 
     return res.json({ ideas });
-
   } catch (e) {
-    console.error(e);
+  // console.error(e);
     const code = e && e.code === "NO_KEY" ? 501 : 500;
     return res.status(code).json({ ok: false, message: e?.message || "Generation failed" });
   }
 });
 
-
+// export the router
 module.exports = router;

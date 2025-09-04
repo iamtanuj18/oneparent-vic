@@ -1,63 +1,89 @@
+// src/pages/PlaydatePage.jsx
 import "./PlaydatePage.css";
 import { Helmet } from "react-helmet-async";
+import { useState } from "react";
 import PlayDateWizard from "../../components/playdate/PlayDateWizard";
-import howitworks from "../../assets/howitworks.svg";
+import playdastescg from "../../assets/playdate.svg";
 
+// playdate planner main page
 export default function PlaydatePage() {
+  // state for showing wizard and transition
+  const [showWizard, setShowWizard] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
+  // start wizard with transition
+  const handleStartWizard = () => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setShowWizard(true);
+      setIsTransitioning(false);
+    }, 450);
+  };
+
+  // main ui for playdate page
   return (
     <>
       <Helmet>
         <title>PlayDate Planner — OneParent VIC</title>
         <meta
           name="description"
-          content="PlayDate is your smart AI-powered activity planner. In just 2 minutes, get 3 curated ideas to enjoy quality time with your kids—without the stress of endless searching."
+          content="get personalised activity suggestions for your kids. no more endless searching or “i don’t know what to do” moments. ready to begin?"
         />
       </Helmet>
 
-      {/* hero */}
-      <section className="playdate-hero animate-fadeIn">
-        <div className="container">
-          <div className="row align-items-center g-5">
-            {/* left copy */}
-            <div className="col-lg-7 animate-slideUp">
-              <h1 className="playdate-title">
-                PlayDate
-                <span className="d-block playdate-subtitle">your AI-powered activity planner</span>
-              </h1>
+      {/* hero section before wizard starts */}
+      {!showWizard && (
+        <section className={`hero-section ${isTransitioning ? "fade-out" : "fade-in"}`}>
+          <div className="container" style={{ paddingTop: 0 }}>
+            <div className="row g-5 align-items-center" style={{ minHeight: "calc(100vh - 80px)" }}>
+              {/* left column with heading and button */}
+              <div className="col-12 col-lg-6 col-xl-7">
+                <div className="hero-content animate-slide-up">
+                  <h1 className="display-3 fw-bold text-dark mb-4 animate-slide-up animate-delay-100">
+                    struggling to plan meaningful activities
+                    <span className="text-primary"> with your kids?</span>
+                  </h1>
+                  <p className="lead text-muted mb-4 animate-slide-up animate-delay-200">
+                    get personalised activity suggestions created using our playdate planner.
+                    no more endless searching or “i don’t know what to do” moments. ready to begin?
+                  </p>
+                  <div className="animate-slide-up animate-delay-300">
+                    <button
+                      className="btn btn-primary btn-lg px-4 py-3"
+                      onClick={handleStartWizard}
+                      disabled={isTransitioning}
+                    >
+                      try now
+                      <svg className="ms-2" width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path d="m7.5 15 5-5-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
 
-              <p className="playdate-body">
-                PlayDate is the simplest tool to help when you&apos;re out of ideas and too exhausted to
-                plan. With a short, interactive 2-minute journey, we generate 3 curated activities
-                tailored for you and your kids. No more juggling dozens of tabs or stressing about
-                what to do — just quick, doable fun.
-              </p>
-
-              <a href="#playdate-wizard" className="btn btn-secondary playdate-cta animate-bounce">
-                Try Now
-              </a>
-            </div>
-
-            {/* right visual */}
-            <div className="col-lg-5 animate-slideUp animate-delay-200">
-              <div className="playdate-visual">
-                <div className="text-center playdate-visual-label">How it works</div>
-                <p className="playdate-visual-sub">
-                  Enter a few quick details — time, energy, budget, place etc. — and we&apos;ll generate
-                  3 curated ideas for your family.
-                </p>
-                <img src={howitworks} alt="How it works" className="playdate-visual-svg animate-float" />
+              {/* right column with svg image */}
+              <div className="col-12 col-lg-6 col-xl-5">
+                <div className="hero-art animate-slide-up animate-delay-400">
+                  <img
+                    src={playdastescg}
+                    alt="how it works: quick inputs, ideas, plan ready"
+                    className="hero-art-img"
+                    loading="eager"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* wizard */}
-      <section id="playdate-wizard" className="playdate-wizard animate-fadeIn animate-delay-400">
-        <div className="container">
-          <PlayDateWizard />
-        </div>
-      </section>
+      {/* wizard section after button click */}
+      {showWizard && (
+        <section id="playdate-wizard" className={`wizard-section ${isTransitioning ? "fade-out" : "fade-in"}`}>
+            <PlayDateWizard />
+        </section>
+      )}
     </>
   );
 }

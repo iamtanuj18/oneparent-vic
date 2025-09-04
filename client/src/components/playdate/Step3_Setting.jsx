@@ -2,8 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import "./Step3_Setting.css";
 import { fetchSuburbList } from "../../lib/api/playdate";
 
-const Step3_Setting = ({ onNext, _onBack, data }) => {
-  /* local form state */
+// step 3 for setting up playdate activity
+const Step3_Setting = ({ onNext, data }) => {
+  // form state for all fields
   const [form, setForm] = useState({
     location: data.location || "",
     place: data.place || "",
@@ -14,41 +15,35 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
     plannedTime: data.plannedTime || "",
   });
 
-  /* separate input text for autocomplete */
+  // input state for location search
   const [locationInput, setLocationInput] = useState(data.location || "");
   const [showList, setShowList] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
 
-  /* autocomplete backend state */
+  // state for remote suburb search
   const [remoteSuburbs, setRemoteSuburbs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  /* errors only after submit */
+  // error state for form validation
   const [errors, setErrors] = useState({});
 
-  /* static options */
+  // options for pills
   const placeOptions    = useMemo(() => ["Indoor", "Outdoor"], []);
   const homeTypeOptions = useMemo(() => ["Apartment", "House", "Other"], []);
   const timeOptions     = useMemo(() => ["15–30 mins", "30–60 mins", "1–2 hrs"], []);
   const budgetOptions   = useMemo(() => ["Free", "< $15", "< $30", "< $50"], []);
 
-  /* tiny helpers */
-  const pad2   = (n) => String(n).padStart(2, "0");
-  const isoDate= (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-  const isoTime= (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
-  const sameYMD = (a, b) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-
-  // aus date format
+  // helper to pad numbers for date
+  const pad2 = (n) => String(n).padStart(2, "0");
+  // helper to format date as yyyy-mm-dd
+  const isoDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  // helper to format date and time for australia
   const formatAusDateTime = (dateStr, timeStr = null) => {
     if (!dateStr) return "";
     const date = new Date(dateStr + "T00:00:00");
     const day = date.getDate();
-    const monthNames = [
-      "January","February","March","April","May","June",
-      "July","August","September","October","November","December"
-    ];
+    const monthNames = ["January","February","March","April","May","June","July","August","September","October","November","December"];
     const month = monthNames[date.getMonth()];
     const year = date.getFullYear();
     let result = `${day} ${month} ${year}`;
@@ -61,20 +56,14 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
     return result;
   };
 
-  /* date window: >= now+1h and <= now+7d */
-  const now   = new Date();
-  const minDT = new Date(now.getTime() + 60 * 60 * 1000);
-  const maxDT = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-
+  // set min and max date for planning
+  const now = new Date();
+  const minDT = new Date(now.getTime()); // no +1 hour
+  const maxDT = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
   const minDateStr = isoDate(minDT);
   const maxDateStr = isoDate(maxDT);
-  const earliestIsToday = sameYMD(minDT, now);
 
-  /* time bounds only on boundary days */
-  const minTimeStr = form.plannedDate === minDateStr ? isoTime(minDT) : undefined;
-  const maxTimeStr = form.plannedDate === maxDateStr ? isoTime(maxDT) : undefined;
-
-  /* clear homeType if switched to outdoor */
+  // reset home type if outdoor is selected
   useEffect(() => {
     if (form.place === "Outdoor" && form.homeType) {
       setForm((p) => ({ ...p, homeType: "" }));
@@ -82,16 +71,17 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
     }
   }, [form.place, form.homeType]);
 
-  /* field setter + clear its error */
+  // update field and clear error
   const setField = (name, value) => {
     setForm((p) => ({ ...p, [name]: value }));
     setErrors((p) => ({ ...p, [name]: "" }));
   };
 
+  // get selected date and time as date object
   const selectedDT = (draft) =>
     draft.plannedDate && draft.plannedTime ? new Date(`${draft.plannedDate}T${draft.plannedTime}`) : null;
 
-  /* fetch suburbs from backend with debounce */
+  // fetch suburb list when typing location
   useEffect(() => {
     const q = locationInput.trim();
     if (q.length < 3) {
@@ -106,26 +96,29 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
       try {
         const res = await fetchSuburbList(q);
         setRemoteSuburbs(res.items.map((r) => r.suburb));
-      } catch (e) {
+      } catch {
         setError("Failed to fetch suburbs");
         setRemoteSuburbs([]);
       } finally {
         setLoading(false);
       }
-    }, 300); // debounce
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [locationInput]);
 
+  // select a suburb from the list
   const selectSuburb = (name) => {
     setLocationInput(name);
-    setField("location", name); // store canonical name
+    setField("location", name);
     setShowList(false);
     setActiveIdx(-1);
   };
 
+  // refs for input and list
   const inputRef = useRef(null);
   const listRef = useRef(null);
+  // close list when clicking away
   useEffect(() => {
     const onClickAway = (e) => {
       if (
@@ -141,7 +134,7 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
     return () => document.removeEventListener("mousedown", onClickAway);
   }, []);
 
-  /* simple validation */
+  // validate all fields
   const validate = (draft = form) => {
     const e = {};
     if (!locationInput.trim()) {
@@ -160,23 +153,15 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
     const sel = selectedDT(draft);
     if (sel) {
       if (sel < minDT) {
-        if (draft.plannedDate === minDateStr) {
-          const dayWord = earliestIsToday ? "today" : formatAusDateTime(isoDate(minDT));
-          e.plannedTime = `Start time must be after ${formatAusDateTime(isoDate(minDT), isoTime(minDT))} ${dayWord}.`;
-        } else {
-          e.plannedDate = `Pick ${formatAusDateTime(isoDate(minDT))} or later.`;
-        }
+        e.plannedDate = `Pick ${formatAusDateTime(minDateStr)} or later.`;
       } else if (sel > maxDT) {
-        if (draft.plannedDate === maxDateStr) {
-          e.plannedTime = `Start time must be before ${formatAusDateTime(isoDate(maxDT), isoTime(maxDT))}.`;
-        } else {
-          e.plannedDate = `Pick ${formatAusDateTime(isoDate(maxDT))} or earlier.`;
-        }
+        e.plannedDate = `Pick ${formatAusDateTime(maxDateStr)} or earlier.`;
       }
     }
     return e;
   };
 
+  // handle next button click
   const handleNext = () => {
     const draft = { ...form };
     const current = validate(draft);
@@ -184,7 +169,7 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
     if (Object.keys(current).length === 0) onNext(draft);
   };
 
-  /* small pill group */
+  // pill group for options
   const PillGroup = ({ name, value, options }) => (
     <div className="option-row" role="group" aria-label={name}>
       {options.map((opt) => (
@@ -201,11 +186,12 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
     </div>
   );
 
+  // main form ui
   return (
     <div className="step-form animate-fade-in">
       <h4 className="mb-4">Lets personalise your activity setting</h4>
 
-      {/* location (autocomplete) */}
+      {/* location input and suburb search */}
       <div className="mb-3 position-relative">
         <label htmlFor="pd-location" className="form-label">
           Your suburb or town <span className="text-danger">*</span>
@@ -218,7 +204,7 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
           value={locationInput}
           onChange={(e) => {
             setLocationInput(e.target.value);
-            setField("location", ""); // clear until selection
+            setField("location", "");
             setShowList(true);
             setActiveIdx(-1);
           }}
@@ -233,10 +219,7 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
               setActiveIdx((i) => Math.max(0, i - 1));
             } else if (e.key === "Enter") {
               e.preventDefault();
-              const pick =
-                activeIdx >= 0 ? remoteSuburbs[activeIdx]
-                : remoteSuburbs.length === 1 ? remoteSuburbs[0]
-                : null;
+              const pick = activeIdx >= 0 ? remoteSuburbs[activeIdx] : remoteSuburbs.length === 1 ? remoteSuburbs[0] : null;
               if (pick) selectSuburb(pick);
             } else if (e.key === "Escape") {
               setShowList(false);
@@ -249,7 +232,9 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
         />
         {errors.location && <div className="invalid-feedback">{errors.location}</div>}
 
-        {loading && <div className="form-text text-muted">Searching suburbs…</div>}
+        {showList && loading && !form.location && (
+          <div className="form-text text-muted">Searching suburbs…</div>
+        )}
         {error && !errors.location && <div className="form-text text-danger">{error}</div>}
 
         {showList && remoteSuburbs.length > 0 && (
@@ -258,25 +243,31 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
             style={{ zIndex: 10, maxHeight: 240, overflow: "auto" }}
             ref={listRef}
             role="listbox"
-            aria-label="Suburb suggestions"
           >
-            {remoteSuburbs.map((name, idx) => (
+            {remoteSuburbs.map((suburb, idx) => (
               <li
-                key={name}
-                className={`list-group-item list-group-item-action ${idx === activeIdx ? "active" : ""}`}
+                key={suburb}
+                className={`list-group-item list-group-item-action${activeIdx === idx ? " active" : ""}`}
+                style={{
+                  cursor: "pointer",
+                  background: activeIdx === idx ? "#1769ff" : "#fff",
+                  color: activeIdx === idx ? "#fff" : "#222",
+                  fontWeight: activeIdx === idx ? 500 : 400,
+                  transition: "background 0.2s, color 0.2s"
+                }}
+                onMouseDown={() => selectSuburb(suburb)}
                 onMouseEnter={() => setActiveIdx(idx)}
-                onMouseDown={(e) => { e.preventDefault(); selectSuburb(name); }}
                 role="option"
-                aria-selected={idx === activeIdx}
+                aria-selected={activeIdx === idx}
               >
-                {name}
+                {suburb}
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      {/* place */}
+      {/* place selection pills */}
       <div className="mb-3">
         <label className="form-label">
           Where should the activity happen? <span className="text-danger">*</span>
@@ -285,7 +276,7 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
         {errors.place && <div className="text-danger small mt-1">{errors.place}</div>}
       </div>
 
-      {/* home type (only if indoor) */}
+      {/* home type pills if indoor is selected */}
       {form.place === "Indoor" && (
         <div className="mb-3">
           <label className="form-label">
@@ -296,7 +287,7 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
         </div>
       )}
 
-      {/* time available */}
+      {/* time available pills */}
       <div className="mb-3">
         <label className="form-label">
           Time available for activity <span className="text-danger">*</span>
@@ -305,7 +296,7 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
         {errors.timeAvailable && <div className="text-danger small mt-1">{errors.timeAvailable}</div>}
       </div>
 
-      {/* budget */}
+      {/* budget pills */}
       <div className="mb-3">
         <label className="form-label">
           Your activity budget <span className="text-danger">*</span>
@@ -314,26 +305,30 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
         {errors.budget && <div className="text-danger small mt-1">{errors.budget}</div>}
       </div>
 
-      {/* planned date & time */}
+      {/* planned date and time inputs */}
       <div className="row gx-3 mb-1">
         <div className="col-md-6 mb-3">
           <label htmlFor="pd-date" className="form-label">
             Planned date <span className="text-danger">*</span>
           </label>
-          <input
-            id="pd-date"
-            type="date"
-            lang="en-AU"
-            className={`form-control ${errors.plannedDate ? "is-invalid" : ""}`}
-            value={form.plannedDate}
-            onChange={(e) => setField("plannedDate", e.target.value)}
-            min={minDateStr}
-            max={maxDateStr}
-            aria-invalid={!!errors.plannedDate}
-          />
+          <div style={{ position: 'relative' }} onClick={() => document.getElementById('pd-date').showPicker && document.getElementById('pd-date').showPicker()}>
+            <input
+              id="pd-date"
+              type="date"
+              lang="en-AU"
+              className={`form-control ${errors.plannedDate ? "is-invalid" : ""}`}
+              value={form.plannedDate}
+              onChange={(e) => setField("plannedDate", e.target.value)}
+              min={minDateStr}
+              max={maxDateStr}
+              aria-invalid={!!errors.plannedDate}
+              style={{ cursor: 'pointer' }}
+            />
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, cursor: 'pointer' }} />
+          </div>
           {errors.plannedDate && <div className="invalid-feedback">{errors.plannedDate}</div>}
           <small className="text-muted d-block mt-1">
-            Earliest: {formatAusDateTime(isoDate(minDT), isoTime(minDT))} • Latest: {formatAusDateTime(isoDate(maxDT), isoTime(maxDT))}
+            Earliest: {formatAusDateTime(minDateStr)} • Latest: {formatAusDateTime(maxDateStr)}
           </small>
         </div>
 
@@ -341,23 +336,25 @@ const Step3_Setting = ({ onNext, _onBack, data }) => {
           <label htmlFor="pd-time" className="form-label">
             Start time <span className="text-danger">*</span>
           </label>
-          <input
-            id="pd-time"
-            type="time"
-            lang="en-AU"
-            className={`form-control ${errors.plannedTime ? "is-invalid" : ""}`}
-            value={form.plannedTime}
-            onChange={(e) => setField("plannedTime", e.target.value)}
-            step="300"
-            min={minTimeStr}
-            max={maxTimeStr}
-            aria-invalid={!!errors.plannedTime}
-          />
+          <div style={{ position: 'relative' }} onClick={() => document.getElementById('pd-time').showPicker && document.getElementById('pd-time').showPicker()}>
+            <input
+              id="pd-time"
+              type="time"
+              lang="en-AU"
+              className={`form-control ${errors.plannedTime ? "is-invalid" : ""}`}
+              value={form.plannedTime}
+              onChange={(e) => setField("plannedTime", e.target.value)}
+              step="300"
+              aria-invalid={!!errors.plannedTime}
+              style={{ cursor: 'pointer' }}
+            />
+            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, cursor: 'pointer' }} />
+          </div>
           {errors.plannedTime && <div className="invalid-feedback">{errors.plannedTime}</div>}
         </div>
       </div>
 
-      {/* footer */}
+      {/* next button */}
       <div className="d-flex justify-content-end mt-4">
         <button className="btn btn-next" type="button" onClick={handleNext} title="Next">
           Next →

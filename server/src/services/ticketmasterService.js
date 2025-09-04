@@ -1,7 +1,8 @@
+// import location resolver and category map
 const { resolveLocation } = require("../utils/locationResolver");
 const CATEGORY_MAP = require("../utils/categoryMapping");
 
-// format to dd/mm/yyyy safely
+// format date to australian style
 function formatToAustralianDate(isoDate) {
   if (!isoDate) return "N/A";
   const d = new Date(isoDate);
@@ -13,7 +14,7 @@ function formatToAustralianDate(isoDate) {
   });
 }
 
-// trim description 
+// trim description and remove html tags
 function trimDescription(description, maxLength = 120) {
   if (!description) return "";
   
@@ -29,7 +30,7 @@ function trimDescription(description, maxLength = 120) {
   return lastSpace > 0 ? trimmed.substring(0, lastSpace) + '...' : trimmed + '...';
 }
 
-// iso  start and end of day
+// convert date to ticketmaster iso format
 function toTicketmasterDate(dateStr, endOfDay = false) {
   try {
     const d = new Date(dateStr);
@@ -42,6 +43,7 @@ function toTicketmasterDate(dateStr, endOfDay = false) {
   }
 }
 
+// get events from ticketmaster using filters
 async function getTicketmasterEvents(filters = {}) {
   const {
     category, // will be null for load more calls
@@ -112,4 +114,5 @@ async function getTicketmasterEvents(filters = {}) {
   }
 }
 
+// export the ticketmaster events function
 module.exports = { getTicketmasterEvents };
