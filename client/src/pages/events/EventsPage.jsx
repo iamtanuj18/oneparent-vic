@@ -9,7 +9,7 @@ const CATEGORIES = [
   "Family & Kids Activities",
   "Community & Support",
   "Wellbeing & Parenting",
-  "Learning & Development",
+  "Learning, Development & Exhibition",
   "Arts & Entertainment",
   "Markets & Local Events",
 ];
