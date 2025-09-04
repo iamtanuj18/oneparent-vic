@@ -188,11 +188,17 @@ const Step2_Kids = ({ onNext, data }) => {
             Energy Level <span className="text-danger">*</span>
           </label>
           <div className="energy-options" role="group" aria-label="Energy level">
-            {{
-              low: "Low",
-              medium: "Medium",
-              high: "High",
-            }[c.energy_level]}
+            {["Low", "Medium", "High"].map((level) => (
+              <button
+                type="button"
+                key={level}
+                className={`btn energy-btn ${c.energy_level === level ? "active" : ""}`}
+                onClick={() => handleField(activeIdx, "energy_level", level)}
+                aria-pressed={c.energy_level === level}
+              >
+                {level}
+              </button>
+            ))}
           </div>
           {errors[activeIdx]?.energy_level && <div className="text-danger small mt-1">{errors[activeIdx].energy_level}</div>}
         </div>

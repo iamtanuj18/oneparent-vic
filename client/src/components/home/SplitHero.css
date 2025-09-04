@@ -1,0 +1,140 @@
+/* split hero: clean light theme with colorful stats */
+.split-hero {
+  /* main hero section background and padding */
+  /* clean light theme tokens */
+  --accent: #0078d7;
+  --ink: #1a1a1a;
+  --muted: #6b7280;
+  --bg1: #fafafa;
+  --bg2: #f8f9fa;
+
+  padding: clamp(32px, 5vh, 48px) clamp(16px, 6vw, 96px);
+  background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 100%);
+}
+
+.split-hero__inner {
+  /* layout for hero content and stats */
+  max-width: 1220px;
+  margin: 0 auto;
+  min-height: 65vh;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: clamp(24px, 4vw, 48px);
+  align-items: center;
+}
+
+.split-hero__title {
+  /* main headline style */
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-size: clamp(2.6rem, 5.2vw, 4.6rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* stats layout without cards */
+.split-hero__stats {
+  /* flex layout for stats row */
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 2.5rem;
+  justify-content: flex-start;
+}
+
+.stat-item {
+  /* each stat block */
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+  max-width: 180px;
+}
+
+.stat-context {
+  /* stat context label */
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-value {
+  /* stat number style */
+  font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.stat-label {
+  /* stat description text */
+  font-size: 0.92rem;
+  color: #4b5563;
+  line-height: 1.3;
+}
+
+/* distinct colors for each stat value */
+.stat-item:nth-child(1) .stat-value { color: #2563eb; }   /* blue */
+.stat-item:nth-child(2) .stat-value { color: #dc2626; }   /* red */
+.stat-item:nth-child(3) .stat-value { color: #059669; }   /* emerald */
+.stat-item:nth-child(4) .stat-value { color: #7c3aed; }   /* violet */
+
+/* skeleton state */
+.skeleton { 
+  /* loading shimmer for stats */
+  position: relative; 
+  overflow: hidden;
+  height: 80px;
+  background: #e5e7eb;
+  border-radius: 8px;
+}
+
+.skeleton::after {
+  /* shimmer animation effect */
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, 
+    rgba(255,255,255,0) 0%, 
+    rgba(255,255,255,0.6) 50%, 
+    rgba(255,255,255,0) 100%);
+  animation: shimmer 1.2s infinite;
+}
+
+@keyframes shimmer { 
+  /* shimmer keyframes */
+  to { transform: translateX(100%); } 
+}
+
+/* responsive layout */
+@media (max-width: 1024px) {
+  .split-hero__inner { 
+    /* stack hero content on smaller screens */
+    grid-template-columns: 1fr; 
+    min-height: auto;
+    text-align: center;
+  }
+  .split-hero__stats { 
+    /* center stats on tablet */
+    justify-content: center; 
+  }
+}
+
+@media (max-width: 640px) {
+  .split-hero__stats { 
+    /* stack stats vertically on mobile */
+    flex-direction: column; 
+    gap: 1.2rem;
+    align-items: center;
+  }
+  .stat-item { 
+    /* full width stat blocks on mobile */
+    max-width: 100%; 
+    min-width: auto;
+    text-align: center;
+  }
+}

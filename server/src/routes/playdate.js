@@ -294,13 +294,12 @@ router.post("/playdate-safety-checks", async (req, res) => {
       const prompt = `
         Evaluate interests/goals for a family activity planner.
         For EACH item:
-        - unsafe for children -> type="unsafe" - Not just for children in general that involes risk or something illegal or something check if some interest or goal could lead to someting like this, interest could be anything in the sense eating, movies, some genre like kpop anime etc which could make sense in making the activity after all
-        - nonsense/gibberish -> type="gibberish" - this only mean the word even after typo doesnt make sense I mean it not even a word. small typing errors you can ignore
-        - off-topic for family-friendly planning -> type="off_topic" - but remember interests and goals could be anything off topic when its totally irrelevant
+        - unsafe for children -> type="unsafe" - Only if the item involves risk, illegal activity, or something clearly inappropriate for children. Interests can be anything reasonable, like eating, movies, music genres, etc.
+        - nonsense/gibberish -> type="gibberish" - Only mark as gibberish if the word is totally unrecognizable and not understandable at all, even with typos. If you can understand the word or guess the intent, do NOT mark it as gibberish. Minor typos and less relevant words should be ignored.
+        - off-topic for family-friendly planning -> type="off_topic" - Only if the item is totally irrelevant to family activities. Interests and goals can be broad, like relaxation, stress out, bonding, etc. These are NOT off-topic.
         Write a single user-facing summary "bannerMessage" in plain English, max 20 words and include 'and similar items' if needed.
         Keep it simple and actionable (e.g., "Unsafe or gibberish items found. Please replace: 'killing', 'fdsfdsf'").
-        Ignore the typing errors made by the users for words that you can understand. 
-        Additionally, off topic has to be very particular eg. relaxation, stress out, bonding etc are not off topic they can be used to formulate good activity plans.
+        Ignore small typing errors if you can understand the word or intent.
         Return ok=false if ANY issues exist.
         Parent age: ${body.parentAge}
         Children: ${JSON.stringify(body.children || [])}

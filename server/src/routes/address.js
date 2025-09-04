@@ -5,6 +5,22 @@ const router = express.Router();
 // get query function for database access
 const { query } = require("../db");
 
+// get all unique suburbs for frontend autocomplete
+router.get("/suburb-list-all", async (req, res) => {
+  try {
+    const sql = `
+      SELECT DISTINCT suburb
+      FROM vic_suburbs.vic_suburbs
+      WHERE suburb IS NOT NULL AND suburb <> ''
+      ORDER BY suburb ASC
+    `;
+    const { rows } = await query(sql);
+    return res.json({ items: rows });
+  } catch (e) {
+    return res.status(500).json({ ok: false, message: "lookup failed" });
+  }
+});
+
 // GET 
 // get a list of suburbs matching the search query
 router.get("/suburb-list", async (req, res) => {
