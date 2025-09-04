@@ -69,3 +69,14 @@ this project helps single parents in victoria, australia by providing tools, res
 - parameterized queries for database safety
 - frontend uses netlify security headers and cloudflare protection
 
+## Development setup
+
+- Backend runs on port **5000** by default.
+- Frontend (Vite) runs on port **5173** and **5174** by default.
+
+Steps:
+1. Copy env examples:
+   ```bash
+   cp server/.env.example server/.env.local
+   cp client/.env.example client/.env
+
