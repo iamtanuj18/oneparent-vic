@@ -219,7 +219,7 @@ export default function PlayDateWizard() {
         {serviceStatus === "error" && (
           <div className="pw-healthgate d-flex flex-column align-items-center justify-content-center py-5">
             <div className="alert alert-danger text-center" role="alert">
-              We couldn't connect to the playdate service.
+                We couldn&apos;t connect to the playdate service.
               <br />
               Please try again.
             </div>
