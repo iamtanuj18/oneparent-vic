@@ -309,6 +309,7 @@ const Step3_Setting = ({ onNext, data }) => {
             selected={form.plannedDate ? new Date(form.plannedDate) : null}
             onChange={date => setField("plannedDate", date ? date.toISOString().slice(0, 10) : "")}
             dateFormat="yyyy-MM-dd"
+            minDate={new Date()}
             className={`form-control ${errors.plannedDate ? "is-invalid" : ""}`}
             placeholderText="Select date"
             aria-invalid={!!errors.plannedDate}

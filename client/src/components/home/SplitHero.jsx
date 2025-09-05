@@ -44,17 +44,35 @@ export default function SplitHero({ theme = "light", title, stats = [], loading 
         </h1>
 
         {/* show skeletons if loading, otherwise show stats */}
-        <div className="split-hero__stats" aria-live="polite">
+        <div className="split-hero__stats" aria-live="polite" style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gridTemplateRows: 'auto auto',
+          gap: '32px 48px',
+          maxWidth: 700,
+          margin: '0 auto',
+        }}>
           {loading
-            ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="stat-item skeleton" />)
-            : stats.slice(0, 4).map((s, i) => (
-                <div key={s.id ?? i} className="stat-item">
-                  {/* show stat context, value, and label */}
-                  {s.context && <div className="stat-context">{s.context}</div>}
-                  <div className="stat-value" data-animate data-final={s.value} data-type={s.type ?? "int"}>…</div>
-                  {s.label && <div className="stat-label">{s.label}</div>}
-                </div>
-              ))
+            ? Array.from({ length: 3 }).map((_, i) => <div key={i} className="stat-item skeleton" />)
+            : (
+                <>
+                  <div className="stat-item" style={{gridColumn:1, gridRow:1}}>
+                    {stats[0]?.context && <div className="stat-context">{stats[0].context}</div>}
+                    <div className="stat-value" data-animate data-final={stats[0]?.value} data-type={stats[0]?.type ?? "int"}>…</div>
+                    {stats[0]?.label && <div className="stat-label">{stats[0].label}</div>}
+                  </div>
+                  <div className="stat-item" style={{gridColumn:2, gridRow:1}}>
+                    {stats[1]?.context && <div className="stat-context">{stats[1].context}</div>}
+                    <div className="stat-value" data-animate data-final={stats[1]?.value} data-type={stats[1]?.type ?? "int"}>…</div>
+                    {stats[1]?.label && <div className="stat-label">{stats[1].label}</div>}
+                  </div>
+                  <div className="stat-item" style={{gridColumn:1, gridRow:2}}>
+                    {stats[2]?.context && <div className="stat-context">{stats[2].context}</div>}
+                    <div className="stat-value" data-animate data-final={stats[2]?.value} data-type={stats[2]?.type ?? "int"}>…</div>
+                    {stats[2]?.label && <div className="stat-label">{stats[2].label}</div>}
+                  </div>
+                </>
+              )
           }
         </div>
       </div>

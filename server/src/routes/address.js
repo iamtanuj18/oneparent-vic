@@ -1,5 +1,4 @@
 // server/src/routes/address.js
-// use express for routing
 const express = require("express");
 const router = express.Router();
 // get query function for database access

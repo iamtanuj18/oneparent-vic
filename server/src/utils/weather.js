@@ -152,7 +152,7 @@ async function getWeatherContext(place, date, timeOpt) {
   var contextString = labelParts.join(" · ");
 
   var finalPayload = { place: g, hour: hour, day: day, contextString: contextString };
-  // console.log("[weather] final context:", JSON.stringify(finalPayload, null, 2));
+  console.log("[weather] final context:", JSON.stringify(finalPayload, null, 2));
 
   return finalPayload;
 }
