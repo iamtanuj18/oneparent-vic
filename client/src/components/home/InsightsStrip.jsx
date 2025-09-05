@@ -15,64 +15,100 @@ export default function InsightsStrip({ state = "VIC" }) {
   const [err, setErr] = useState(null);
 
   useEffect(() => {
-    fetchInsightsOverview({ state })
-      .then(setOverview)
-      .catch((e) => setErr(e.message));
-  }, [state]);
-
-  useEffect(() => {
-    fetchInsightsLabourBars(state, year)
-      .then((d) => {
-        setLabour(d);
-        if (d?.year) setYear(d.year);
-      })
-      .catch((e) => setErr(e.message));
+    const cacheKey = "oneparent_vic_insights";
+    const cache = localStorage.getItem(cacheKey);
+    let usedCache = false;
+    if (cache) {
+      try {
+        const { overview: cachedOverview, labour: cachedLabour, pps12: cachedPps12, year: cachedYear, ts } = JSON.parse(cache);
+        if (cachedOverview && cachedLabour && cachedPps12 && ts && Date.now() - ts < 30 * 60 * 1000) {
+          setOverview(cachedOverview);
+          setLabour(cachedLabour);
+          setPps12(cachedPps12);
+          if (cachedYear) setYear(cachedYear);
+          usedCache = true;
+        }
+      } catch { /* ignore cache parse errors */ }
+    }
+    if (!usedCache) {
+      let nextOverview = null, nextLabour = null, nextPps12 = null, nextYear = year;
+      Promise.all([
+        fetchInsightsOverview({ state }).then((d) => { nextOverview = d; setOverview(d); }),
+        fetchInsightsLabourBars(state, year).then((d) => { nextLabour = d; setLabour(d); if (d?.year) { setYear(d.year); nextYear = d.year; } }),
+        fetchPpsTrends(state, "state_total").then((series) => { nextPps12 = series.slice(-12); setPps12(nextPps12); })
+      ]).then(() => {
+        localStorage.setItem(cacheKey, JSON.stringify({ overview: nextOverview, labour: nextLabour, pps12: nextPps12, year: nextYear, ts: Date.now() }));
+      }).catch((e) => setErr(e.message));
+    }
   }, [state, year]);
 
-  useEffect(() => {
-    fetchPpsTrends(state, "state_total")
-      .then((series) => setPps12(series.slice(-12)))
-      .catch((e) => setErr(e.message));
-  }, [state]);
-
-  // make sparkline data for card 1
-  const ppsSpark = useMemo(() => {
+  // summarize trend for card 1 and prepare a simple bar visual
+  const ppsSummary = useMemo(() => {
     if (!pps12.length) return null;
-    const vals = pps12.map((d) => d.value);
-    const min = Math.min(...vals);
-    const max = Math.max(...vals);
-    const w = 320, h = 84, pad = 8;
-    const toX = (i) => pad + (i / (pps12.length - 1)) * (w - pad * 2);
-    const toY = (v) => (max === min ? h / 2 : h - pad - ((v - min) / (max - min)) * (h - pad * 2));
-    const points = pps12.map((d, i) => `${toX(i)},${toY(d.value)}`).join(" ");
     const first = pps12[0].value;
     const last = pps12[pps12.length - 1].value;
     const diff = last - first;
     const pct = first ? Math.round((diff / first) * 100) : 0;
     const trendWord = diff === 0 ? "stayed about the same" : diff > 0 ? "increased" : "decreased";
-    return { w, h, points, first, last, diff, pct, trendWord };
+    // For bar visual: show start and end as a bar
+    const min = Math.min(first, last);
+    const max = Math.max(first, last);
+    const barW = 180;
+    const startPct = Math.round(((first - min) / (max - min || 1)) * 100);
+    const endPct = Math.round(((last - min) / (max - min || 1)) * 100);
+    return { first, last, diff, pct, trendWord, barW, startPct, endPct };
   }, [pps12]);
 
-  // make work reality bars for card 2
+  // clarify work reality breakdown for single-parent families
   const singleBars = useMemo(() => {
     if (!labour?.single) return [];
     const total = labour.single.reduce((s, x) => s + (x.value || 0), 0) || 1;
-    return labour.single.map((x) => ({
-      name: x.name,
-      pct: Math.round(((x.value || 0) / total) * 100),
-    }));
+    const employed = labour.single.find((x) => x.name.toLowerCase().includes("employed"))?.value || 0;
+    const unemployed = labour.single.find((x) => x.name.toLowerCase().includes("unemployed"))?.value || 0;
+    const notInLabour = labour.single.find((x) => x.name.toLowerCase().includes("not in"))?.value || 0;
+    const inLabourForce = employed + unemployed;
+    return [
+      {
+        name: `Of all single-parent families in the labour force:`,
+        pct: null,
+        isHeader: true,
+      },
+      {
+        name: `• ${inLabourForce ? Math.round((employed/inLabourForce)*100) : 0}% are employed`,
+        pct: inLabourForce ? Math.round((employed/inLabourForce)*100) : 0,
+      },
+      {
+        name: `• ${inLabourForce ? Math.round((unemployed/inLabourForce)*100) : 0}% are unemployed`,
+        pct: inLabourForce ? Math.round((unemployed/inLabourForce)*100) : 0,
+      },
+      {
+        name: `Of all single-parent families:`,
+        pct: null,
+        isHeader: true,
+      },
+      {
+        name: `${Math.round((notInLabour/total)*100)}% are not in the labour force`,
+        pct: Math.round((notInLabour/total)*100),
+      },
+    ];
   }, [labour]);
 
-  // make families snapshot for card 3
+  // make families snapshot for card 3, and prepare a bar visual
   const families = useMemo(() => {
     if (!overview) return null;
-    const k = (n) => Math.max(0, Math.round((Number(n) || 0) * 1000)); // table stores in thousands
+    const k = (n) => Math.max(0, Math.round((Number(n) || 0) * 1000));
+    const total = k(overview.total_families);
+    const with014 = k(overview.with_children_0_14);
+    const with14plus = total - with014;
+    const pct014 = total ? Math.round((with014 / total) * 100) : 0;
+    const pct14plus = total ? Math.round((with14plus / total) * 100) : 0;
     return {
       year: overview.year ?? "—",
-      total: k(overview.total_families),
-      with014: k(overview.with_children_0_14),
-      with024: null, // not available in this table; hide
-      withoutDeps: null, // not available; hide
+      total,
+      with014,
+      with14plus,
+      pct014,
+      pct14plus,
     };
   }, [overview]);
 
@@ -85,26 +121,14 @@ export default function InsightsStrip({ state = "VIC" }) {
 
   {/* card 1 shows how vic is changing */}
         <article className="insight-card">
-          <header className="insight-title">How VIC is changing</header>
-          {ppsSpark ? (
-            <>
-              <svg
-                className="spark"
-                viewBox={`0 0 ${ppsSpark.w} ${ppsSpark.h}`}
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                <polyline fill="none" stroke="currentColor" strokeWidth="3" points={ppsSpark.points} />
-              </svg>
-              <p className="insight-copy">
-                Parenting Payment (Single) recipients in VIC {ppsSpark.trendWord} from{" "}
-                <b>{ppsSpark.first.toLocaleString()}</b> to{" "}
-                <b>{ppsSpark.last.toLocaleString()}</b> over the last 12 months
-                {ppsSpark.diff !== 0 ? (
-                  <> (<b>{(ppsSpark.diff > 0 ? "+" : "") + ppsSpark.diff.toLocaleString()}</b>, ~{Math.abs(ppsSpark.pct)}%).</>
-                ) : "."}
-              </p>
-            </>
+          <header className="insight-title">Parenting Payment (Single) recipients in VIC</header>
+          {ppsSummary ? (
+            <p className="insight-copy">
+              Over the last 12 months, the number of Parenting Payment (Single) recipients in Victoria increased from <b>{ppsSummary.first.toLocaleString()}</b> to <b>{ppsSummary.last.toLocaleString()}</b>
+              {ppsSummary.diff !== 0 ? (
+                <> (<b>{(ppsSummary.diff > 0 ? "+" : "") + ppsSummary.diff.toLocaleString()}</b>, ~{Math.abs(ppsSummary.pct)}%).</>
+              ) : "."}
+            </p>
           ) : (
             <p className="insight-copy">Loading…</p>
           )}
@@ -116,7 +140,9 @@ export default function InsightsStrip({ state = "VIC" }) {
           {singleBars.length ? (
             <>
               <ul className="bars">
-                {singleBars.map((b) => (
+                {singleBars.map((b, i) => b.isHeader ? (
+                  <li key={b.name} className="bar" style={{fontWeight:600, color:'#0a1020', marginTop:i>0?12:0}}>{b.name}</li>
+                ) : (
                   <li key={b.name} className="bar">
                     <span className="bar-label">{b.name}</span>
                     <div className="bar-track" role="img" aria-label={`${b.name} ${b.pct}%`}>
@@ -139,7 +165,8 @@ export default function InsightsStrip({ state = "VIC" }) {
           {families ? (
             <div className="kv">
               <div><span className="k">Total:</span> <span className="v">{fmt(families.total)} families</span></div>
-              <div><span className="k">With children under 14:</span> <span className="v">{fmt(families.with014)} families</span></div>
+              <div><span className="k">With children under 14 years old:</span> <span className="v">{fmt(families.with014)} families</span></div>
+              <div><span className="k">With children 14 years old and over:</span> <span className="v">{fmt(families.with14plus)} families</span></div>
             </div>
           ) : (
             <p className="insight-copy">Loading…</p>

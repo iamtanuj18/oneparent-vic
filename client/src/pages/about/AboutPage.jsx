@@ -22,7 +22,7 @@ export default function AboutPage() {
     },
     {
       name: "Nirmal Kumar Kumaresan",
-      course: "Master of Information Technology",
+      course: "Master of Data Science",
       image: nirmalImg
     },
     {

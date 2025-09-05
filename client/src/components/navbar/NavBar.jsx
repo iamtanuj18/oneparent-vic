@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { NavLink, Link, useLocation } from "react-router-dom";
 import "./NavBar.css";
 
-// Updated NavBar to reflect a professional, industrial-level design with improved hover effects and active states
 const NavBar = () => {
   const { pathname } = useLocation();
 
@@ -42,11 +41,7 @@ const NavBar = () => {
   return (
     <nav
       className="navbar navbar-expand-lg navbar-light sticky-top border-bottom"
-      style={{
-        minHeight: "82px",
-        background: "#ffffff",
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-      }}
+      style={{ minHeight: "82px", background: "#eef1f5" }}
     >
       <div className="container-xl">
         {/* Brand */}
@@ -107,24 +102,11 @@ const NavBar = () => {
           <span className="toggler-icon bottom-bar"></span>
         </button>
 
-        {/* Collapse */}
+        {/* Collapse (in-flow so it "expands" the header on mobile) */}
         <div className="collapse navbar-collapse" id="mainNavbar">
           <ul className="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center">
             <li className="nav-item">
-              <NavLink
-                to="/"
-                end
-                className="nav-link"
-                style={({ isActive }) =>
-                  isActive
-                    ? {
-                        color: "#18b6ff",
-                        fontWeight: 600,
-                        borderBottom: "2px solid #18b6ff",
-                      }
-                    : { color: "#444b5a", fontWeight: 500 }
-                }
-              >
+              <NavLink to="/" end className="nav-link">
                 Home
               </NavLink>
             </li>
@@ -140,7 +122,6 @@ const NavBar = () => {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 data-bs-auto-close="outside"
-                style={{ color: "#444b5a", fontWeight: 500 }}
               >
                 Events & Activities
               </a>
@@ -195,7 +176,6 @@ const NavBar = () => {
                 data-bs-toggle="dropdown"
                 aria-expanded="false"
                 data-bs-auto-close="outside"
-                style={{ color: "#444b5a", fontWeight: 500 }}
               >
                 More
               </a>
