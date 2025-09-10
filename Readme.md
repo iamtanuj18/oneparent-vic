@@ -11,11 +11,6 @@ this project helps single parents in victoria, australia by providing tools, res
 
 ## live links
 
-**production server:**
-- https://oneparent-vic-prod-9a338acb8033.herokuapp.com/
-
-**development server:**
-- https://oneparent-dev-api.onrender.com/
 
 **production frontend:**
 - https://oneparentvic.me/
