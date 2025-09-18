@@ -9,7 +9,7 @@ router.get("/suburb-list-all", async (req, res) => {
   try {
     const sql = `
       SELECT DISTINCT suburb
-      FROM vic_suburbs.vic_suburbs
+      FROM vic_geo.vic_suburb_list
       WHERE suburb IS NOT NULL AND suburb <> ''
       ORDER BY suburb ASC
     `;
