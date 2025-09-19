@@ -1,6 +1,7 @@
 // import location resolver and category map
 const { resolveLocation } = require("../utils/locationResolver");
-const CATEGORY_MAP = require("../utils/categoryMapping");
+const { CATEGORY_MAP } = require("../utils/categoryMapping");
+const { CONFIG } = require("../config");
 
 // format date to australian style
 function formatToAustralianDate(isoDate) {
@@ -53,7 +54,7 @@ async function getTicketmasterEvents(filters = {}) {
     perPage = 6,
   } = filters;
 
-  const API_KEY = process.env.TICKETMASTER_KEY;
+  const API_KEY = CONFIG.TICKETMASTER_KEY;
   const BASE_URL = "https://app.ticketmaster.com/discovery/v2/events.json";
 
   // only get keywords for initial search, not pagination

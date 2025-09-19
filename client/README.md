@@ -1,65 +1,36 @@
-# oneparent-vic client
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-this is the frontend web app for the oneparent-vic project. it is built with react and vite. the app helps single parents in victoria, australia by providing tools, resources, and community features.
+## Getting Started
 
-## features
-- modern react app with vite for fast builds and hot reload
-- pages for events, playdates, benefits, childcare, wellbeing, transitions, about, and more
-- reusable components for navigation, footer, images, and forms
-- api calls to the backend server for dynamic data
-- responsive design for desktop and mobile
+First, run the development server:
 
-## folder structure
-- `src/` - main react code
-  - `components/` - reusable ui components
-  - `pages/` - main app pages
-  - `lib/` - helper libraries and api calls
-  - `assets/` - images and icons
-  - `router/` - app routing
-- `public/` - static assets
-
-## requirements
-- node.js 20 or newer
-- npm
-
-## install dependencies
-
-open a terminal in the `client` folder and run:
-
-npm install
-
-
-## running the app
-
-for development (with hot reload):
-
+```bash
 npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
 
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-for production build:
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-npm run build
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-to preview the production build:
+## Learn More
 
-npm run preview
+To learn more about Next.js, take a look at the following resources:
 
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-## environment variables
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-create a `.env` file in the `client` folder if you need to set api endpoints or secrets. example:
+## Deploy on Vercel
 
-VITE_API_URL=https://oneparent-vic-prod-9a338acb8033.herokuapp.com/
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-
-## deployment
-
-- deployed on netlify for production and development
-- see netlify.toml for build and security settings
-
-## api
-
-- connects to the backend server for all dynamic data
-- see `src/lib/api/` for api call details
-
-
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
