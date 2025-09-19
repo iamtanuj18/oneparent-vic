@@ -30,3 +30,7 @@ coverage/
 
 # --- Local runtime ---
 *.pid
+
+# --- Development Documentation ---
+WORKING_STYLE_GUIDE.md
+AI_DEVELOPER_INSTRUCTIONS.md
