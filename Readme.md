@@ -1,77 +1,143 @@
 
-# oneparent-vic project
+# OneParent VIC
 
-this project helps single parents in victoria, australia by providing tools, resources, and community features. it includes a backend server, a frontend web app, and is deployed using modern cloud services.
+A comprehensive platform supporting single parents across Victoria, Australia. Built with modern technologies to provide tools, resources, and community features that make single parenting easier.
 
-## overview
-- backend server: node.js + express, deployed on heroku and render
-- database: postgresql, hosted on heroku
-- frontend: react + vite, deployed on netlify
-- domain: managed by namecheap, protected by cloudflare
+## Technology Stack
 
-## live links
+**Frontend**
+- Next.js 14 with App Router
+- Tailwind CSS with custom design system
+- Framer Motion for animations
+- TypeScript for type safety
+- Deployed on Netlify
 
+**Backend**
+- Node.js with Express.js
+- PostgreSQL database (Heroku)
+- Security middleware (Helmet, Rate Limiting, CORS)
+- External API integrations (Ticketmaster, Eventfinda)
+- Deployed on Heroku (prod), Render (dev)
 
-**production frontend:**
-- https://oneparentvic.me/
-- alternative: https://oneparentvic-prod.netlify.app/
+**Infrastructure**
+- Domain: Namecheap with Cloudflare protection
+- CDN: Cloudflare
+- Database: Heroku Postgres
 
-**development frontend:**
-- https://oneparentvic-dev.netlify.app/
+## Live Applications
 
-## directory structure
+**Production**
+- Website: https://oneparentvic.me/
 
-- `client/` - frontend react app
-  - `src/` - main react code
-  - `public/` - static assets
-  - `components/` - reusable ui components
-  - `pages/` - main app pages
-  - `lib/` - helper libraries and api calls
-- `server/` - backend node.js server
-  - `src/` - main server code
-	 - `routes/` - api route handlers
-	 - `middleware/` - security, error, rate limit
-	 - `db/` - database connection
-	 - `services/` - external api integrations
-	 - `utils/` - helper functions
-- `datasets/` - data files
-- `docs/` - documentation
+## Project Structure
 
-## how to run locally
+```
+oneparent-vic/
+├── client/                    # Next.js Frontend Application
+│   ├── src/
+│   │   ├── app/              # App Router pages
+│   │   ├── components/       # Reusable UI components
+│   │   └── lib/             # Utilities and API clients
+│   ├── public/              # Static assets
+│   ├── next.config.ts       # Next.js configuration
+│   └── tailwind.config.js   # Tailwind CSS config
+├── server/                   # Express.js Backend API
+│   ├── src/
+│   │   ├── routes/          # API endpoints
+│   │   ├── middleware/      # Security and validation
+│   │   ├── services/        # External API integrations
+│   │   └── db/             # Database connection
+│   └── .env.example
+├── datasets/                # Data files
+└── docs/                   # Documentation
+```
 
-1. clone the repo
-2. install dependencies for both client and server:
-	- open terminal in `client` and run `npm install`
-	- open terminal in `server` and run `npm install`
-3. set up environment variables:
-	- create `.env` in `server` with your database url and secrets
-4. start the backend:
-	- in `server`, run `npm run dev` for development or `npm start` for production
-5. start the frontend:
-	- in `client`, run `npm run dev` for development or `npm run build` and `npm run preview` for production
+## Local Development Setup
 
-## deployment
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- PostgreSQL (or access to remote database)
 
-- server is deployed on heroku (prod) and render (dev)
-- database is hosted on heroku postgres
-- frontend is deployed on netlify
-- domain is managed by namecheap and protected by cloudflare
+### Backend Setup
+```bash
+cd server
+npm install
+cp .env.example .env.local
+# Add your database URL and API keys to .env.local
+npm run dev
+```
+Backend runs on http://localhost:5000
 
-## security
-- backend uses helmet for security headers
-- express-rate-limit for request limiting
-- cors for origin control
-- parameterized queries for database safety
-- frontend uses netlify security headers and cloudflare protection
+### Frontend Setup
+```bash
+cd client
+npm install
+npm run dev
+```
+Frontend runs on http://localhost:3000
 
-## Development setup
+## Deployment
 
-- Backend runs on port **5000** by default.
-- Frontend (Vite) runs on port **5173** and **5174** by default.
+**Frontend (Netlify)**
+- Build Command: `cd client && npm run build`
+- Publish Directory: `client/out`
 
-Steps:
-1. Copy env examples:
-   ```bash
-   cp server/.env.example server/.env.local
-   cp client/.env.example client/.env
+**Backend (Heroku)**
+- Buildpack: Node.js
+- Start Command: `npm start`
+
+## Available Scripts
+
+**Frontend (client/)**
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm start            # Start production server
+npm run lint         # Run ESLint
+```
+
+**Backend (server/)**
+```bash
+npm run dev          # Start development with nodemon
+npm start            # Start production server
+npm test             # Run tests
+```
+
+## Key Features
+
+### For Single Parents
+- PlayDate Planner: AI-powered activity suggestions
+- Find Events: Curated family-friendly events
+- Community Match: Find culturally diverse neighborhoods
+- Journey Map: Single parenting milestone tracking
+- Resources Hub: Government support information
+
+### Technical Features
+- Responsive mobile-first design
+- Performance optimized with image optimization and code splitting
+- SEO friendly with proper meta tags
+- Accessibility compliant (WCAG 2.1)
+- Comprehensive error monitoring and logging
+
+## Security
+
+- Helmet.js for security headers
+- Rate limiting for API protection
+- CORS for origin control
+- Parameter validation and input sanitization
+- SQL injection prevention with parameterized queries
+- Cloudflare DDoS protection
+
+## Contributing
+
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/your-feature`)
+3. Commit changes (`git commit -m 'Add your feature'`)
+4. Push to branch (`git push origin feature/your-feature`)
+5. Open Pull Request
+
+## Support
+
+For technical issues or feature requests, create an issue on GitHub or check the documentation in the `/docs` folder.
 
