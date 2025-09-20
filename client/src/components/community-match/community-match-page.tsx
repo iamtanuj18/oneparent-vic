@@ -111,7 +111,7 @@ export default function MapView({
     getSuburbsGeo().then(setSubGeo);
   }, []);
 
-  // ⭐ When switching LGA or language (i.e., top3 changes), clear school pins to avoid leftovers
+  //  When switching LGA or language (i.e., top3 changes), clear school pins to avoid leftovers
   useEffect(() => {
     setSchoolPins(null);
   }, [activeCouncil, top3]);
