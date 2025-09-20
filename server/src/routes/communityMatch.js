@@ -1,145 +1,93 @@
-// community match router for suburb matching functionality
+// Community matching + map data related API (merged routes)
 const express = require("express");
 const router = express.Router();
 const { getPool } = require("../db");
 const { asyncHandler } = require("../utils/asyncHandler");
-const path = require("path");
-const fs = require("fs");
+const { query } = require("../db/index");
 
-// get languages with LGA population data
-router.get("/languages", asyncHandler(async (req, res) => {
-  // TODO: Replace with database query when language data is in DB
-  // For now, return placeholder data based on legacy CSV structure
-  
-  const languages = [
-    "English",
-    "Mandarin", 
-    "Arabic",
-    "Vietnamese",
-    "Italian",
-    "Greek",
-    "Cantonese",
-    "Hindi",
-    "Spanish",
-    "Punjabi"
-  ];
+// ---- Centralized table names ----
+const T = {
+  langCount: "languages_lga", // columns: language, council, population
+  suburbs:   "suburbs",       // columns: council, suburb, postcode
+  housing:   "housing",       // columns: suburb, rent_allprop, buy_flat, buy_house, ...
+  schools:   "schools",       // columns: address_town, school_name, school_type, education_sector, lat, lon, ...
+};
 
-  return res.json({
-    languages: languages.sort()
+// GET /api/community/languages  -> Dropdown list of available languages
+router.get("/languages", asyncHandler(async (_req, res) => {
+  const { rows } = await query(
+     `SELECT DISTINCT language FROM community.languages_lga ORDER BY language ASC`
+  );
+  res.json(rows.map(r => r.language));
+}));
+
+// GET /api/community/top3?language=Chinese  -> Top 3 LGAs for a given language
+router.get("/top3", asyncHandler(async (req, res) => {
+  const language = req.query.language;
+  if (!language) return res.status(400).json({ error: "language required" });
+  const { rows } = await query(
+      `SELECT council, population
+         FROM community.languages_lga
+        WHERE language = $1
+        ORDER BY population DESC
+        LIMIT 3`,
+    [language]
+  );
+  res.json(rows.map((r, i) => ({ council: r.council, population: r.population, rank: i + 1 })));
+}));
+
+// GET /api/community/lga/:council/suburbs  -> List of suburbs in a specific LGA
+router.get("/lga/:council/suburbs", asyncHandler(async (req, res) => {
+  const council = decodeURIComponent(req.params.council);
+  const { rows } = await query(
+    `SELECT suburb, postcode
+       FROM community.council_suburbs
+      WHERE council = $1
+      ORDER BY suburb ASC`,
+    [council]
+  );
+  res.json(rows);
+}));
+
+// GET /api/community/suburb/:name/summary  -> Show housing summary when suburb is clicked the first time
+router.get("/suburb/:name/summary", asyncHandler(async (req, res) => {
+  const name = decodeURIComponent(req.params.name || "").trim();
+
+  // Note: Some datasets may include punctuation or inconsistent casing in suburb names.
+  // Use regex to remove non-alphanumeric characters before matching to improve hit rate.
+  const { rows } = await query(
+    `SELECT suburb, rent_allprop, buy_flat, buy_house
+       FROM community.rent_sale
+      WHERE lower(regexp_replace(suburb, '[^a-z0-9]+', '', 'g')) = lower(regexp_replace($1, '[^a-z0-9]+', '', 'g'))
+         OR lower(suburb) = lower($1)
+      LIMIT 1`,
+    [name]
+  );
+
+  if (!rows[0]) return res.json({ notFound: true });
+
+  const r = rows[0];
+  const medianHousing = r.buy_house ?? r.buy_flat ?? r.rent_allprop ?? null;
+  res.json({
+    suburb: r.suburb,
+    medianHousing,
+    rent_allprop: r.rent_allprop,
+    buy_flat: r.buy_flat,
+    buy_house: r.buy_house,
   });
 }));
 
-// get top LGAs by language population
-router.get("/top-lgas/:language", asyncHandler(async (req, res) => {
-  const { language } = req.params;
-  
-  // TODO: Implement actual database query
-  // For now, return mock data based on legacy functionality
-  
-  const mockData = {
-    "Mandarin": [
-      { lga: "Monash", population: 15420 },
-      { lga: "Glen Eira", population: 12380 },
-      { lga: "Whitehorse", population: 11250 }
-    ],
-    "Arabic": [
-      { lga: "Hume", population: 8920 },
-      { lga: "Brimbank", population: 7150 },
-      { lga: "Darebin", population: 6840 }
-    ],
-    "Vietnamese": [
-      { lga: "Maribyrnong", population: 5680 },
-      { lga: "Brimbank", population: 4920 },
-      { lga: "Darebin", population: 4150 }
-    ]
-  };
-
-  const data = mockData[language] || [];
-  
-  return res.json({
-    language,
-    topLgas: data
-  });
+// GET /api/community/suburb/:name/schools  -> Show school list when suburb is clicked a second time
+router.get("/suburb/:name/schools", asyncHandler(async (req, res) => {
+  const name = decodeURIComponent(req.params.name);
+  const { rows } = await query(
+    `SELECT school_name, school_type, education_sector, lat, lon, address_postcode
+       FROM community.schools
+      WHERE lower(address_town) = lower($1)
+      ORDER BY school_name ASC`,
+    [name]
+  );
+  res.json(rows);
 }));
 
-// get suburbs by council/LGA
-router.get("/suburbs/:lga", asyncHandler(async (req, res) => {
-  const { lga } = req.params;
-  const pool = getPool();
-  
-  if (!pool) {
-    return res.status(503).json({ error: "Database unavailable" });
-  }
-
-  try {
-    // Query suburbs for the given LGA
-    // TODO: Adjust table/column names based on actual schema
-    const sql = `
-      SELECT DISTINCT suburb as name
-      FROM vic_geo.vic_suburb_list 
-      WHERE lga_name = $1
-      ORDER BY suburb ASC
-      LIMIT 50
-    `;
-    
-    const { rows } = await pool.query(sql, [lga]);
-    
-    return res.json({
-      lga,
-      suburbs: rows.map(row => ({ name: row.name }))
-    });
-  } catch (error) {
-    console.error("Error fetching suburbs:", error);
-    
-    // Return mock data as fallback
-    const mockSuburbs = [
-      { name: "Brighton" },
-      { name: "Carnegie" }, 
-      { name: "Caulfield" },
-      { name: "Elsternwick" },
-      { name: "Ormond" }
-    ];
-    
-    return res.json({
-      lga,
-      suburbs: mockSuburbs
-    });
-  }
-}));
-
-// get schools near a location
-router.post("/schools-near", asyncHandler(async (req, res) => {
-  const { lat, lng, radiusKm = 3, lga, limit = 200 } = req.body;
-  
-  // TODO: Implement actual school data query
-  // For now, return mock school data
-  
-  const mockSchools = [
-    {
-      id: 1,
-      name: "Brighton Primary School",
-      type: "Primary",
-      lat: lat + 0.001,
-      lng: lng + 0.001,
-      address: "123 School St, Brighton"
-    },
-    {
-      id: 2, 
-      name: "Carnegie Secondary College",
-      type: "Secondary",
-      lat: lat - 0.002,
-      lng: lng + 0.002,
-      address: "456 Education Ave, Carnegie"
-    }
-  ];
-
-  return res.json({
-    location: { lat, lng },
-    radiusKm,
-    lga,
-    schools: mockSchools.slice(0, limit)
-  });
-}));
-
-// export the router
 module.exports = router;

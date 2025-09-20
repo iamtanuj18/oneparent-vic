@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@types/leaflet": "^1.9.20",
     "@upstash/redis": "^1.35.3",
     "autoprefixer": "^10.4.21",
     "framer-motion": "^12.23.12",
@@ -20,11 +19,14 @@
     "next": "15.5.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "react-leaflet": "^5.0.0"
+    "react-leaflet": "^5.0.0",
+    "swr": "^2.3.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/geojson": "^7946.0.16",
     "@types/html2canvas": "^0.5.35",
+    "@types/leaflet": "^1.9.20",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

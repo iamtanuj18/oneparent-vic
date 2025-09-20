@@ -1,316 +1,278 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { PageHeader } from '@/components/ui'
-import { ANIMATION_CONFIG } from '@/lib/animation'
-import { ChevronDown, MapPin, Users, GraduationCap } from 'lucide-react'
 import {
-  fetchLanguages,
-  fetchTopLgasByLanguage,
-  fetchSuburbsByLga,
-  fetchSchoolsNear,
-  type LgaData,
-  type SuburbData,
-  type SchoolData
-} from '@/lib/api/community-match'
+  MapContainer, TileLayer, Pane,
+  Tooltip as LeafletTooltip, GeoJSON, useMap, Marker
+} from "react-leaflet";
+import L, { GeoJSON as LGeoJSON, LeafletEvent, LeafletMouseEvent } from "leaflet";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-export function CommunityMatchPage() {
-  const [languages, setLanguages] = useState<string[]>([])
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('')
-  const [topLgas, setTopLgas] = useState<LgaData[]>([])
-  const [selectedLga, setSelectedLga] = useState<string>('')
-  const [suburbs, setSuburbs] = useState<SuburbData[]>([])
-  const [schools, setSchools] = useState<SchoolData[]>([])
-  const [loading, setLoading] = useState<boolean>(false)
+import type { Top3Item, SuburbSummary, SchoolRow } from "@/lib/api/community-match";
+import { getSuburbSummary, useCouncilSuburbRows, getSuburbSchools } from "@/lib/api/community-match";
 
-  // load available languages on component mount
+import type { GCollection, GFeature } from "@/lib/api/suburb";
+import { getLgaGeo, getSuburbsGeo, filterBySuburbRows, getSuburbName } from "@/lib/api/suburb";
+
+/* ========= Utils & Constants ========= */
+
+const LGA_KEYS = ["LGA_NAME", "lga_name", "Council", "council", "NAME", "name"];
+
+function getProp(o: any, keys: string[]) {
+  for (const k of keys) if (o && o[k] != null) return o[k];
+  return "";
+}
+function normName(s: any) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/city of |shire of | city| shire| council/g, "")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "")
+    .trim();
+}
+function rankIcon(n: number) {
+  return L.divIcon({
+    className: "rank-marker",
+    html: `<div style="width:26px;height:26px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;font-weight:700;
+      background:#ff6a00;color:#fff;box-shadow:0 0 0 2px #fff">${n}</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+}
+
+/** School marker icon (📍 style; adjust size/color as needed) */
+const SCHOOL_ICON = L.divIcon({
+  className: "",
+  html: `<div style="
+      width:18px;height:24px;
+      background:#e74c3c;color:#fff;font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+      border-radius:50% 50% 50% 50% / 60% 60% 40% 40%;
+      box-shadow:0 1px 3px rgba(0,0,0,0.3); font-size:12px;">📍</div>`,
+  iconSize: [18, 24],
+  iconAnchor: [9, 24],
+});
+
+/* ========= Subcomponents ========= */
+
+function AutoFit({ features }: { features: GFeature[] }) {
+  const map = useMap();
   useEffect(() => {
-    loadLanguages()
-  }, [])
+    if (!features?.length) return; // ⭐ Do not auto-zoom if there’s no target (prevents jumping on first load)
+    const b = new L.LatLngBounds([]);
+    features.forEach((f) => { try { b.extend(L.geoJSON(f).getBounds()); } catch {} });
+    if (b.isValid()) map.fitBounds(b, { padding: [16, 16] });
+  }, [map, features]);
+  return null;
+}
 
-  // fetch top LGAs when language changes
+function RankMarkers({ features, top3 }: { features: GFeature[]; top3: Top3Item[] }) {
+  const map = useMap();
   useEffect(() => {
-    if (selectedLanguage) {
-      loadTopLgas(selectedLanguage)
-      setSelectedLga('')
-      setSuburbs([])
-      setSchools([])
+    const markers: L.Marker[] = [];
+    features.forEach((f) => {
+      const lgaName = getProp(f.properties, LGA_KEYS);
+      const rank = top3.find((t) => normName(t.council) === normName(lgaName))?.rank;
+      if (!rank) return;
+      let center: L.LatLng;
+      try { center = (L.geoJSON(f) as LGeoJSON).getBounds().getCenter(); } catch { return; }
+      markers.push(L.marker(center, {
+        icon: rankIcon(rank),
+        interactive: false,
+        pane: "markerPane",
+        zIndexOffset: 1000,
+      }).addTo(map));
+    });
+    return () => markers.forEach((m) => m.remove());
+  }, [map, features, top3]);
+  return null;
+}
+
+/* ========= Main component ========= */
+
+export default function MapView({
+  top3,
+  activeCouncil,
+  onPickCouncil,
+  onPickSuburb,
+}: {
+  top3: Top3Item[];
+  activeCouncil: string | null;
+  onPickCouncil: (c: string) => void;
+  onPickSuburb: (s: string) => void;
+}) {
+  const [lgaGeo, setLgaGeo] = useState<GCollection | null>(null);
+  const [subGeo, setSubGeo] = useState<GCollection | null>(null);
+
+  const summaryCacheRef = useRef<Map<string, SuburbSummary>>(new Map());
+  const [schoolPins, setSchoolPins] = useState<SchoolRow[] | null>(null);
+
+  useEffect(() => {
+    getLgaGeo().then(setLgaGeo);
+    getSuburbsGeo().then(setSubGeo);
+  }, []);
+
+  // ⭐ When switching LGA or language (i.e., top3 changes), clear school pins to avoid leftovers
+  useEffect(() => {
+    setSchoolPins(null);
+  }, [activeCouncil, top3]);
+
+  // Geo features for Top 3 LGAs (for outlines/rank badges)
+  const top3Features = useMemo(() => {
+    if (!lgaGeo || !top3?.length) return [];
+    const want = new Set(top3.map((t) => normName(t.council)));
+    return lgaGeo.features.filter((f) =>
+      want.has(normName(getProp(f.properties, LGA_KEYS)))
+    );
+  }, [lgaGeo, top3]);
+
+  // Selected LGA -> suburb list from DB
+  const { data: councilSuburbs } = useCouncilSuburbRows(activeCouncil || undefined);
+
+  // Suburb polygons for current LGA
+  const suburbsInCouncil = useMemo(() => {
+    if (!subGeo || !activeCouncil) return [];
+    if (councilSuburbs && councilSuburbs.length) {
+      return filterBySuburbRows(subGeo, councilSuburbs);
     }
-  }, [selectedLanguage])
+    return [];
+  }, [subGeo, councilSuburbs, activeCouncil]);
 
-  // fetch suburbs when LGA is selected
-  useEffect(() => {
-    if (selectedLga) {
-      loadSuburbs(selectedLga)
-      setSchools([])
-    }
-  }, [selectedLga])
+  // ⭐ Only zoom when activeCouncil is set; otherwise keep default viewport
+  const fitTargets = useMemo(() => {
+    if (!activeCouncil) return [];
+    return suburbsInCouncil.length ? suburbsInCouncil : top3Features;
+  }, [activeCouncil, suburbsInCouncil, top3Features]);
 
-  const loadLanguages = async () => {
-    try {
-      const data = await fetchLanguages()
-      setLanguages(data.languages || [])
-      if (data.languages?.length > 0) {
-        setSelectedLanguage(data.languages[0])
+  /** On suburb click: show housing price + school pins (keep original info visible) */
+  async function handleSuburbClick(name: string, layer: any) {
+    // 1) Housing tooltip
+    const key = name.toLowerCase();
+    let sum = summaryCacheRef.current.get(key);
+    if (!sum) {
+      try {
+        sum = await getSuburbSummary(name);
+        if (sum) summaryCacheRef.current.set(key, sum);
+      } catch (e) {
+        console.error("getSuburbSummary failed:", e);
       }
-    } catch (error) {
-      console.error('Error fetching languages:', error)
     }
-  }
+    const price =
+      sum && !sum.notFound && sum.medianHousing != null
+        ? `$${Number(sum.medianHousing).toLocaleString()}`
+        : "N/A";
+    const html = `<div><strong>${name}</strong><br/>Median price: ${price}</div>`;
+    const tip = layer.getTooltip?.();
+    if (tip) tip.setContent(html);
+    else layer.bindTooltip(html, { sticky: true });
+    layer.openTooltip();
 
-  const loadTopLgas = async (language: string) => {
-    setLoading(true)
+    // 2) School pins (if your source data already has correct lat/lon, remove the two swap lines)
     try {
-      const data = await fetchTopLgasByLanguage(language)
-      setTopLgas(data.topLgas || [])
-    } catch (error) {
-      console.error('Error fetching top LGAs:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadSuburbs = async (lga: string) => {
-    try {
-      const data = await fetchSuburbsByLga(lga)
-      setSuburbs(data.suburbs || [])
-    } catch (error) {
-      console.error('Error fetching suburbs:', error)
-    }
-  }
-
-  const handleLgaSelect = (lga: string) => {
-    setSelectedLga(lga)
-  }
-
-  const handleSuburbClick = async (suburb: SuburbData) => {
-    // Mock coordinates for demo - in real app, would get from suburb data
-    const mockLat = -37.8136
-    const mockLng = 144.9631
-    
-    try {
-      const data = await fetchSchoolsNear({
-        lat: mockLat,
-        lng: mockLng,
-        radiusKm: 3,
-        lga: selectedLga,
-        limit: 200
-      })
-      setSchools(data.schools || [])
-    } catch (error) {
-      console.error('Error fetching schools:', error)
+      const rows = await getSuburbSchools(name);
+      const fixedRows = (rows || [])
+        .filter((s) => typeof s.lat === "number" && typeof s.lon === "number")
+        .map((s) => ({
+          ...s,
+          lat: s.lon, // If your source data has correct lat/lon, delete these two lines
+          lon: s.lat, // ↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑
+        }));
+      setSchoolPins(fixedRows);
+    } catch (e) {
+      console.error("getSuburbSchools failed:", e);
+      setSchoolPins([]);
     }
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Page Header using global component */}
-      <PageHeader
-        title="Community"
-        titleGradientText="Match"
-        subtitle="Find suburbs where your cultural background is celebrated and your family feels truly at home, connecting with neighbors who share your values."
+    <MapContainer
+      center={[-37.81, 144.96]}
+      zoom={11}
+      style={{ height: "clamp(420px, 60vh, 520px)", width: "100%", borderRadius: 12 }}
+    >
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution="&copy; OpenStreetMap"
       />
 
-      {/* Main Content Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-6">
-          <div className="max-w-6xl mx-auto space-y-8">
-            
-            {/* Language Selection Card */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: ANIMATION_CONFIG.duration, ease: ANIMATION_CONFIG.ease }}
-              viewport={{ once: true }}
-              className="bg-white rounded-2xl shadow-lg p-8"
+      {/* Only auto-fit after an LGA is selected */}
+      <AutoFit features={fitTargets} />
+
+      {/* LGA layer (lower pane so it doesn’t block suburb clicks) */}
+      <Pane name="lga" style={{ zIndex: 300, pointerEvents: activeCouncil ? "none" : "auto" }}>
+        {top3Features.length > 0 && (
+          <>
+            <GeoJSON
+              pane="lga"
+              data={{ type: "FeatureCollection", features: top3Features } as any}
+              style={() => ({ color: "#ff6a00", weight: 2.5, fillOpacity: 0.18 })}
+              interactive={!activeCouncil}
+              onEachFeature={(f, layer) => {
+                const lgaName = String(getProp(f.properties, LGA_KEYS));
+                layer.on("click", () => onPickCouncil(lgaName));
+                layer.bindTooltip(lgaName, { sticky: true });
+              }}
+            />
+            <RankMarkers features={top3Features} top3={top3} />
+          </>
+        )}
+      </Pane>
+
+      {/* Suburbs layer (higher pane to ensure it’s clickable) */}
+      <Pane name="suburbs" style={{ zIndex: 400 }}>
+        {suburbsInCouncil.length > 0 && (
+          <GeoJSON
+            pane="suburbs"
+            key={`subs-${normName(activeCouncil || "")}`}
+            data={{ type: "FeatureCollection", features: suburbsInCouncil } as any}
+            style={() => ({ color: "#3388ff", weight: 1.5, fillOpacity: 0.15 })}
+            onEachFeature={(f, layer) => {
+              const name = getSuburbName(f.properties);
+              layer.bindTooltip(name, { sticky: true });
+              layer.on("click", () => onPickSuburb(name));
+              layer.on("click", () => handleSuburbClick(name, layer));
+            }}
+          />
+        )}
+      </Pane>
+
+      {/* Schools layer (highest pane, keep all info visible) */}
+      <Pane
+        name="schools"
+        style={{ zIndex: 650, pointerEvents: schoolPins && schoolPins.length ? "auto" : "none" }}
+      >
+        {schoolPins && schoolPins.length > 0 &&
+          schoolPins.map((s) => (
+            <Marker
+              pane="schools"
+              key={`${s.school_no ?? s.school_name}-${s.lat}-${s.lon}`}
+              position={[s.lat as number, s.lon as number]}
+              icon={SCHOOL_ICON}
+              eventHandlers={{
+                click: (e: LeafletMouseEvent) => { (e.target as L.Marker).openTooltip(); },
+                add: (e: LeafletEvent) => (e.target as any).bringToFront?.(),
+              }}
             >
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Select Your Language</h3>
-              <div className="relative">
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="w-full lg:w-96 px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white appearance-none cursor-pointer transition-all duration-200"
-                >
-                  {languages.map((language) => (
-                    <option key={language} value={language}>
-                      {language}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400 pointer-events-none" />
-              </div>
-            </motion.div>
+              <LeafletTooltip sticky>
+                <div style={{ minWidth: 220 }}>
+                  <strong>{s.school_name}</strong><br />
+                  {[s.school_type, s.education_sector].filter(Boolean).join(" · ") || "School"}
+                  {s.address_postcode ? ` · ${s.address_postcode}` : ""}
 
-            {/* Top Councils Section */}
-            {selectedLanguage && (
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: ANIMATION_CONFIG.duration, delay: 0.2, ease: ANIMATION_CONFIG.ease }}
-                viewport={{ once: true }}
-                className="bg-white rounded-2xl shadow-lg overflow-hidden"
-              >
-                <div className="p-8 border-b border-gray-100">
-                  <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <h3 className="text-2xl font-bold text-gray-900">
-                      Top Councils <span className="text-orange-600">({selectedLanguage})</span>
-                    </h3>
-                    
-                    {/* Quick Select Dropdown */}
-                    <div className="relative">
-                      <select
-                        value={selectedLga}
-                        onChange={(e) => handleLgaSelect(e.target.value)}
-                        className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white appearance-none cursor-pointer w-full lg:w-72"
-                      >
-                        <option value="">-- Select Council --</option>
-                        {topLgas.map((lga) => (
-                          <option key={lga.lga} value={lga.lga}>
-                            {lga.lga}
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                  {(s.address_line_1 || s.address_line_2 || s.address_town) && (
+                    <div style={{ marginTop: 4 }}>
+                      {s.address_line_1 ? `${s.address_line_1}` : ""}
+                      {s.address_line_2 ? `, ${s.address_line_2}` : ""}
+                      {s.address_town ? `, ${s.address_town}` : ""}
+                      {s.address_postcode ? ` ${s.address_postcode}` : ""}
                     </div>
-                  </div>
+                  )}
+
+                  {s.phone ? <div>☎ {s.phone}</div> : null}
                 </div>
-
-                {/* Loading State */}
-                {loading && (
-                  <div className="p-8 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading council data...</p>
-                  </div>
-                )}
-
-                {/* Top LGAs Table */}
-                {!loading && topLgas.length > 0 && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 w-16">#</th>
-                          <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900">Council</th>
-                          <th className="px-8 py-4 text-right text-sm font-semibold text-gray-900">Population</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {topLgas.map((lga, index) => (
-                          <tr
-                            key={lga.lga}
-                            onClick={() => handleLgaSelect(lga.lga)}
-                            className="hover:bg-orange-50 cursor-pointer transition-colors duration-200"
-                          >
-                            <td className="px-8 py-4 text-sm font-medium text-gray-900">
-                              {index + 1}
-                            </td>
-                            <td className="px-8 py-4">
-                              <div className="flex items-center">
-                                <MapPin className="w-5 h-5 text-orange-600 mr-3" />
-                                <span className="text-sm font-medium text-gray-900">{lga.lga}</span>
-                              </div>
-                            </td>
-                            <td className="px-8 py-4 text-right">
-                              <div className="flex items-center justify-end">
-                                <Users className="w-4 h-4 text-gray-400 mr-2" />
-                                <span className="text-sm font-medium text-gray-900">
-                                  {lga.population.toLocaleString()}
-                                </span>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {/* Suburbs Section */}
-            {selectedLga && suburbs.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: ANIMATION_CONFIG.duration, delay: 0.3, ease: ANIMATION_CONFIG.ease }}
-                viewport={{ once: true }}
-                className="bg-white rounded-2xl shadow-lg p-8"
-              >
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                  Suburbs in <span className="text-orange-600">{selectedLga}</span>
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {suburbs.map((suburb, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSuburbClick(suburb)}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 text-left group"
-                    >
-                      <div className="flex items-center">
-                        <MapPin className="w-5 h-5 text-gray-400 group-hover:text-orange-600 mr-3 transition-colors duration-200" />
-                        <span className="text-sm font-medium text-gray-900">{suburb.name}</span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Schools Section */}
-            {schools.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: ANIMATION_CONFIG.duration, delay: 0.4, ease: ANIMATION_CONFIG.ease }}
-                viewport={{ once: true }}
-                className="bg-white rounded-2xl shadow-lg p-8"
-              >
-                <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                  Nearby Schools
-                </h3>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {schools.map((school) => (
-                    <div key={school.id} className="p-6 border border-gray-200 rounded-lg">
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="text-lg font-semibold text-gray-900">{school.name}</h4>
-                        <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                          {school.type}
-                        </span>
-                      </div>
-                      <div className="flex items-center text-gray-600">
-                        <GraduationCap className="w-4 h-4 mr-2" />
-                        <span className="text-sm">{school.address}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-
-            {/* Map Placeholder */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: ANIMATION_CONFIG.duration, delay: 0.5, ease: ANIMATION_CONFIG.ease }}
-              viewport={{ once: true }}
-              className="bg-white rounded-2xl shadow-lg p-8"
-            >
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Interactive Map</h3>
-              <div className="h-96 bg-gray-100 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600 font-medium">Map integration coming soon</p>
-                  <p className="text-gray-500 text-sm mt-2">
-                    Interactive map with LGA boundaries, suburbs, and school locations
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-
-          </div>
-        </div>
-      </section>
-    </div>
-  )
+              </LeafletTooltip>
+            </Marker>
+          ))}
+      </Pane>
+    </MapContainer>
+  );
 }

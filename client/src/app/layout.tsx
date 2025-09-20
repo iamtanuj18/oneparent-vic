@@ -3,6 +3,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navbar, Footer } from "@/components/layout";
+import "leaflet/dist/leaflet.css";
 
 // search engine optimization metadata for single parent support
 export const metadata: Metadata = {

@@ -1,70 +1,110 @@
-// community match api functions for cultural suburb matching
-import { apiFetch } from './client'
+import useSWR from "swr";
 
-// types for community match api responses
-export interface LgaData {
-  lga: string
-  population: number
+/** Unified API base path — keep consistent with your backend at /api/community-match */
+export const API_BASE = "/api/community-match";
+
+/** Generic JSON fetcher */
+async function getJSON<T = any>(url: string): Promise<T> {
+  const res = await fetch(url, { credentials: "same-origin" });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`${res.status} ${res.statusText} - ${text}`);
+  }
+  return res.json() as Promise<T>;
 }
 
-export interface SuburbData {
-  name: string
+/* ========= Types ========= */
+export type Top3Item = {
+  council: string;
+  population: number;
+  rank: number;
+};
+
+export type SuburbSummary = {
+  medianHousing: number | null;
+  notFound?: boolean;
+};
+
+export type CouncilSuburbRow = { suburb: string; postcode?: string };
+
+/** School row (used by SuburbInfoPanel) */
+export type SchoolRow = {
+  school_no: number;
+  education_sector?: string | null;
+  school_name: string;
+  school_type?: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  address_town?: string | null;
+  address_postcode?: number | null;
+  phone?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+};
+
+/* ========= Hooks & API ========= */
+
+/** Language list */
+export function useLanguages() {
+  return useSWR<string[]>(`${API_BASE}/languages`, getJSON, {
+    revalidateOnFocus: false,
+  });
 }
 
-export interface SchoolData {
-  id: number
-  name: string
-  type: string
-  lat: number
-  lng: number
-  address: string
+/** Top 3 LGAs for a given language */
+export function useTop3(language?: string) {
+  const key = language
+    ? `${API_BASE}/top3?language=${encodeURIComponent(language)}`
+    : null;
+  return useSWR<Top3Item[]>(key, getJSON, { revalidateOnFocus: false });
 }
 
-export interface LanguagesResponse {
-  languages: string[]
+/** Fetch suburb housing summary (for lazy-loading map tooltip) */
+export async function getSuburbSummary(name: string): Promise<SuburbSummary> {
+  const url = `${API_BASE}/suburb/${encodeURIComponent(name)}/summary`;
+  return getJSON<SuburbSummary>(url);
 }
 
-export interface TopLgasResponse {
-  language: string
-  topLgas: LgaData[]
+/** ⭐ New: SWR version of suburb summary (for SuburbInfoPanel) */
+export function useSuburbSummary(name?: string | null) {
+  const key = name
+    ? `${API_BASE}/suburb/${encodeURIComponent(name)}/summary`
+    : null;
+  return useSWR<SuburbSummary>(key, getJSON, { revalidateOnFocus: false });
 }
 
-export interface SuburbsResponse {
-  lga: string
-  suburbs: SuburbData[]
+/** Get the list of suburbs for an LGA (from DB table council_suburbs) */
+export async function getCouncilSuburbRows(
+  council: string
+): Promise<CouncilSuburbRow[]> {
+  const url = `${API_BASE}/lga/${encodeURIComponent(council)}/suburbs`;
+  return getJSON<CouncilSuburbRow[]>(url);
 }
 
-export interface SchoolsResponse {
-  location: { lat: number; lng: number }
-  radiusKm: number
-  lga?: string
-  schools: SchoolData[]
+/** SWR version (optional) */
+export function useCouncilSuburbRows(council?: string) {
+  const key = council
+    ? `${API_BASE}/lga/${encodeURIComponent(council)}/suburbs`
+    : null;
+  return useSWR<CouncilSuburbRow[]>(key, getJSON, { revalidateOnFocus: false });
 }
 
-export interface SchoolsNearRequest {
-  lat: number
-  lng: number
-  radiusKm?: number
-  lga?: string
-  limit?: number
+/**  New: direct API call to get a suburb’s schools */
+export async function getSuburbSchools(name: string): Promise<SchoolRow[]> {
+  const url = `${API_BASE}/suburb/${encodeURIComponent(name)}/schools`;
+  return getJSON<SchoolRow[]>(url);
 }
 
-// fetch available languages for community matching
-export function fetchLanguages(): Promise<LanguagesResponse> {
-  return apiFetch('/community-match/languages', { method: 'GET' })
+/**  New: SWR version of the school list
+ *  The second parameter `enabled` toggles the request (e.g., don’t fetch when showSchools=false)
+ */
+export function useSuburbSchools(name?: string | null, enabled = false) {
+  const key =
+    enabled && name
+      ? `${API_BASE}/suburb/${encodeURIComponent(name)}/schools`
+      : null;
+  return useSWR<SchoolRow[]>(key, getJSON, { revalidateOnFocus: false });
 }
 
-// fetch top LGAs by language population
-export function fetchTopLgasByLanguage(language: string): Promise<TopLgasResponse> {
-  return apiFetch(`/community-match/top-lgas/${encodeURIComponent(language)}`, { method: 'GET' })
-}
 
-// fetch suburbs within an LGA
-export function fetchSuburbsByLga(lga: string): Promise<SuburbsResponse> {
-  return apiFetch(`/community-match/suburbs/${encodeURIComponent(lga)}`, { method: 'GET' })
-}
 
-// fetch schools near a location
-export function fetchSchoolsNear(request: SchoolsNearRequest): Promise<SchoolsResponse> {
-  return apiFetch('/community-match/schools-near', { method: 'POST', body: request })
-}
