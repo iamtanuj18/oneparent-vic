@@ -1,110 +1,194 @@
 import useSWR from "swr";
 
-/** Unified API base path — keep consistent with your backend at /api/community-match */
-export const API_BASE = "/api/community-match";
+/** ===== API base (兼容新旧后端前缀) =====
+ *  优先 /api/community-match；若该路径请求失败，会自动回退到 /api/community
+ */
+const PRIMARY_BASE = "/api/community-match";
+const LEGACY_BASE = "/api/community";
 
-/** Generic JSON fetcher */
-async function getJSON<T = any>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "same-origin" });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`${res.status} ${res.statusText} - ${text}`);
-  }
-  return res.json() as Promise<T>;
+/** 把相对路径拼成两个候选 URL */
+function makeCandidates(path: string) {
+  const p = path.startsWith("/") ? path : `/${path}`;
+  // 返回优先候选（primary），随后是 legacy，fetchJSON 会按顺序尝试
+  return [`${PRIMARY_BASE}${p}`, `${LEGACY_BASE}${p}`];
 }
 
-/* ========= Types ========= */
-export type Top3Item = {
-  council: string;
-  population: number;
-  rank: number;
-};
+/** 通用 JSON fetcher（带新旧前缀回退） */
+async function fetchJSON<T = any>(pathOrUrl: string): Promise<T> {
+  // 支持传完整 URL 或相对 path
+  const candidates = pathOrUrl.startsWith("/api/")
+    ? // 如果传入的是完整的 /api/... 路径，构造一个两个候选（互换 primary/legacy）
+      [pathOrUrl, pathOrUrl.startsWith(PRIMARY_BASE) ? pathOrUrl.replace(PRIMARY_BASE, LEGACY_BASE) : pathOrUrl.replace(LEGACY_BASE, PRIMARY_BASE)]
+    : makeCandidates(pathOrUrl);
+
+  let lastErr: any = null;
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { credentials: "same-origin" });
+      if (res.ok) return res.json() as Promise<T>;
+      lastErr = new Error(`${res.status} ${res.statusText} - ${await res.text().catch(() => "")}`);
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr ?? new Error("Network error");
+}
+
+/* ================== Types ================== */
+export type Top3Item = { rank: number; council: string; population: number };
 
 export type SuburbSummary = {
-  medianHousing: number | null;
+  suburb: string;
   notFound?: boolean;
+  medianHousing?: number | null;
+  // 可选：保留后端其他字段以防 UI 需要
+  rent_allprop?: number | null;
+  buy_flat?: number | null;
+  buy_house?: number | null;
 };
 
-export type CouncilSuburbRow = { suburb: string; postcode?: string };
-
-/** School row (used by SuburbInfoPanel) */
 export type SchoolRow = {
-  school_no: number;
-  education_sector?: string | null;
+  school_no?: string | number;
   school_name: string;
-  school_type?: string | null;
-  address_line_1?: string | null;
-  address_line_2?: string | null;
-  address_town?: string | null;
-  address_postcode?: number | null;
-  phone?: string | null;
-  lat?: number | null;
-  lon?: number | null;
+  school_type?: string;           // Primary / Secondary / Pri/Sec / Language / Special
+  education_sector?: string;      // Government / Independent / Catholic
+  lat: number;
+  lon: number;
+  address_line_1?: string;
+  address_line_2?: string;
+  address_town?: string;
+  address_postcode?: string;
+  phone?: string;
 };
 
-/* ========= Hooks & API ========= */
+export type SchoolType  = "Government" | "Independent" | "Catholic";
+export type SchoolLevel = "Primary" | "Secondary" | "Pri/Sec" | "Language" | "Special";
+
+/* ================== Helpers ================== */
+const fetcher = (url: string) => fetchJSON(url);
+
+function qs(params: Record<string, any>) {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v === undefined || v === null) return;
+    if (Array.isArray(v)) sp.set(k, v.join(","));
+    else sp.set(k, String(v));
+  });
+  const s = sp.toString();
+  return s ? `?${s}` : "";
+}
+
+/* ================== APIs ================== */
 
 /** Language list */
 export function useLanguages() {
-  return useSWR<string[]>(`${API_BASE}/languages`, getJSON, {
+  // /languages
+  return useSWR<string[]>(makeCandidates("/languages")[0], fetcher, {
     revalidateOnFocus: false,
   });
 }
 
-/** Top 3 LGAs for a given language */
+/** Top 3 councils by language */
 export function useTop3(language?: string) {
-  const key = language
-    ? `${API_BASE}/top3?language=${encodeURIComponent(language)}`
-    : null;
-  return useSWR<Top3Item[]>(key, getJSON, { revalidateOnFocus: false });
+  const key = language ? `/top3${qs({ language })}` : null;
+  return useSWR<Top3Item[]>(key ? makeCandidates(key)[0] : null, fetcher, {
+    revalidateOnFocus: false,
+  });
 }
 
-/** Fetch suburb housing summary (for lazy-loading map tooltip) */
+/** Suburb list for a specified Council (used for map filtering) */
+export function useCouncilSuburbRows(lga?: string) {
+  const path = lga ? `/council/${encodeURIComponent(lga)}/suburbs` : null;
+  return useSWR<{ suburb: string; postcode?: string }[]>(
+    path ? makeCandidates(path)[0] : null,
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+}
+
+/** Get suburb summary (for map tooltip / sidebar) */
 export async function getSuburbSummary(name: string): Promise<SuburbSummary> {
-  const url = `${API_BASE}/suburb/${encodeURIComponent(name)}/summary`;
-  return getJSON<SuburbSummary>(url);
+  return fetchJSON<SuburbSummary>(`/suburb/${encodeURIComponent(name)}/summary`);
 }
 
-/** New: SWR version of suburb summary (for SuburbInfoPanel) */
+/** SWR 版本（侧栏用） */
 export function useSuburbSummary(name?: string | null) {
-  const key = name
-    ? `${API_BASE}/suburb/${encodeURIComponent(name)}/summary`
-    : null;
-  return useSWR<SuburbSummary>(key, getJSON, { revalidateOnFocus: false });
+  const key = name ? `/suburb/${encodeURIComponent(name)}/summary` : null;
+  return useSWR<SuburbSummary>(key ? makeCandidates(key)[0] : null, fetcher, {
+    revalidateOnFocus: false,
+  });
 }
 
-/** Get the list of suburbs for an LGA (from DB table council_suburbs) */
-export async function getCouncilSuburbRows(
-  council: string
-): Promise<CouncilSuburbRow[]> {
-  const url = `${API_BASE}/lga/${encodeURIComponent(council)}/suburbs`;
-  return getJSON<CouncilSuburbRow[]>(url);
+/** Get school's list for a suburb (optional type/level filters) */
+export async function getSuburbSchools(
+  name: string,
+  types?: SchoolType[],
+  levels?: SchoolLevel[]
+): Promise<SchoolRow[]> {
+  const path = `/suburb/${encodeURIComponent(name)}/schools${qs({
+    types: types && types.length ? types : undefined,
+    levels: levels && levels.length ? levels : undefined,
+  })}`;
+  return fetchJSON<SchoolRow[]>(path);
 }
 
-/** SWR version (optional) */
-export function useCouncilSuburbRows(council?: string) {
-  const key = council
-    ? `${API_BASE}/lga/${encodeURIComponent(council)}/suburbs`
-    : null;
-  return useSWR<CouncilSuburbRow[]>(key, getJSON, { revalidateOnFocus: false });
-}
-
-/**  New: direct API call to get a suburb’s schools */
-export async function getSuburbSchools(name: string): Promise<SchoolRow[]> {
-  const url = `${API_BASE}/suburb/${encodeURIComponent(name)}/schools`;
-  return getJSON<SchoolRow[]>(url);
-}
-
-/**  New: SWR version of the school list
- *  The second parameter `enabled` toggles the request (e.g., don’t fetch when showSchools=false)
- */
+/** SWR 版本（第二个参数控制是否启用，例如 showSchools=false 时不发请求） */
 export function useSuburbSchools(name?: string | null, enabled = false) {
-  const key =
-    enabled && name
-      ? `${API_BASE}/suburb/${encodeURIComponent(name)}/schools`
-      : null;
-  return useSWR<SchoolRow[]>(key, getJSON, { revalidateOnFocus: false });
+  const key = enabled && name ? `/suburb/${encodeURIComponent(name)}/schools` : null;
+  return useSWR<SchoolRow[]>(key ? makeCandidates(key)[0] : null, fetcher, {
+    revalidateOnFocus: false,
+  });
 }
+
+/** School counts aggregation (used for choropleth coloring) */
+export function useSchoolCounts(
+  lga?: string,
+  types: SchoolType[] = [],
+  levels: SchoolLevel[] = []
+) {
+  const key = lga
+    ? `/council/${encodeURIComponent(lga)}/schools/agg${qs({
+        types: types.length ? types : undefined,
+        levels: levels.length ? levels : undefined,
+      })}`
+    : null;
+  return useSWR<{ suburb: string; n: number }[]>(key ? makeCandidates(key)[0] : null, fetcher, {
+    revalidateOnFocus: false,
+  });
+}
+
+/** 住房中位价（用于 choropleth 着色） */
+export function useHousingMedians(params: null | {
+  lga: string;
+  tenure: "buy" | "rent";
+  dwelling: "House" | "Flat";
+  beds: number;
+}) {
+  const key = params
+    ? `/council/${encodeURIComponent(params.lga)}/housing/medians${qs({
+        tenure: params.tenure,
+        dwelling: params.dwelling,
+        beds: params.beds,
+      })}`
+    : null;
+  return useSWR<{ suburb: string; median: number }[]>(key ? makeCandidates(key)[0] : null, fetcher, {
+    revalidateOnFocus: false,
+  });
+}
+
+/** Cheapest/most expensive suburbs (used for cards and border highlighting) */
+export async function getHousingExtremes(
+  lga: string,
+  tenure: "buy" | "rent",
+  dwelling: "House" | "Flat",
+  beds: number
+): Promise<{ cheap?: { suburb: string; price: number }; costly?: { suburb: string; price: number } }> {
+  const path = `/council/${encodeURIComponent(lga)}/housing/minmax${qs({
+    tenure, dwelling, beds,
+  })}`;
+  return fetchJSON(path);
+}
+
 
 
 

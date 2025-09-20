@@ -56,14 +56,34 @@ export default function CommunityMatchPage() {
   };
 
   return (
-    <main style={{ padding: 16, maxWidth: 1100, margin: "0 auto" }}>
+    <>
+      <header style={{ width: "100%", background: "#050505", color: "#fff", padding: "56px 16px", marginBottom: 18 }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", textAlign: "center" }}>
+          <h1 style={{ fontSize: 44, margin: 0, fontWeight: 800 }}>
+            Find your <span style={{ background: "linear-gradient(90deg,#6aa6ff,#ff6ad6)", WebkitBackgroundClip: "text", color: "transparent" }}>Community</span>
+          </h1>
+          <p style={{ color: "#d1d5db", marginTop: 10, fontSize: 16, maxWidth: 920, marginLeft: "auto", marginRight: "auto" }}>
+            Life can feel a little less hard with people who truly understand you. Find your language community in Greater Melbourne and connect with families who share your cultural journey.
+          </p>
+          <div style={{ marginTop: 18 }}>
+            <button
+              onClick={() => { const el = document.querySelector('section'); if (el) (el as HTMLElement).scrollIntoView({ behavior: 'smooth' }); }}
+              style={{ background: "linear-gradient(90deg,#6aa6ff,#7b61ff)", color: "#fff", padding: "12px 18px", borderRadius: 8, border: "none", fontSize: 16, cursor: "pointer" }}
+            >
+              Start by choosing a language
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main style={{ padding: 16, maxWidth: 1100, margin: "0 auto" }}>
       <h1 style={{ fontSize: 34, margin: "6px 0 16px" }}>
         Find My Local Community
       </h1>
 
       {/* Language */}
       <section style={{ ...card, marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>Language</div>
+        <div style={{ fontWeight: 600, marginBottom: 8 }}>Select by Language</div>
         <select
           value={language}
           onChange={(e) => {
@@ -91,44 +111,10 @@ export default function CommunityMatchPage() {
         </select>
       </section>
 
-      {/* Top 3 + top-right selector */}
+      {/* Top Councils (no top-right selector) */}
       <section style={{ ...card, marginBottom: 16 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: 12,
-            marginBottom: 10,
-          }}
-        >
-          <h2 style={sectionTitle}>
-            Top Councils {language ? `(by ${language})` : ""}
-          </h2>
-
-          <select
-            value={activeCouncil || ""}
-            onChange={(e) => {
-              const v = e.target.value || null;
-              setActiveCouncil(v);
-              console.log("[page] select LGA:", v);
-            }}
-            style={{
-              minWidth: 230,
-              padding: "10px 12px",
-              borderRadius: 10,
-              border: "1px solid #e5e7eb",
-              background: "#fff",
-              fontSize: 16,
-            }}
-          >
-            <option value="">{`-- Select Council --`}</option>
-            {(councilOptions || []).map((t) => (
-              <option key={t.council} value={t.council}>
-                {t.council}
-              </option>
-            ))}
-          </select>
+        <div style={{ marginBottom: 10 }}>
+          <h2 style={sectionTitle}>Find Largest Communities</h2>
         </div>
 
         <div>
@@ -149,7 +135,7 @@ export default function CommunityMatchPage() {
               <thead>
                 <tr style={{ background: "#fafafa", textAlign: "left" }}>
                   <th style={{ padding: "12px 14px", width: 70 }}>#</th>
-                  <th style={{ padding: "12px 14px" }}>LGA</th>
+                  <th style={{ padding: "12px 14px" }}>council</th>
                   <th style={{ padding: "12px 14px", textAlign: "right" }}>
                     Population
                   </th>
@@ -206,6 +192,7 @@ export default function CommunityMatchPage() {
         />
       </section>
     </main>
+    </>
   );
 }
 
