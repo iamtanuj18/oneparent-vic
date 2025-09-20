@@ -135,7 +135,7 @@ function RankMarkers({ features, top3 }: { features: GFeature[]; top3: Top3Item[
   return null;
 }
 
-/* ========= 主组件 ========= */
+/* ========= Main component ========= */
 
 export default function MapView({
   top3,
@@ -160,12 +160,15 @@ export default function MapView({
   const [lgaGeo, setLgaGeo] = useState<GCollection | null>(null);
   const [subGeo, setSubGeo] = useState<GCollection | null>(null);
 
+  // Currently selected LGA (local for highlighting on the map)
+  const [selectedLga, setSelectedLga] = useState<string | null>(null);
+
   const summaryCacheRef = useRef<Map<string, SuburbSummary>>(new Map());
   const [schoolPins, setSchoolPins] = useState<SchoolRow[] | null>(null);
 
-  // ==== Added: currently selected suburb after click (used to desaturate other areas) ====
+  // Currently selected suburb (after click) used to highlight the clicked suburb
   const [selectedSuburb, setSelectedSuburb] = useState<string | null>(null);
-  // ==== Added: metric toggle (internal small control; does not affect parent) ====
+  // metric toggle (internal small control; does not affect parent)
   const [metric, setMetric] = useState<"schools" | "housing">(initialMetric);
 
   useEffect(() => {
@@ -179,7 +182,7 @@ export default function MapView({
     setSelectedSuburb(null);
   }, [activeCouncil, top3]);
 
-  // Top3 的 LGA features
+  // Top3 LGA features
   const top3Features = useMemo(() => {
     if (!lgaGeo || !top3?.length) return [];
     const want = new Set(top3.map((t) => normName(t.council)));
@@ -191,7 +194,7 @@ export default function MapView({
     [top3]
   );
 
-  // Selected LGA -> fetch its suburbs from DB
+  // Selected LGA -> fetch its suburbs from the DB
   const { data: councilSuburbs } = useCouncilSuburbRows(activeCouncil || undefined);
 
   // Suburbs for the current LGA
@@ -205,13 +208,13 @@ export default function MapView({
 
   const fitTargets = suburbsInCouncil.length ? suburbsInCouncil : top3Features;
 
-  // ==== Added: school counts & housing medians aggregations (data for choropleth basemap) ====
+  // School counts & housing medians aggregations (data for choropleth basemap)
   const { data: schoolCounts = [] } = useSchoolCounts(activeCouncil || undefined);
   const countMap = useMemo(() => new Map(schoolCounts.map((c) => [String(c.suburb).toLowerCase(), c.n])), [schoolCounts]);
   const maxCount = useMemo(() => Math.max(1, ...schoolCounts.map((c) => c.n)), [schoolCounts]);
   const countColor = useMemo(() => makeScale(0, maxCount, 210), [maxCount]);
 
-  // housing：给出一个合理默认（buy/House/3bed），不动父组件
+  // housing: use a reasonable default (buy / House / 3 beds) — parent is not affected
   const { data: medians = [] } = useHousingMedians(
     activeCouncil ? { lga: activeCouncil, tenure: "buy", dwelling: "House", beds: 3 } : null
   );
@@ -220,11 +223,14 @@ export default function MapView({
   const medMax = useMemo(() => (medians.length ? Math.max(...medians.map((m) => m.median)) : 1), [medians]);
   const medColor = useMemo(() => makeScale(medMin, medMax, 160), [medMin, medMax]);
 
-  /** On suburb click: show housing median + school points (preserve original logic and record selectedSuburb) */
+  /**
+   * On suburb click: highlight the clicked suburb, show a styled tooltip with
+   * median housing, weekly rent, and flat price (when available), and load school pins.
+   */
   async function handleSuburbClick(name: string, layer: any) {
-  setSelectedSuburb(name); // Added: desaturate other areas after a click
+    setSelectedSuburb(name); // highlight the clicked suburb
 
-    // 1) 房价 tooltip（原逻辑）
+    // 1) fetch suburb summary (median housing, rent, flat price)
     const key = name.toLowerCase();
     let sum = summaryCacheRef.current.get(key);
     if (!sum) {
@@ -235,20 +241,30 @@ export default function MapView({
         console.error("getSuburbSummary failed:", e);
       }
     }
-    const price =
-      sum && !sum.notFound && sum.medianHousing != null ? `$${Number(sum.medianHousing).toLocaleString()}` : "N/A";
-    const html = `<div><strong>${name}</strong><br/>Median price: ${price}</div>`;
+
+    const median = sum && !sum.notFound && sum.medianHousing != null ? `$${Number(sum.medianHousing).toLocaleString()}` : "N/A";
+    const rent = sum && sum.rent_allprop != null ? `$${Number(sum.rent_allprop).toLocaleString()}/week` : null;
+    const flat = sum && sum.buy_flat != null ? `$${Number(sum.buy_flat).toLocaleString()}` : null;
+
+    // Styled tooltip HTML (white background, rounded, subtle shadow) — avoids a dark/opaque box
+    const html = `<div style="background:#fff;color:#111;padding:10px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.08);min-width:200px">
+        <div style="font-weight:700;margin-bottom:6px">${name}</div>
+        <div style="font-size:13px;color:#333">Median price: <strong>${median}</strong></div>
+        ${rent ? `<div style="font-size:13px;color:#333">Rent (per week): <strong>${rent}</strong></div>` : ''}
+        ${flat ? `<div style="font-size:13px;color:#333">Flat price: <strong>${flat}</strong></div>` : ''}
+      </div>`;
+
     const tip = layer.getTooltip?.();
     if (tip) tip.setContent(html);
     else layer.bindTooltip(html, { sticky: true });
     layer.openTooltip();
 
-  // 2) school points (original logic + coordinate fix)
+    // 2) load school points (preserve original logic + coordinate fix)
     try {
       const rows = await getSuburbSchools(name);
       const fixedRows = (rows || [])
         .filter((s) => typeof s.lat === "number" && typeof s.lon === "number")
-        .map((s) => ({ ...s, lat: s.lon, lon: s.lat })); // 原注释：库中 lat/lon 反了
+        .map((s) => ({ ...s, lat: s.lon, lon: s.lat }));
       setSchoolPins(fixedRows);
     } catch (e) {
       console.error("getSuburbSchools failed:", e);
@@ -304,20 +320,30 @@ export default function MapView({
       <Pane name="lga" style={{ zIndex: 300, pointerEvents: activeCouncil ? "none" : "auto" }}>
         {top3Features.length > 0 && (
           <>
-            <GeoJSON
+              <GeoJSON
               pane="lga"
               key={top3Key}
               data={{ type: "FeatureCollection", features: top3Features } as any}
               style={(f: any) => {
                 const lgaName = String(getProp(f.properties, LGA_KEYS));
                 const pop = top3.find((t) => normName(t.council) === normName(lgaName))?.population ?? popMinMax.min;
-                return { color: "#ff6a00", weight: 2.5, fillOpacity: 0.28, fillColor: popColor(pop) };
+                const isActive = selectedLga && normName(selectedLga) === normName(lgaName);
+                return {
+                  color: isActive ? "#111" : "#ff6a00",
+                  weight: isActive ? 3.5 : 2.5,
+                  fillOpacity: isActive ? 0.55 : 0.28,
+                  fillColor: popColor(pop),
+                };
               }}
               interactive={!activeCouncil}
               onEachFeature={(f, layer) => {
                 const lgaName = String(getProp(f.properties, LGA_KEYS));
-                layer.on("click", () => onPickCouncil(lgaName));
+                layer.on("click", () => {
+                  setSelectedLga(lgaName);
+                  onPickCouncil(lgaName);
+                });
                 const pop = top3.find((t) => normName(t.council) === normName(lgaName))?.population ?? 0;
+                // LGA tooltip kept for hover (shows language population)
                 layer.bindTooltip(`${lgaName} — ${pop.toLocaleString()} speakers`, { sticky: true });
               }}
             />
@@ -337,18 +363,21 @@ export default function MapView({
               const nm = getSuburbName(f.properties);
               const v = valueOf(nm);
               return {
-                color: "#3388ff",
-                weight: 1.5,
-                fillOpacity: selectedSuburb ? 0.12 : 0.6,
-                fillColor: selectedSuburb ? "#ffffff00" : colorOf(v),
+                color: selectedSuburb && normName(selectedSuburb) === normName(nm) ? "#111" : "#3388ff",
+                weight: selectedSuburb && normName(selectedSuburb) === normName(nm) ? 3.2 : 1.5,
+                fillOpacity: selectedSuburb && normName(selectedSuburb) === normName(nm) ? 0.7 : 0.6,
+                fillColor: selectedSuburb && normName(selectedSuburb) === normName(nm) ? '#ffffe6' : colorOf(v),
               };
             }}
             onEachFeature={(f, layer) => {
               const name = getSuburbName(f.properties);
               // Do NOT show hover tooltips when suburbs are shown after an LGA click.
               // Only bind click handlers which will fetch and display median price + schools.
-              layer.on("click", () => onPickSuburb(name));
-              layer.on("click", () => handleSuburbClick(name, layer));
+              layer.on("click", () => {
+                setSelectedSuburb(name);
+                onPickSuburb(name);
+                handleSuburbClick(name, layer);
+              });
             }}
           />
         )}

@@ -46,7 +46,7 @@ export default function CommunityMatchPage() {
     padding: 18,
     borderRadius: 12,
     border: "1px solid #e5e7eb",
-    background: "#fff",
+    background: "#fbfbfc", // slightly off-white (deeper than pure white)
   };
   const sectionTitle: React.CSSProperties = {
     margin: 0,
