@@ -57,7 +57,7 @@ const SCHOOL_ICON = L.divIcon({
 function AutoFit({ features }: { features: GFeature[] }) {
   const map = useMap();
   useEffect(() => {
-    if (!features?.length) return; // ⭐ Do not auto-zoom if there’s no target (prevents jumping on first load)
+    if (!features?.length) return; //  Do not auto-zoom if there’s no target (prevents jumping on first load)
     const b = new L.LatLngBounds([]);
     features.forEach((f) => { try { b.extend(L.geoJSON(f).getBounds()); } catch {} });
     if (b.isValid()) map.fitBounds(b, { padding: [16, 16] });
