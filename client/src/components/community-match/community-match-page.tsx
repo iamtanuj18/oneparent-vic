@@ -137,7 +137,7 @@ export default function MapView({
     return [];
   }, [subGeo, councilSuburbs, activeCouncil]);
 
-  // ⭐ Only zoom when activeCouncil is set; otherwise keep default viewport
+  //  Only zoom when activeCouncil is set; otherwise keep default viewport
   const fitTargets = useMemo(() => {
     if (!activeCouncil) return [];
     return suburbsInCouncil.length ? suburbsInCouncil : top3Features;
@@ -267,7 +267,7 @@ export default function MapView({
                     </div>
                   )}
 
-                  {s.phone ? <div>☎ {s.phone}</div> : null}
+                  {s.phone ? <div> {s.phone}</div> : null}
                 </div>
               </LeafletTooltip>
             </Marker>
