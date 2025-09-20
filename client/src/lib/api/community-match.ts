@@ -65,7 +65,7 @@ export async function getSuburbSummary(name: string): Promise<SuburbSummary> {
   return getJSON<SuburbSummary>(url);
 }
 
-/** ⭐ New: SWR version of suburb summary (for SuburbInfoPanel) */
+/** New: SWR version of suburb summary (for SuburbInfoPanel) */
 export function useSuburbSummary(name?: string | null) {
   const key = name
     ? `${API_BASE}/suburb/${encodeURIComponent(name)}/summary`
