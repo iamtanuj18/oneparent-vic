@@ -19,6 +19,7 @@ const events = require("./routes/events");
 const playdate = require("./routes/playdate");
 const victoriaSuburbList = require("./routes/victoriaSuburbList");
 const communityMatch = require("./routes/communityMatch");
+const journeyMap = require("./routes/journeyMap");
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use("/api", playdate);
 app.use("/api", victoriaSuburbList);
 app.use("/api", insights);
 app.use("/api/community-match", communityMatch);
+app.use("/api/journey-map", journeyMap);
 
 // handle not found and errors
 app.use(notFound);
