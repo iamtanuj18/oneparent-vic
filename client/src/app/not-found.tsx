@@ -1,4 +1,6 @@
-import Link from 'next/link'
+import Link from "next/link";
+import Image from "next/image";
+import { Navbar, Footer } from "@/components/layout";
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -23,10 +25,13 @@ export default function NotFound() {
         <div className="max-w-lg mx-auto text-center">
           {/* 404 illustration image */}
           <div className="mb-8">
-            <img 
+            <Image 
               src="/images/404-illustration.png" 
               alt="404 Page Not Found Illustration"
-              className="w-96 h-96 mx-auto object-contain"
+              width={384}
+              height={384}
+              className="mx-auto object-contain"
+              priority
             />
           </div>
           
