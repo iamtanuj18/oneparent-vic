@@ -451,6 +451,7 @@ export default function MapView({
     const median = sum && !sum.notFound && sum.medianHousing != null ? Number(sum.medianHousing) : null;
     const rent = sum && sum.rent_allprop != null ? Number(sum.rent_allprop) : null;
     const flat = sum && sum.buy_flat != null ? Number(sum.buy_flat) : null;
+    const house = sum && sum.buy_house != null ? Number(sum.buy_house) : null;
 
     // get school count and analyze breakdown
     const schoolCount = schoolCountsMap.get(name.toLowerCase()) ?? schoolDetails.length;
@@ -479,32 +480,45 @@ export default function MapView({
     header.textContent = name;
     
     // housing section - always show if we have data
-    const hasHousingData = median || rent || flat;
+    const hasHousingData = median || rent || flat || house;
     
     if (hasHousingData) {
       const housingSection = L.DomUtil.create('div', '', container);
       housingSection.style.cssText = 'margin-bottom:12px';
       
       const housingTitle = L.DomUtil.create('div', '', housingSection);
-      housingTitle.style.cssText = 'font-weight:600;font-size:14px;color:#374151;margin-bottom:6px;display:flex;align-items:center;gap:6px';
-      housingTitle.innerHTML = '<span style="color:#3b82f6;">🏠</span> Housing Costs';
+      housingTitle.style.cssText = 'font-weight:600;font-size:14px;color:#374151;margin-bottom:8px;display:flex;align-items:center;gap:6px';
+      housingTitle.innerHTML = '<span style="color:#3b82f6;">🏠</span> Housing Info';
       
-      if (median) {
-        const medianDiv = L.DomUtil.create('div', '', housingSection);
-        medianDiv.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:3px;display:flex;justify-content:space-between';
-        medianDiv.innerHTML = `<span>Median price:</span><strong style="color:#1f2937;">$${median.toLocaleString()}</strong>`;
+      // Buying Prices section
+      const hasBuyingData = house || flat;
+      if (hasBuyingData) {
+        const buyingSubtitle = L.DomUtil.create('div', '', housingSection);
+        buyingSubtitle.style.cssText = 'font-weight:600;font-size:12px;color:#4b5563;margin-bottom:4px;margin-left:8px';
+        buyingSubtitle.textContent = 'Buying Prices (Average)';
+        
+        if (house) {
+          const houseDiv = L.DomUtil.create('div', '', housingSection);
+          houseDiv.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:2px;display:flex;justify-content:space-between;margin-left:16px';
+          houseDiv.innerHTML = `<span>House:</span><strong style="color:#1f2937;">$${house.toLocaleString()}</strong>`;
+        }
+        
+        if (flat) {
+          const flatDiv = L.DomUtil.create('div', '', housingSection);
+          flatDiv.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:6px;display:flex;justify-content:space-between;margin-left:16px';
+          flatDiv.innerHTML = `<span>Flat:</span><strong style="color:#1f2937;">$${flat.toLocaleString()}</strong>`;
+        }
       }
       
+      // Renting Prices section
       if (rent) {
+        const rentingSubtitle = L.DomUtil.create('div', '', housingSection);
+        rentingSubtitle.style.cssText = 'font-weight:600;font-size:12px;color:#4b5563;margin-bottom:4px;margin-left:8px';
+        rentingSubtitle.textContent = 'Renting Prices (Average)';
+        
         const rentDiv = L.DomUtil.create('div', '', housingSection);
-        rentDiv.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:3px;display:flex;justify-content:space-between';
-        rentDiv.innerHTML = `<span>Weekly rent:</span><strong style="color:#1f2937;">$${rent.toLocaleString()}</strong>`;
-      }
-      
-      if (flat) {
-        const flatDiv = L.DomUtil.create('div', '', housingSection);
-        flatDiv.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:3px;display:flex;justify-content:space-between';
-        flatDiv.innerHTML = `<span>Flat price:</span><strong style="color:#1f2937;">$${flat.toLocaleString()}</strong>`;
+        rentDiv.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:3px;margin-left:16px';
+        rentDiv.innerHTML = `<div style="display:flex;justify-content:space-between;"><span>Weekly Rent:</span><strong style="color:#1f2937;">$${rent.toLocaleString()}</strong></div><div style="font-size:11px;color:#9ca3af;text-align:right;">(all property types)</div>`;
       }
       
       // Add council-wide context if we have data
