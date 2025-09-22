@@ -1,44 +1,45 @@
-// server/src/db/index.js
+// database connection pool management for oneparent vic api
 const { CONFIG } = require("../config");
 const { Pool } = require("pg");
 
 let pool;
 
-// make a single pool for database connections
+// create and return a singleton database connection pool
 function getPool() {
   if (!CONFIG.DATABASE_URL) {
-    // database url is missing
-    console.warn("[db] DATABASE_URL is not set");
+    console.warn("[db] database url is not configured");
     return null;
   }
 
   if (!pool) {
-    // create the pool only once
+    // initialize connection pool with environment specific settings
     pool = new Pool({
       connectionString: CONFIG.DATABASE_URL,
-      max: Number(CONFIG.PG_POOL_MAX || (CONFIG.NODE_ENV === "production" ? 7 : 5)),
+      max: CONFIG.PG_POOL_MAX || (CONFIG.NODE_ENV === "production" ? 7 : 5),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
+      // ssl config required for hosted postgres instances
       ssl: {
         rejectUnauthorized: false,
       },
     });
 
-    // log errors from idle clients
+    // handle unexpected errors from idle database connections
     pool.on("error", (err) => {
-      console.error("[db] Unexpected error on idle client", err);
+      console.error("[db] unexpected error on idle client", err);
     });
   }
 
   return pool;
 }
 
-// check if database is working
+// test database connection health
 async function ping() {
   try {
     const p = getPool();
     if (!p) return false;
-    // run a simple query to check connection
+    
+    // execute simple query to verify connection
     const res = await p.query("SELECT 1");
     return !!res;
   } catch (e) {
@@ -47,24 +48,23 @@ async function ping() {
   }
 }
 
-// run a query with parameters
+// execute sql query with optional parameters
 async function query(text, params) {
   const p = getPool();
-  if (!p) throw new Error("DB not configured");
-  // run the query using the pool
+  if (!p) throw new Error("database not configured");
+  
+  // execute query using connection pool
   return p.query(text, params);
 }
 
-// close the database pool
+// gracefully close database connection pool
 async function close() {
   if (pool) {
     try {
       await pool.end();
-      // pool closed successfully
       console.log("[db] pool closed");
     } catch (e) {
-      // could not close pool
-      console.warn("[db] pool.close() failed:", e?.message);
+      console.warn("[db] pool close failed:", e?.message);
     } finally {
       pool = null;
     }

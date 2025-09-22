@@ -101,6 +101,7 @@ async function fetchForecast(coords, date) {
 // get weather context for a place and date
 async function getWeatherContext(place, date, timeOpt) {
   var g = await geocodeNominatim(place);
+  
   var fc = await fetchForecast(g, date);
 
   // pick forecast hour: prefer given timeOpt, else 12:00, else fallback
@@ -152,7 +153,6 @@ async function getWeatherContext(place, date, timeOpt) {
   var contextString = labelParts.join(" · ");
 
   var finalPayload = { place: g, hour: hour, day: day, contextString: contextString };
-  console.log("[weather] final context:", JSON.stringify(finalPayload, null, 2));
 
   return finalPayload;
 }
