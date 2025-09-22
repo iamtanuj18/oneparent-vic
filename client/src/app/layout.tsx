@@ -3,6 +3,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navbar, Footer } from "@/components/layout";
+import AuthGuard from "@/components/AuthGuard";
 
 // search engine optimization metadata for single parent support
 export const metadata: Metadata = {
@@ -103,11 +104,13 @@ export default function RootLayout({
         <meta name="msapplication-TileImage" content="/favicon.ico?v=3" />
       </head>
       <body>
-        <Navbar />
-        <main className="min-h-screen">
-          {children}
-        </main>
-        <Footer />
+        <AuthGuard>
+          <Navbar />
+          <main className="min-h-screen">
+            {children}
+          </main>
+          <Footer />
+        </AuthGuard>
       </body>
     </html>
   );
