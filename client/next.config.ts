@@ -1,22 +1,13 @@
 import type { NextConfig } from "next";
 
-// Detect if we're building for Vercel (no static export) or Netlify (static export)
-const isVercel = process.env.VERCEL === '1';
-
 const nextConfig: NextConfig = {
-  // Only use static export for Netlify, not Vercel
-  ...(isVercel ? {} : { output: 'export' }),
+  // Enable static export for universal deployment (works on both Vercel and Netlify)
+  output: 'export',
   trailingSlash: true,
   
-  // Conditional image optimization based on platform
+  // Image optimization (unoptimized for static export compatibility)
   images: {
-    ...(isVercel ? {
-      formats: ['image/webp', 'image/avif'],
-      deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-      imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    } : {
-      unoptimized: true
-    }),
+    unoptimized: true,
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
@@ -49,12 +40,14 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
-    turbo: {
-      rules: {
-        '*.svg': {
-          loaders: ['@svgr/webpack'],
-          as: '*.js',
-        },
+  },
+  
+  // Turbopack configuration (moved from experimental)
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
       },
     },
   },
@@ -65,7 +58,7 @@ const nextConfig: NextConfig = {
   },
   
   // Fast refresh for development
-  reactStrictMode: true,
+  reactStrictMode: false,
   
   eslint: {
     // Disable ESLint during builds for faster deployment

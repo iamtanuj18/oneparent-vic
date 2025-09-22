@@ -14,7 +14,6 @@ const { ping, close } = require("./db");
 
 // import route handlers
 const apiHealthCheck = require("./routes/apiHealthCheck");
-const auth = require("./routes/auth");
 const insights = require("./routes/insights");
 const events = require("./routes/events");
 const playdate = require("./routes/playdate");
@@ -32,7 +31,7 @@ security(app);
 
 // add cookie parser for auth handling
 const cookieParser = require('cookie-parser');
-app.use(cookieParser());
+// app.use(cookieParser()); // Removed - no longer needed for auth
 
 // parse json body with size limit to prevent abuse
 app.use(express.json({ 
@@ -69,7 +68,7 @@ app.use(
       if (allowed.includes(origin)) return cb(null, true);
       return cb(new Error("CORS blocked"), false);
     },
-    credentials: true, // Enable credentials for auth cookies
+    credentials: false, // Disabled - no auth cookies needed
   })
 );
 
@@ -81,7 +80,6 @@ app.use(generalLimiter);
 
 // connect main routes with proper middleware order
 app.use("/api", apiHealthCheck);
-app.use("/api", auth);
 app.use("/api", events);
 app.use("/api", playdate);
 app.use("/api", victoriaSuburbList);
