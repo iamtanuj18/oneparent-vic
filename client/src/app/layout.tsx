@@ -3,7 +3,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navbar, Footer } from "@/components/layout";
-import AuthWrapper from "@/components/auth/AuthWrapper";
 
 // search engine optimization metadata for single parent support
 export const metadata: Metadata = {
@@ -104,13 +103,11 @@ export default function RootLayout({
         <meta name="msapplication-TileImage" content="/favicon.ico?v=3" />
       </head>
       <body>
-        <AuthWrapper>
-          <Navbar />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
-        </AuthWrapper>
+        <Navbar />
+        <main className="min-h-screen">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );
