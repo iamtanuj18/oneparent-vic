@@ -29,7 +29,13 @@ const INTEREST_SUGGESTIONS = [
   "Sports", "Music", "Science", "Movies"
 ];
 
-const GOAL_SUGGESTIONS = [
+// goal suggestions for parent-only activities
+const GOAL_SUGGESTIONS_MYSELF = [
+  "Relaxation", "Learning Something New", "Personal Growth"
+];
+
+// goal suggestions for activities with kids
+const GOAL_SUGGESTIONS_WITH_KIDS = [
   "Relaxation", "Learning Something New", "Quality Bonding Time"
 ];
 
@@ -254,6 +260,11 @@ export function InterestsGoalsStep({
 
   const goalLabel = "Enter your goals/outcomes for the activity";
 
+  // get appropriate goal suggestions based on plan type
+  const goalSuggestions = formData.planFor === 'withKids' 
+    ? GOAL_SUGGESTIONS_WITH_KIDS 
+    : GOAL_SUGGESTIONS_MYSELF;
+
   return (
     <div className="space-y-6">
       <div className="text-center mb-8">
@@ -295,7 +306,7 @@ export function InterestsGoalsStep({
         'goals',
         goalLabel,
         goals,
-        GOAL_SUGGESTIONS,
+        goalSuggestions,
         goalInput,
         goalError,
         "eg. Relaxation",

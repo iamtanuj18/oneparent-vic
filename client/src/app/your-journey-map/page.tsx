@@ -15,6 +15,7 @@ export default function JourneyMapPageRoute() {
   const [assessmentResults, setAssessmentResults] = useState<AssessmentResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastFormData, setLastFormData] = useState<AssessmentRequest | null>(null);
 
   // load existing assessment data when component mounts
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function JourneyMapPageRoute() {
   const handleAssessmentComplete = async (formData: AssessmentRequest) => {
     setLoading(true);
     setError(null);
+    setLastFormData(formData); // Store form data for retry
     
     // scroll to top immediately when form is submitted
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -94,6 +96,7 @@ export default function JourneyMapPageRoute() {
     setError(null);
     setLoading(false);
     setCurrentView('introduction');
+    setLastFormData(null);
     
     // scroll to top when returning to introduction
     setTimeout(() => {
@@ -134,14 +137,23 @@ export default function JourneyMapPageRoute() {
           <div className="text-center max-w-md mx-auto px-4">
             <div className="bg-red-50 border border-red-200 rounded-lg p-6">
               <h2 className="text-xl font-semibold text-red-800 mb-2">Assessment error</h2>
-              <p className="text-red-600 mb-4">{error}</p>
+              <p className="text-red-600 mb-4">
+                {error === 'Failed to fetch' 
+                  ? 'Please click Try again to rebuild your journey map'
+                  : error
+                }
+              </p>
               <div className="space-y-2">
                 <button
                   onClick={() => {
-                    setCurrentView('assessment');
-                    setTimeout(() => {
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }, 100);
+                    if (lastFormData) {
+                      handleAssessmentComplete(lastFormData);
+                    } else {
+                      setCurrentView('assessment');
+                      setTimeout(() => {
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }, 100);
+                    }
                   }}
                   className="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors"
                 >
