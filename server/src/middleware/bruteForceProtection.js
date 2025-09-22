@@ -18,7 +18,10 @@ const serverErrorOnly = (req, res, next, nextValidateRequest) => {
     
     // only count 5xx server errors as failures, not 4xx client errors
     if (res.statusCode >= 500) {
-      nextValidateRequest();
+      // check if nextValidateRequest is a function before calling
+      if (typeof nextValidateRequest === 'function') {
+        nextValidateRequest();
+      }
     }
     // for 2xx, 3xx, 4xx - don't count as failure, reset the counter
     else if (req.brute && req.brute.reset) {
