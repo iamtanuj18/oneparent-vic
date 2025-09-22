@@ -23,5 +23,5 @@
       connect-src 'self' https://oneparent-vic-prod-9a338acb8033.herokuapp.com https://oneparent-dev-api.onrender.com;
       img-src 'self' data: https:;
       style-src 'self' 'unsafe-inline';
-      script-src 'self';
+      script-src 'self' 'unsafe-inline';
     '''
