@@ -1,13 +1,22 @@
 import type { NextConfig } from "next";
 
+// Detect if we're building for Vercel (no static export) or Netlify (static export)
+const isVercel = process.env.VERCEL === '1';
+
 const nextConfig: NextConfig = {
-  // Remove static export for Vercel optimizations
+  // Only use static export for Netlify, not Vercel
+  ...(isVercel ? {} : { output: 'export' }),
   trailingSlash: true,
   
-  // Enable image optimization for Vercel
+  // Conditional image optimization based on platform
   images: {
-    formats: ['image/webp', 'image/avif'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    ...(isVercel ? {
+      formats: ['image/webp', 'image/avif'],
+      deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+      imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    } : {
+      unoptimized: true
+    }),
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     remotePatterns: [
       {
