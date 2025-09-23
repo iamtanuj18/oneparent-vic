@@ -266,7 +266,7 @@ function RankMarkers({ features, top3 }: { features: GFeature[]; top3: Top3Item[
         icon: rankIcon(rank),
         interactive: false,
         pane: "markerPane",
-        zIndexOffset: 1000,
+        zIndexOffset: 100,
       }).addTo(map);
       markers.push(m);
     });
@@ -399,7 +399,7 @@ export default function MapView({
 
     // Show loading tooltip immediately
     const loadingContainer = L.DomUtil.create('div');
-    loadingContainer.style.cssText = 'background:#ffffff !important;background-color:#ffffff !important;color:#111;padding:16px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);min-width:200px;max-width:280px;font-family:Inter,system-ui;border:1px solid #e5e7eb;opacity:1 !important;z-index:10000 !important;position:relative !important';
+    loadingContainer.style.cssText = 'background:#ffffff !important;background-color:#ffffff !important;color:#111;padding:16px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);min-width:200px;max-width:280px;font-family:Inter,system-ui;border:1px solid #e5e7eb;opacity:1 !important;z-index:1000 !important;position:relative !important';
     
     const loadingHeader = L.DomUtil.create('div', '', loadingContainer);
     loadingHeader.style.cssText = 'font-weight:700;font-size:16px;margin-bottom:12px;color:#1f2937;border-bottom:2px solid #e5e7eb;padding-bottom:8px';
@@ -472,7 +472,7 @@ export default function MapView({
 
     // create clean, organized tooltip content
     const container = L.DomUtil.create('div');
-    container.style.cssText = 'background:#ffffff !important;background-color:#ffffff !important;color:#111;padding:16px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);min-width:280px;max-width:320px;font-family:Inter,system-ui;border:1px solid #e5e7eb;opacity:1 !important;z-index:10000 !important;position:relative !important';
+    container.style.cssText = 'background:#ffffff !important;background-color:#ffffff !important;color:#111;padding:16px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);min-width:280px;max-width:320px;font-family:Inter,system-ui;border:1px solid #e5e7eb;opacity:1 !important;z-index:1000 !important;position:relative !important';
     
     // suburb name header
     const header = L.DomUtil.create('div', '', container);
@@ -495,7 +495,7 @@ export default function MapView({
       if (hasBuyingData) {
         const buyingSubtitle = L.DomUtil.create('div', '', housingSection);
         buyingSubtitle.style.cssText = 'font-weight:600;font-size:12px;color:#4b5563;margin-bottom:4px;margin-left:8px';
-        buyingSubtitle.textContent = 'Buying Prices (Average)';
+        buyingSubtitle.textContent = 'Buying Prices (Median)';
         
         if (house) {
           const houseDiv = L.DomUtil.create('div', '', housingSection);
@@ -514,7 +514,7 @@ export default function MapView({
       if (rent) {
         const rentingSubtitle = L.DomUtil.create('div', '', housingSection);
         rentingSubtitle.style.cssText = 'font-weight:600;font-size:12px;color:#4b5563;margin-bottom:4px;margin-left:8px';
-        rentingSubtitle.textContent = 'Renting Prices (Average)';
+        rentingSubtitle.textContent = 'Renting Prices (Median)';
         
         const rentDiv = L.DomUtil.create('div', '', housingSection);
         rentDiv.style.cssText = 'font-size:13px;color:#6b7280;margin-bottom:3px;margin-left:16px';
@@ -611,7 +611,7 @@ export default function MapView({
       
       // Show error message
       const errorContainer = L.DomUtil.create('div');
-      errorContainer.style.cssText = 'background:#ffffff !important;background-color:#ffffff !important;color:#111;padding:16px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);min-width:200px;max-width:280px;font-family:Inter,system-ui;border:1px solid #e5e7eb;opacity:1 !important;z-index:10000 !important;position:relative !important';
+      errorContainer.style.cssText = 'background:#ffffff !important;background-color:#ffffff !important;color:#111;padding:16px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.12);min-width:200px;max-width:280px;font-family:Inter,system-ui;border:1px solid #e5e7eb;opacity:1 !important;z-index:1000 !important;position:relative !important';
       
       const errorHeader = L.DomUtil.create('div', '', errorContainer);
       errorHeader.style.cssText = 'font-weight:700;font-size:16px;margin-bottom:8px;color:#dc2626;';
@@ -760,7 +760,7 @@ export default function MapView({
   }
 
   return (
-    <div style={{ position: 'relative', height, width: '100%' }}>
+    <div style={{ position: 'relative', height, width: '100%', zIndex: 1 }}>
       {/* Add CSS animation for loading spinner and Leaflet tooltip overrides */}
       <style>{`
         @keyframes spin {
@@ -776,14 +776,14 @@ export default function MapView({
           border: 1px solid #e5e7eb !important;
           box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
           opacity: 1 !important;
-          z-index: 10000 !important;
+          z-index: 1000 !important;
           position: relative !important;
         }
         
         /* Force tooltip content to have solid background */
         .leaflet-tooltip * {
           background: #ffffff !important;
-          z-index: 10001 !important;
+          z-index: 1001 !important;
         }
         
         /* Remove any transparency from tooltip arrows */
@@ -984,6 +984,11 @@ function FilterControls() {
       createDisplayItem("Housing Prices", "🏠");
       createDisplayItem("Rental Costs", "💰");
       createDisplayItem("Schools", "🏫");
+      
+      // Add note about suburb boundaries
+      const note = L.DomUtil.create("div", "", el);
+      note.style.cssText = "margin-top:12px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;line-height:1.4";
+      note.textContent = "Note: Some suburbs may fall under more than one council.";
       
       return el;
     };
