@@ -73,10 +73,10 @@ export function Navbar() {
   const getNavbarClasses = () => {
     if (isScrolled) {
       // when scrolled: white background on all pages
-      return "fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md shadow-md border-b border-gray-200/80 transition-all duration-300"
+      return "fixed top-0 left-0 right-0 z-[9999] bg-white/95 backdrop-blur-md shadow-md border-b border-gray-200/80 transition-all duration-300"
     }
     // not scrolled: transparent with overlay on all pages (like homepage)
-    return "fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-sm transition-all duration-300"
+    return "fixed top-0 left-0 right-0 z-[9999] bg-black/20 backdrop-blur-sm transition-all duration-300"
   }
 
   // get text color classes based on scroll state (consistent across all pages)
@@ -156,7 +156,7 @@ export function Navbar() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.2 }}
-                        className="absolute top-full left-0 w-48 bg-white shadow-lg backdrop-blur-md overflow-hidden z-50"
+                        className="absolute top-full left-0 w-48 bg-white shadow-lg backdrop-blur-md overflow-hidden z-[9998]"
                       >
                         <div className="py-2">
                           {moreNavItems.map((item) => (

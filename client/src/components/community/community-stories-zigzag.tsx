@@ -42,13 +42,21 @@ const formatDate = (dateStr: string): string => {
 
 // number formatting helper function
 const formatNumber = (num: number): string => {
-  if (num >= 1000000) {
-    return (num / 1000000).toFixed(1) + 'M'
+  // Handle invalid numbers
+  if (!num || isNaN(num) || !isFinite(num)) {
+    return '0'
   }
-  if (num >= 1000) {
-    return (num / 1000).toFixed(1) + 'k'
+  
+  // Round the number first to handle floating point precision issues
+  const rounded = Math.round(num * 10) / 10
+  
+  if (rounded >= 1000000) {
+    return (rounded / 1000000).toFixed(1) + 'M'
   }
-  return num.toString()
+  if (rounded >= 1000) {
+    return (rounded / 1000).toFixed(1) + 'K'
+  }
+  return Math.round(rounded).toString()
 }
 
 const formatChartDate = (dateStr: string): string => {
@@ -546,13 +554,13 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                             // calculate single parent employment rate
                             const singleParentTotal = singleParents.reduce((sum: number, item: any) => sum + item.families_k, 0)
                             const singleParentEmployed = singleParents.find((item: any) => item.status === 'Employed parent')?.families_k || 0
-                            const singleParentRate = singleParentTotal > 0 ? (singleParentEmployed / singleParentTotal * 100) : 0
+                            const singleParentRate = singleParentTotal > 0 ? ((singleParentEmployed / singleParentTotal) * 100) : 0
                             
                             // calculate couple families employment rate
                             const coupleFamilyTotal = coupleFamilies.reduce((sum: number, item: any) => sum + item.families_k, 0)
                             const atLeastOne = coupleFamilies.find((item: any) => item.status === 'At least one partner employed')?.families_k || 0
                             const bothEmployed = coupleFamilies.find((item: any) => item.status === 'Both partners employed')?.families_k || 0
-                            const coupleFamilyRate = coupleFamilyTotal > 0 ? ((atLeastOne + bothEmployed) / coupleFamilyTotal * 100) : 0
+                            const coupleFamilyRate = coupleFamilyTotal > 0 ? (((atLeastOne + bothEmployed) / coupleFamilyTotal) * 100) : 0
                             
                             return (
                               <>
@@ -568,7 +576,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                       Employment Rate ({latestYear})
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      {formatNumber(singleParentTotal)} families
+                                      {formatNumber(singleParentTotal * 1000)} families
                                     </div>
                                   </div>
                                 </div>
@@ -585,7 +593,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                       At Least One Employed ({latestYear})
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      {formatNumber(coupleFamilyTotal)} families
+                                      {formatNumber(coupleFamilyTotal * 1000)} families
                                     </div>
                                   </div>
                                 </div>
@@ -603,12 +611,12 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                           
                           const singleParentTotal = singleParents.reduce((sum: number, item: any) => sum + item.families_k, 0)
                           const singleParentEmployed = singleParents.find((item: any) => item.status === 'Employed parent')?.families_k || 0
-                          const singleParentRate = singleParentTotal > 0 ? (singleParentEmployed / singleParentTotal * 100) : 0
+                          const singleParentRate = singleParentTotal > 0 ? ((singleParentEmployed / singleParentTotal) * 100) : 0
                           
                           const coupleFamilyTotal = coupleFamilies.reduce((sum: number, item: any) => sum + item.families_k, 0)
                           const atLeastOne = coupleFamilies.find((item: any) => item.status === 'At least one partner employed')?.families_k || 0
                           const bothEmployed = coupleFamilies.find((item: any) => item.status === 'Both partners employed')?.families_k || 0
-                          const coupleFamilyRate = coupleFamilyTotal > 0 ? ((atLeastOne + bothEmployed) / coupleFamilyTotal * 100) : 0
+                          const coupleFamilyRate = coupleFamilyTotal > 0 ? (((atLeastOne + bothEmployed) / coupleFamilyTotal) * 100) : 0
                           
                           if (singleParentRate > 0 && coupleFamilyRate > 0) {
                             const difference = Math.abs(singleParentRate - coupleFamilyRate)
@@ -660,7 +668,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                         <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
                                           <div className="flex justify-between items-center mb-3">
                                             <span className="font-semibold text-gray-800">{item.status}</span>
-                                            <span className="text-xl font-bold text-emerald-700">{formatNumber(item.families_k)}</span>
+                                            <span className="text-xl font-bold text-emerald-700">{formatNumber(item.families_k * 1000)}</span>
                                           </div>
                                           <div className="w-full bg-emerald-200 rounded-full h-4 mb-2">
                                             <div
@@ -669,7 +677,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                             ></div>
                                           </div>
                                           <div className="text-xs text-gray-600">
-                                            {formatNumber(item.with_children_k)} with children (0-14 years)
+                                            {formatNumber(item.with_children_k * 1000)} with children (0-14 years)
                                           </div>
                                         </div>
                                       )
@@ -681,14 +689,17 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                     <div className="grid grid-cols-2 gap-4">
                                       <div>
                                         <div className="text-2xl font-bold">
-                                          {formatNumber(familyTypes['One parent families'].reduce((sum: number, item: any) => sum + item.families_k, 0))}
+                                          {formatNumber(familyTypes['One parent families'].reduce((sum: number, item: any) => sum + item.families_k, 0) * 1000)}
                                         </div>
                                         <div className="text-xs text-emerald-200">Total Single Parents</div>
                                       </div>
                                       <div>
                                         <div className="text-2xl font-bold">
-                                          {((familyTypes['One parent families'].find((i: any) => i.status === 'Employed parent')?.families_k || 0) / 
-                                          familyTypes['One parent families'].reduce((sum: number, item: any) => sum + item.families_k, 0) * 100).toFixed(1)}%
+                                          {(() => {
+                                            const total = familyTypes['One parent families'].reduce((sum: number, item: any) => sum + item.families_k, 0)
+                                            const employed = familyTypes['One parent families'].find((i: any) => i.status === 'Employed parent')?.families_k || 0
+                                            return total > 0 ? ((employed / total) * 100).toFixed(1) : '0.0'
+                                          })()}%
                                         </div>
                                         <div className="text-xs text-emerald-200">Employment Rate</div>
                                       </div>
@@ -714,7 +725,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                         <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
                                           <div className="flex justify-between items-center mb-3">
                                             <span className="font-semibold text-gray-800">{item.status}</span>
-                                            <span className="text-xl font-bold text-blue-700">{formatNumber(item.families_k)}</span>
+                                            <span className="text-xl font-bold text-blue-700">{formatNumber(item.families_k * 1000)}</span>
                                           </div>
                                           <div className="w-full bg-blue-200 rounded-full h-4 mb-2">
                                             <div
@@ -723,7 +734,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                             ></div>
                                           </div>
                                           <div className="text-xs text-gray-600">
-                                            {formatNumber(item.with_children_k)} with children (0-14 years)
+                                            {formatNumber(item.with_children_k * 1000)} with children (0-14 years)
                                           </div>
                                         </div>
                                       )
@@ -735,7 +746,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                     <div className="grid grid-cols-2 gap-4">
                                       <div>
                                         <div className="text-2xl font-bold">
-                                          {formatNumber(familyTypes['Couple families'].reduce((sum: number, item: any) => sum + item.families_k, 0))}
+                                          {formatNumber(familyTypes['Couple families'].reduce((sum: number, item: any) => sum + item.families_k, 0) * 1000)}
                                         </div>
                                         <div className="text-xs text-blue-200">Total Couple Families</div>
                                       </div>
@@ -743,9 +754,9 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                         <div className="text-2xl font-bold">
                                           {(() => {
                                             const total = familyTypes['Couple families'].reduce((sum: number, item: any) => sum + item.families_k, 0)
-                                            const atLeastOne = (familyTypes['Couple families'].find((i: any) => i.status === 'At least one partner employed')?.families_k || 0)
-                                            const bothEmployed = (familyTypes['Couple families'].find((i: any) => i.status === 'Both partners employed')?.families_k || 0)
-                                            return ((atLeastOne + bothEmployed) / total * 100).toFixed(1)
+                                            const atLeastOne = familyTypes['Couple families'].find((i: any) => i.status === 'At least one partner employed')?.families_k || 0
+                                            const bothEmployed = familyTypes['Couple families'].find((i: any) => i.status === 'Both partners employed')?.families_k || 0
+                                            return total > 0 ? (((atLeastOne + bothEmployed) / total) * 100).toFixed(1) : '0.0'
                                           })()}%
                                         </div>
                                         <div className="text-xs text-blue-200">At Least One Employed Rate</div>
