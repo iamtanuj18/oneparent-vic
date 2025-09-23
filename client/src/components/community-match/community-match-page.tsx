@@ -98,7 +98,7 @@ export function CommunityMatchPage() {
   const isInitialLoading = !languages && !languagesError
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" style={{ position: 'relative', zIndex: 1 }}>
       {/* page header */}
       <PageHeader
         title="Community"
