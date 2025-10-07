@@ -15,10 +15,10 @@ const NAV_ITEMS = [
     label: 'PlayDate Planner',
     href: '/playdate'
   },
-  // {
-  //   label: 'Time & Learn Hub', 
-  //   href: '/time-and-learn-hub'
-  // },
+  {
+    label: 'Time & Learn Hub', 
+    href: '/time-and-learn-hub'
+  },
   {
     label: 'Your Journey Map',
     href: '/your-journey-map'
@@ -27,10 +27,10 @@ const NAV_ITEMS = [
     label: 'Community Match',
     href: '/community-match'
   },
-  // {
-  //   label: 'Benefits Checker',
-  //   href: '/benefits-entitlements'
-  // },
+  {
+    label: 'Emotion Tracker',
+    href: '/emotion-tracker'
+  },
   {
     label: 'Find Events',
     href: '/events'
@@ -113,7 +113,7 @@ export function Navbar() {
                 <span className={getTextClasses()}>
                   oneparent
                 </span>
-                <span className="text-blue-600">
+                <span className="gradient-text">
                   {' '}vic
                 </span>
               </button>

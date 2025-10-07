@@ -13,6 +13,8 @@ export function TimelineSection() {
     growth: string;
     bgColor: string;
     textColor: string;
+    height: number;
+    familiesCount: number;
   }> | null>(null);
   const [yearsOfGrowth, setYearsOfGrowth] = React.useState<number | null>(null);
   const [fetchError, setFetchError] = React.useState<string | null>(null);
@@ -36,30 +38,46 @@ export function TimelineSection() {
           ];
           
           // take only first 5 items and process them
-          const processedData = timeline.slice(0, 5).map((item, index) => {
+          const timelineSlice = timeline.slice(0, 5);
+          const maxFamilies = Math.max(...timelineSlice.map(item => item.total_families_k));
+          
+          const processedData = timelineSlice.map((item, index) => {
             let growth = "baseline";
             if (index > 0) {
               const previousValue = timeline[index - 1].total_families_k;
               const currentValue = item.total_families_k;
               const growthPercent = Math.round(((currentValue - previousValue) / previousValue) * 100);
-              // only show + for positive, - for negative, no double signs
               if (growthPercent > 0) {
                 growth = `+${growthPercent}%`;
               } else if (growthPercent < 0) {
-                growth = `${growthPercent}%`; // already has negative sign
+                growth = `${growthPercent}%`;
               } else {
                 growth = "0%";
               }
             }
             
             const colorIndex = Math.min(index, colors.length - 1);
+            const baseHeight = 130 + (index * 25);
+            let adjustment = 0;
+            if (index === 1 && item.total_families_k > timelineSlice[2]?.total_families_k) {
+              adjustment = 15;
+            } else if (index === 2) {
+              adjustment = -25;
+            } else if (index === 3) {
+              adjustment = -20;
+            } else if (index === 4) {
+              adjustment = -15;
+            }
+            const relativeHeight = baseHeight + adjustment;
             
             return {
               year: item.year,
               families: `${Math.round(item.total_families_k)}k`,
               growth,
               bgColor: colors[colorIndex].bgColor,
-              textColor: colors[colorIndex].textColor
+              textColor: colors[colorIndex].textColor,
+              height: Math.round(relativeHeight),
+              familiesCount: item.total_families_k
             };
           });
           
@@ -126,7 +144,7 @@ export function TimelineSection() {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
                 className={`${item.bgColor} rounded-2xl p-4 text-center min-w-[140px] max-w-[160px] border border-white/50 shadow-lg flex-shrink-0 flex flex-col justify-between`}
-                style={{ height: `${130 + index * 25}px` }}
+                style={{ height: `${item.height}px` }}
               >
                 {/* year at top */}
                 <div className={`text-lg font-bold ${item.textColor}`}>

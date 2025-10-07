@@ -22,7 +22,7 @@ const FOOTER_LINKS = [
   {
     title: 'More Resources',
     links: [
-      { label: 'Benefits Checker', href: '/benefits-entitlements' },
+      { label: 'Emotion Tracker', href: '/emotion-tracker' },
       { label: 'Find Events', href: '/events' }
     ]
   }
@@ -50,7 +50,7 @@ export function Footer() {
             <div className="mb-6">
               <h3 className="text-3xl font-bold tracking-tight">
                 <span className="text-white">oneparent</span>
-                <span className="text-blue-400"> vic</span>
+                <span className="gradient-text"> vic</span>
               </h3>
               <p className="text-gray-300 mt-4 text-base leading-relaxed">
                 Making life easier for single parents across Victoria

@@ -279,6 +279,7 @@ export function InterestsGoalsStep({
       {/* safety error display */}
       {safetyCheckError && (
         <SafetyError 
+          message={safetyCheckError.message}
           issues={safetyCheckError.issues}
           flaggedItems={safetyCheckError.flaggedItems}
           planFor={formData.planFor as 'myself' | 'withKids'}

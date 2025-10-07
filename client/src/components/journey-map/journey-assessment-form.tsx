@@ -45,6 +45,17 @@ export function JourneyAssessmentForm({ onBackToIntro, onAssessmentComplete }: J
     improvementGoals: []
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [dateError, setDateError] = useState('');
+
+  // get current date for validation
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayString = today.toISOString().split('T')[0];
+  
+  // calculate min date (20 years back from today)
+  const minDate = new Date();
+  minDate.setFullYear(minDate.getFullYear() - 20);
+  const minDateString = minDate.toISOString().split('T')[0];
 
   const steps = [
     "When your single parenthood began?",
@@ -63,6 +74,40 @@ export function JourneyAssessmentForm({ onBackToIntro, onAssessmentComplete }: J
     }
   };
 
+  // handle separation date change with real-time validation
+  const handleSeparationDateChange = (date: string) => {
+    setDateError(''); // clear any previous error
+    updateFormData('separationDate', date);
+    
+    if (date) {
+      const selectedDate = new Date(date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      if (selectedDate > today) {
+        setDateError('Single parenthood cannot begin in the future');
+        return;
+      }
+      
+      // check if date is not too far in the past (20 years max)
+      const minAllowedDate = new Date();
+      minAllowedDate.setFullYear(minAllowedDate.getFullYear() - 20);
+      minAllowedDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < minAllowedDate) {
+        setDateError('Please choose a date within the last 20 years');
+        return;
+      }
+    }
+  };
+
+  // validate on blur (when user finishes typing and clicks away)
+  const handleDateBlur = () => {
+    if (formData.separationDate && formData.separationDate.length > 0 && formData.separationDate.length < 10) {
+      setDateError('Please enter a complete date');
+    }
+  };
+
   // validation for each step
   const validateCurrentStep = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -74,8 +119,19 @@ export function JourneyAssessmentForm({ onBackToIntro, onAssessmentComplete }: J
         } else {
           const selectedDate = new Date(formData.separationDate);
           const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
           if (selectedDate > today) {
-            newErrors.separationDate = 'date cannot be in the future';
+            newErrors.separationDate = 'single parenthood cannot begin in the future';
+          } else {
+            // check if date is not too far in the past (20 years max)
+            const minAllowedDate = new Date();
+            minAllowedDate.setFullYear(minAllowedDate.getFullYear() - 20);
+            minAllowedDate.setHours(0, 0, 0, 0);
+            
+            if (selectedDate < minAllowedDate) {
+              newErrors.separationDate = 'please choose a date within the last 20 years';
+            }
           }
         }
         break;
@@ -163,6 +219,7 @@ export function JourneyAssessmentForm({ onBackToIntro, onAssessmentComplete }: J
         onAssessmentComplete(assessmentData);
       } else {
         setCurrentStep(prev => prev + 1);
+        setDateError(''); // clear date error when progressing to next step
         // scroll to step indicator after state update
         setTimeout(scrollToStepIndicator, 100);
       }
@@ -203,12 +260,16 @@ export function JourneyAssessmentForm({ onBackToIntro, onAssessmentComplete }: J
           id="separation-date"
           type="date"
           value={formData.separationDate}
-          onChange={(e) => updateFormData('separationDate', e.target.value)}
-          max={new Date().toISOString().split('T')[0]}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+          onChange={(e) => handleSeparationDateChange(e.target.value)}
+          onBlur={handleDateBlur}
+          min={minDateString}
+          max={todayString}
+          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 ${
+            dateError || errors.separationDate ? 'border-red-300' : 'border-gray-300'
+          }`}
         />
-        {errors.separationDate && (
-          <p className="mt-2 text-sm text-red-600">{errors.separationDate}</p>
+        {(dateError || errors.separationDate) && (
+          <p className="mt-2 text-sm text-red-600">{dateError || errors.separationDate}</p>
         )}
       </div>
     </motion.div>

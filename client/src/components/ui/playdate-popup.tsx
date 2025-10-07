@@ -131,7 +131,7 @@ export function PlayDatePopup({ isOpen, onClose }: PlayDatePopupProps) {
                           onClick={handleTryPlayDate}
                           className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold transition-colors duration-200 flex-1 sm:flex-none text-lg"
                         >
-                          try playdate planner
+                          Try Playdate Planner
                         </motion.button>
                         
                         <motion.button
@@ -140,7 +140,7 @@ export function PlayDatePopup({ isOpen, onClose }: PlayDatePopupProps) {
                           onClick={handleClose}
                           className="border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 px-8 py-4 rounded-lg font-semibold transition-all duration-200 text-lg"
                         >
-                          maybe later
+                          Maybe Later
                         </motion.button>
                       </div>
                       

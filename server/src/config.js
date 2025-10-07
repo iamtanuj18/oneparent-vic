@@ -45,7 +45,7 @@ const CONFIG = {
   GEMINI_STANDARD_FALLBACK: process.env.GEMINI_STANDARD_FALLBACK || "models/gemini-2.0-flash", // tier 2 standard fallback
 
   // configurable model sequences for reliable generation 
-  GENERATE_MODEL_SEQUENCE: process.env.GENERATE_MODEL_SEQUENCE || "FLASH,PRO,PRO", // generation priority
+  GENERATE_MODEL_SEQUENCE: process.env.GENERATE_MODEL_SEQUENCE || "FLASH,FLASH,PRO", // generation priority
   VALIDATE_MODEL_SEQUENCE: process.env.VALIDATE_MODEL_SEQUENCE || "LITE,FLASH", // validation priority
 
   // multi-key pool 
