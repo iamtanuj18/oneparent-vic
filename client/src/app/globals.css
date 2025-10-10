@@ -25,6 +25,48 @@ body {
 
 /* utility classes for consistent styling */
 
+/* animations for sheet component */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-in-from-top {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+.animate-in {
+  animation: slide-in-from-top 0.3s ease-out;
+}
+
 /* gradient text effect used across multiple components */
 .gradient-text {
   background: linear-gradient(to right, #9333ea, #2563eb, #059669);
@@ -186,4 +228,45 @@ body {
 
 .slider-red::-moz-range-thumb:hover {
   background: #dc2626;
+}
+
+/* sleep slider styles */
+.sleep-slider {
+  background: #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.sleep-slider::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 24px;
+  width: 24px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
+  border: 0;
+  transition: background-color 0.3s ease;
+}
+
+.sleep-slider::-webkit-slider-thumb:hover {
+  background: #7c3aed;
+}
+
+.sleep-slider::-moz-range-thumb {
+  height: 24px;
+  width: 24px;
+  background: #8b5cf6;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
+  border: 0;
+  transition: background-color 0.3s ease;
+}
+
+.sleep-slider::-moz-range-thumb:hover {
+  background: #7c3aed;
 }

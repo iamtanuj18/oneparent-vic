@@ -1,0 +1,63 @@
+# AWS EC2 Deployment - Ignore Sensitive Files
+
+# SSH Keys and Certificates
+*.pem
+*.key
+*.ppk
+*.pub
+id_rsa*
+id_ed25519*
+id_ecdsa*
+
+# Environment Files
+.env
+.env.*
+*.env
+
+# Connection Details
+connection-details.txt
+server-details.txt
+instance-details.txt
+
+# AWS CloudFormation Outputs
+stack-outputs.json
+ec2-outputs.json
+instance-outputs.json
+
+# Log Files
+*.log
+logs/
+access.log
+error.log
+deployment.log
+
+# Nginx Configuration (if contains sensitive info)
+# Uncomment if your nginx configs contain sensitive data:
+# nginx.conf
+# sites-available/
+# sites-enabled/
+
+# Temporary Files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Docker Compose Override Files (if containing secrets)
+docker-compose.override.yml
+docker-compose.prod.yml
+
+# Application Secrets
+secrets/
+*.secrets

@@ -105,6 +105,8 @@ function prepareAnalysisData({ weekData, previousWeekData, emotionLogs }) {
   const energyPattern = calculateEnergyPattern(emotionLogs);
   const overwhelmPattern = calculateOverwhelmPattern(emotionLogs);
   const emotionFrequency = calculateEmotionFrequency(emotionLogs);
+  const sleepPattern = calculateSleepPattern(emotionLogs);
+  const activityFrequency = calculateActivityFrequency(emotionLogs);
   
   return {
     weekSummary: {
@@ -112,7 +114,10 @@ function prepareAnalysisData({ weekData, previousWeekData, emotionLogs }) {
       averageMood: weekData.averageMood,
       averageEnergy: weekData.averageEnergy,
       averageOverwhelm: weekData.averageOverwhelm,
+      averageSleep: weekData.averageSleep,
+      sleepDataCount: weekData.sleepDataCount,
       topEmotions: weekData.topEmotions,
+      topActivities: weekData.topActivities,
       startDate: weekData.startDate,
       endDate: weekData.endDate
     },
@@ -120,26 +125,40 @@ function prepareAnalysisData({ weekData, previousWeekData, emotionLogs }) {
       moodTrend,
       energyPattern,
       overwhelmPattern,
-      emotionFrequency
+      emotionFrequency,
+      sleepPattern,
+      activityFrequency
     },
     previousWeek: previousWeekData ? {
       averageMood: previousWeekData.averageMood,
       averageEnergy: previousWeekData.averageEnergy,
       averageOverwhelm: previousWeekData.averageOverwhelm,
-      topEmotions: previousWeekData.topEmotions
+      averageSleep: previousWeekData.averageSleep,
+      topEmotions: previousWeekData.topEmotions,
+      topActivities: previousWeekData.topActivities
     } : null,
     dailyLogs: emotionLogs.map(log => ({
       date: log.date,
       mood: log.mood,
       energy: log.energy,
       overwhelm: log.overwhelm,
-      emotions: log.emotions
+      emotions: log.emotions,
+      sleepHours: log.sleepHours,
+      activities: log.activities || []
     }))
   };
 }
 
 // build the prompt for gemini ai
 function buildInsightsPrompt({ weekSummary, patterns, previousWeek, dailyLogs }) {
+  const sleepInfo = weekSummary.sleepDataCount >= 5 ? 
+    `- Average sleep: ${weekSummary.averageSleep.toFixed(1)} hours (based on ${weekSummary.sleepDataCount} days)` : 
+    `- Sleep tracking: Only ${weekSummary.sleepDataCount} days logged (need 5+ for analysis)`;
+  
+  const activitiesInfo = weekSummary.topActivities?.length > 0 ? 
+    `- Common activities: ${weekSummary.topActivities.join(', ')}` : 
+    '- Activities: None logged this week';
+
   return `You are a supportive AI assistant helping single parents track their emotional wellbeing. Analyze this week's emotion data to provide encouraging, practical insights.
 
 WEEK OVERVIEW:
@@ -148,22 +167,28 @@ WEEK OVERVIEW:
 - Average mood: ${weekSummary.averageMood}/6 (1=low, 6=high)
 - Average energy: ${weekSummary.averageEnergy}/100
 - Average overwhelm: ${weekSummary.averageOverwhelm}/100
+${sleepInfo}
 - Common emotions: ${weekSummary.topEmotions.join(', ')}
+${activitiesInfo}
 
 DAILY ENTRIES:
-${dailyLogs.map(log => 
-  `${log.date}: Mood ${log.mood}/6, Energy ${log.energy}/100, Overwhelm ${log.overwhelm}/100, Felt: [${log.emotions.join(', ')}]`
-).join('\n')}
+${dailyLogs.map(log => {
+  const sleepText = log.sleepHours !== undefined && log.sleepHours !== null ? `, Sleep: ${log.sleepHours}h` : '';
+  const activitiesText = log.activities?.length > 0 ? `, Activities: [${log.activities.join(', ')}]` : '';
+  return `${log.date}: Mood ${log.mood}/6, Energy ${log.energy}/100, Overwhelm ${log.overwhelm}/100${sleepText}, Felt: [${log.emotions.join(', ')}]${activitiesText}`;
+}).join('\n')}
 
 PATTERNS:
 - Mood trend: ${patterns.moodTrend}
 - Energy levels: ${patterns.energyPattern}
 - Overwhelm levels: ${patterns.overwhelmPattern}
+${weekSummary.sleepDataCount >= 5 ? `- Sleep pattern: ${patterns.sleepPattern}` : '- Sleep pattern: Insufficient data for analysis'}
 
 ${previousWeek ? `PREVIOUS WEEK:
 - Mood was: ${previousWeek.averageMood}/6 (this week: ${weekSummary.averageMood}/6)
 - Energy was: ${previousWeek.averageEnergy}/100 (this week: ${weekSummary.averageEnergy}/100)
-- Overwhelm was: ${previousWeek.averageOverwhelm}/100 (this week: ${weekSummary.averageOverwhelm}/100)` : 'No previous week data available.'}
+- Overwhelm was: ${previousWeek.averageOverwhelm}/100 (this week: ${weekSummary.averageOverwhelm}/100)
+${previousWeek.averageSleep ? `- Sleep was: ${previousWeek.averageSleep.toFixed(1)}h (this week: ${weekSummary.averageSleep ? weekSummary.averageSleep.toFixed(1) + 'h' : 'insufficient data'})` : ''}` : 'No previous week data available.'}
 
 Please provide:
 1. A brief, encouraging 2-sentence summary of their week
@@ -234,6 +259,39 @@ function calculateEmotionFrequency(emotionLogs) {
     .slice(0, 5)
     .reduce((acc, [emotion, count]) => {
       acc[emotion] = count;
+      return acc;
+    }, {});
+}
+
+// analyze sleep patterns
+function calculateSleepPattern(emotionLogs) {
+  const logsWithSleep = emotionLogs.filter(log => log.sleepHours !== undefined && log.sleepHours !== null);
+  
+  if (logsWithSleep.length === 0) return 'no sleep data';
+  
+  const avgSleep = logsWithSleep.reduce((sum, log) => sum + log.sleepHours, 0) / logsWithSleep.length;
+  
+  if (avgSleep >= 8) return 'good sleep (8+ hours)';
+  if (avgSleep >= 6.5) return 'adequate sleep (6.5-8 hours)';
+  if (avgSleep >= 5) return 'limited sleep (5-6.5 hours)';
+  return 'insufficient sleep (<5 hours)';
+}
+
+// count which activities happened most often
+function calculateActivityFrequency(emotionLogs) {
+  const frequency = {};
+  
+  emotionLogs.forEach(log => {
+    (log.activities || []).forEach(activity => {
+      frequency[activity] = (frequency[activity] || 0) + 1;
+    });
+  });
+  
+  return Object.entries(frequency)
+    .sort(([,a], [,b]) => b - a)
+    .slice(0, 5)
+    .reduce((acc, [activity, count]) => {
+      acc[activity] = count;
       return acc;
     }, {});
 }

@@ -1,0 +1,75 @@
+# dockerignore for oneparent vic server
+# excludes unnecessary files from docker build context
+
+# development files
+node_modules/
+npm-debug.log*
+.npm
+.eslintcache
+
+# environment files
+.env
+.env.*
+*.env
+
+# git files
+.git/
+.gitignore
+
+# documentation
+readme.md
+*.md
+
+# test files
+test/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+
+# development tools
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# logs
+logs/
+*.log
+
+# runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# coverage directory
+coverage/
+.nyc_output
+
+# dependency directories
+jspm_packages/
+bower_components/
+
+# optional npm cache directory
+.npm
+
+# optional eslint cache
+.eslintcache
+
+# output of build tools
+dist/
+build/
+
+# temporary folders
+tmp/
+temp/
+
+# os generated files
+.ds_store
+.ds_store?
+._*
+.spotlight-v100
+.trashes
+thumbs.db
+desktop.ini

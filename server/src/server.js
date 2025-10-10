@@ -22,6 +22,7 @@ const victoriaSuburbList = require("./routes/victoriaSuburbList");
 const communityMatch = require("./routes/communityMatch");
 const journeyMap = require("./routes/journeyMap");
 const emotionTracker = require("./routes/emotionTracker");
+const timeAndLearnHub = require("./routes/timeAndLearnHub");
 
 const app = express();
 
@@ -86,6 +87,7 @@ app.use("/api", insights);
 app.use("/api/community-match", communityMatch);
 app.use("/api/journey-map", journeyMap);
 app.use("/api/emotion-tracker", emotionTracker);
+app.use("/api", timeAndLearnHub);
 
 // handle not found and errors
 app.use(notFound);

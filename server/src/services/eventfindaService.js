@@ -283,8 +283,8 @@ async function getEventfindaEvents(filters = {}) {
         return {
           id: e.id,
           title: e.name || "untitled event",
-          date: formatToAustralianDate(e.datetime_start),
-          rawDate: e.datetime_start, // keep iso for dedup and sort
+          date: e.datetime_start,
+          rawDate: e.datetime_start,
           location: e.location_summary || e.address || "Victoria, Australia",
           description: trimDescription(e.description),
           url: e.url || "#",

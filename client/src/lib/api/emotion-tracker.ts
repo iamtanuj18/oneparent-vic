@@ -9,6 +9,8 @@ export interface EmotionLog {
   energy: number
   overwhelm: number
   emotions: string[]
+  sleepHours: number
+  activities: string[]
   week: number
   week_number?: number
   created_at?: string

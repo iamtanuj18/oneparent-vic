@@ -1,0 +1,93 @@
+# AWS Deployment Security - Ignore Sensitive Files
+
+# SSH Keys (Private Keys)
+*.pem
+*.key
+*.ppk
+id_rsa*
+id_ed25519*
+id_ecdsa*
+
+# Environment Files
+.env
+.env.*
+*.env
+.environment
+environment.local
+environment.production
+
+# AWS Credentials and Config
+.aws/
+aws-credentials.json
+credentials.json
+aws-config.json
+config.json
+
+# Connection Details and Secrets
+*connection-details.txt
+*connection-info.txt
+*credentials.txt
+*secrets.txt
+*passwords.txt
+*tokens.txt
+
+# Tunnel Commands with Real IPs
+tunnelcommand.env
+
+# Backup Files
+*.bak
+*.backup
+*.old
+*.orig
+
+# Temporary Files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Log Files
+*.log
+logs/
+*.log.*
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Development Files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled/Generated Files
+*.zip
+*.tar
+*.tar.gz
+*.rar
+build/
+dist/
+node_modules/
+
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+dump.sql
+*.dump
+
+# Certificate Files
+*.crt
+*.cert
+*.p12
+*.pfx
+*.jks
+*.keystore

@@ -1,0 +1,56 @@
+# aws codebuild configuration for frontend deployment
+# this file defines how aws builds and deploys the next.js application
+# it runs automatically when code is pushed to the main branch
+
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+      
+  pre_build:
+    commands:
+      # navigate to the client directory and install dependencies
+      - echo "installing frontend dependencies"
+      - cd client
+      - echo "node version:" && node --version
+      - echo "npm version:" && npm --version
+      # install dependencies with optimized settings for build performance
+      - npm ci --prefer-offline --no-audit
+      
+  build:
+    commands:
+      # build the next.js application for production
+      - echo "starting frontend build process"
+      - npm run build
+      - echo "build completed successfully"
+      # verify the build output exists
+      - ls -la out/
+      
+  post_build:
+    commands:
+      # deploy built files to s3 and invalidate cloudfront cache
+      - echo "deploying built files to aws s3"
+      # sync files with cache optimization
+      # static assets get long cache headers for performance
+      - aws s3 sync out/ s3://$S3_BUCKET --delete --cache-control "public,max-age=31536000,immutable" --exclude "*.html"
+      # html files get short cache headers for fast updates
+      - aws s3 sync out/ s3://$S3_BUCKET --delete --cache-control "public,max-age=0,must-revalidate" --include "*.html"
+      # clear cloudfront cache so changes are visible immediately
+      - echo "invalidating cloudfront cache for immediate updates"
+      - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DISTRIBUTION_ID --paths "/*" --query 'Invalidation.Id' --output text
+      - echo "deployment completed successfully"
+
+# build artifacts that get passed between pipeline stages
+artifacts:
+  files:
+    - '**/*'
+  base-directory: client/out
+  name: frontend-build-artifacts
+
+# cache node_modules and next.js cache to speed up builds
+cache:
+  paths:
+    - client/node_modules/**/*
+    - client/.next/cache/**/*

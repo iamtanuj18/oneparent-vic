@@ -1,12 +1,80 @@
+// Test Case 6: Week 1 only 
+
 localStorage.setItem("user-emotion-start-date", "2025-09-15");
 
 localStorage.setItem("emotion-logs", JSON.stringify([
-  {"id": "1757937600000", "date": "Mon Sep 15 2025", "timestamp": 1757937600000, "mood": 4, "energy": 70, "overwhelm": 30, "emotions": ["excited", "motivated"], "week": 1},
-  {"id": "1758024000000", "date": "Tue Sep 16 2025", "timestamp": 1758024000000, "mood": 3, "energy": 60, "overwhelm": 40, "emotions": ["okay", "busy"], "week": 1},
-  {"id": "1758110400000", "date": "Wed Sep 17 2025", "timestamp": 1758110400000, "mood": 5, "energy": 80, "overwhelm": 20, "emotions": ["joyful", "grateful"], "week": 1},
-  {"id": "1758196800000", "date": "Thu Sep 18 2025", "timestamp": 1758196800000, "mood": 4, "energy": 65, "overwhelm": 35, "emotions": ["confident", "productive"], "week": 1},
-  {"id": "1758283200000", "date": "Fri Sep 19 2025", "timestamp": 1758283200000, "mood": 3, "energy": 50, "overwhelm": 50, "emotions": ["tired", "stressed"], "week": 1},
-  {"id": "1758369600000", "date": "Sat Sep 20 2025", "timestamp": 1758369600000, "mood": 4, "energy": 75, "overwhelm": 25, "emotions": ["relaxed", "peaceful"], "week": 1}
+  {
+    "id": "1757937600000",
+    "date": "Mon Sep 15 2025",
+    "timestamp": 1757937600000,
+    "mood": 4,
+    "energy": 70,
+    "overwhelm": 30,
+    "emotions": ["excited", "motivated"],
+    "sleepHours": 7.0,
+    "activities": ["worked_personal_goal"],
+    "week": 1
+  },
+  {
+    "id": "1758024000000",
+    "date": "Tue Sep 16 2025",
+    "timestamp": 1758024000000,
+    "mood": 3,
+    "energy": 60,
+    "overwhelm": 40,
+    "emotions": ["average", "nervous"],
+    "sleepHours": 6.0,
+    "activities": ["worked_personal_goal"],
+    "week": 1
+  },
+  {
+    "id": "1758110400000",
+    "date": "Wed Sep 17 2025",
+    "timestamp": 1758110400000,
+    "mood": 5,
+    "energy": 80,
+    "overwhelm": 20,
+    "emotions": ["joyful", "grateful"],
+    "sleepHours": 7.5,
+    "activities": ["connected_friends_family", "self_care"],
+    "week": 1
+  },
+  {
+    "id": "1758196800000",
+    "date": "Thu Sep 18 2025",
+    "timestamp": 1758196800000,
+    "mood": 4,
+    "energy": 65,
+    "overwhelm": 35,
+    "emotions": ["accomplished", "productive"],
+    "sleepHours": 6.5,
+    "activities": ["worked_personal_goal"],
+    "week": 1
+  },
+  {
+    "id": "1758283200000",
+    "date": "Fri Sep 19 2025",
+    "timestamp": 1758283200000,
+    "mood": 3,
+    "energy": 50,
+    "overwhelm": 50,
+    "emotions": ["tired", "anxious"],
+    "sleepHours": 5.5,
+    "activities": [],
+    "week": 1
+  },
+  {
+    "id": "1758369600000",
+    "date": "Sat Sep 20 2025",
+    "timestamp": 1758369600000,
+    "mood": 4,
+    "energy": 75,
+    "overwhelm": 25,
+    "emotions": ["relaxed", "calm"],
+    "sleepHours": 8.0,
+    "activities": ["relaxed_rested", "quality_time_kids"],
+    "week": 1
+  }
 ]));
 
 localStorage.setItem("emotion-insights-generated", JSON.stringify([1]));
@@ -39,3 +107,5 @@ localStorage.setItem("emotion-insights-week-1", JSON.stringify({
   },
   "generatedAt": "2025-10-07T04:16:32.370Z"
 }));
+
+console.log("Test Case 6 data injected successfully!");

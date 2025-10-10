@@ -13,15 +13,16 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ANIMATION_CONFIG, FADE_UP_VARIANT } from '@/lib/animation'
 import { MOOD_LABELS, MOOD_EMOJIS } from '@/lib/api/emotion-tracker'
 
-// emotion log interface for localStorage
 interface EmotionLog {
   id: string
   date: string
   timestamp: number
-  mood: number // 1-6 scale
-  energy: number // 0-100
-  overwhelm: number // 0-100
+  mood: number
+  energy: number
+  overwhelm: number
   emotions: string[]
+  sleepHours: number
+  activities: string[]
   week: number
 }
 
@@ -64,6 +65,15 @@ const EMOTIONS = {
   }
 }
 
+const ACTIVITIES = [
+  { id: 'exercised', label: 'Exercised', icon: '🏃' },
+  { id: 'quality_time_kids', label: 'Quality time with kids', icon: '👨‍👩‍👧‍👦' },
+  { id: 'connected_friends_family', label: 'Connected with friends/family', icon: '👥' },
+  { id: 'relaxed_rested', label: 'Relaxed or rested', icon: '🧘' },
+  { id: 'worked_personal_goal', label: 'Worked on a personal goal', icon: '🎯' },
+  { id: 'self_care', label: 'Practiced self-care', icon: '💆' }
+]
+
 interface EmotionLogFormProps {
   onDataChange?: () => void;
 }
@@ -73,6 +83,8 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
   const [energy, setEnergy] = useState<number>(50)
   const [overwhelm, setOverwhelm] = useState<number>(50)
   const [selectedEmotions, setSelectedEmotions] = useState<string[]>([])
+  const [sleepHours, setSleepHours] = useState<number>(7)
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([])
   const [logs, setLogs] = useState<EmotionLog[]>([])
   const [todayLogged, setTodayLogged] = useState(false)
   const [isEditMode, setIsEditMode] = useState(false)
@@ -83,6 +95,8 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
     energy: number;
     overwhelm: number;
     emotions: string[];
+    sleepHours: number;
+    activities: string[];
   } | null>(null)
   const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const [hasTriedSubmit, setHasTriedSubmit] = useState(false)
@@ -128,6 +142,8 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
       setEnergy(50)
       setOverwhelm(50)
       setSelectedEmotions([])
+      setSleepHours(7)
+      setSelectedActivities([])
     }
   }
 
@@ -142,11 +158,15 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
       setEnergy(todayLog.energy)
       setOverwhelm(todayLog.overwhelm)
       setSelectedEmotions(todayLog.emotions)
+      setSleepHours(todayLog.sleepHours || 7)
+      setSelectedActivities(todayLog.activities || [])
       setOriginalValues({
         mood: todayLog.mood,
         energy: todayLog.energy,
         overwhelm: todayLog.overwhelm,
-        emotions: [...todayLog.emotions]
+        emotions: [...todayLog.emotions],
+        sleepHours: todayLog.sleepHours || 7,
+        activities: [...(todayLog.activities || [])]
       })
     } else {
       setTodaysLogData(null)
@@ -167,6 +187,14 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
       
       return newEmotions
     })
+  }
+
+  const toggleActivity = (activity: string) => {
+    setSelectedActivities(prev => 
+      prev.includes(activity) 
+        ? prev.filter(a => a !== activity)
+        : [...prev, activity]
+    )
   }
 
   // get week number based on first log date
@@ -412,6 +440,8 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
         energy,
         overwhelm,
         emotions: selectedEmotions,
+        sleepHours,
+        activities: selectedActivities,
         week: finalWeekNumber
       }
       
@@ -443,7 +473,9 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
       mood,
       energy,
       overwhelm,
-      emotions: [...selectedEmotions]
+      emotions: [...selectedEmotions],
+      sleepHours,
+      activities: [...selectedActivities]
     })
 
     // Reset form only for new logs, not edits
@@ -524,7 +556,7 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
                 </div>
 
                 {/* Emotions */}
-                <div>
+                <div className="mb-4">
                   <h5 className="font-medium text-gray-900 mb-2">Emotions Felt ({todaysLogData?.emotions.length || selectedEmotions.length})</h5>
                   <div className="flex flex-wrap gap-2">
                     {(todaysLogData?.emotions || selectedEmotions).map((emotion) => (
@@ -535,6 +567,45 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
                         {emotion}
                       </span>
                     ))}
+                  </div>
+                </div>
+
+                {/* Sleep and Activities */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Sleep Hours */}
+                  <div>
+                    <h5 className="font-medium text-gray-900 mb-2">Sleep</h5>
+                    <div className="flex items-center gap-2">
+                      <span className="text-2xl">😴</span>
+                      <span className="text-purple-600 font-semibold">
+                        {todaysLogData?.sleepHours || sleepHours}h
+                      </span>
+                      <span className="text-gray-600 text-sm">of sleep</span>
+                    </div>
+                  </div>
+
+                  {/* Activities */}
+                  <div>
+                    <h5 className="font-medium text-gray-900 mb-2">
+                      Activities ({(todaysLogData?.activities || selectedActivities).length})
+                    </h5>
+                    {(todaysLogData?.activities || selectedActivities).length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {(todaysLogData?.activities || selectedActivities).map((activityId) => {
+                          const activity = ACTIVITIES.find(a => a.id === activityId)
+                          return (
+                            <span
+                              key={activityId}
+                              className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium"
+                            >
+                              {activity?.icon} {activity?.label}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-gray-500 text-sm">No activities logged</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -698,6 +769,114 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
             </CardContent>
           </Card>
         </div>
+        )}
+
+        {(!todayLogged || isEditMode) && (
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold text-gray-900">
+                How many hours of sleep did you have last night? <span className="text-red-500">*</span>
+              </h3>
+              <p className="text-sm text-gray-600">
+                Drag the slider to indicate your total sleep hours
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="px-2">
+                <div className="relative">
+                  <input
+                    type="range"
+                    min="0"
+                    max="12"
+                    step="0.5"
+                    value={sleepHours}
+                    onChange={(e) => setSleepHours(Number(e.target.value))}
+                    className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer sleep-slider"
+                    style={{
+                      background: `linear-gradient(to right, #8b5cf6 0%, #8b5cf6 ${(sleepHours / 12) * 100}%, #e5e7eb ${(sleepHours / 12) * 100}%, #e5e7eb 100%)`
+                    }}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-between items-center text-xs text-gray-500">
+                <span>0h</span>
+                <span>2h</span>
+                <span>4h</span>
+                <span>6h</span>
+                <span>8h</span>
+                <span>10h</span>
+                <span>12h</span>
+              </div>
+              
+              <div className="text-center">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                  {sleepHours}h Sleep
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {(!todayLogged || isEditMode) && (
+          <Card>
+            <CardHeader>
+              <h3 className="text-lg font-semibold text-gray-900">
+                What activities did you do today?
+              </h3>
+              <p className="text-sm text-gray-600">
+                Select all activities that apply to your day (optional)
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {ACTIVITIES.map((activity) => {
+                  const isSelected = selectedActivities.includes(activity.id)
+                  return (
+                    <button
+                      key={activity.id}
+                      onClick={() => toggleActivity(activity.id)}
+                      className={`text-left p-3 rounded-lg border transition-all hover:scale-105 ${
+                        isSelected 
+                          ? 'bg-green-50 border-green-300 text-green-800' 
+                          : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                          isSelected 
+                            ? 'bg-green-500 border-green-500' 
+                            : 'border-gray-300'
+                        }`}>
+                          {isSelected && (
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          )}
+                        </div>
+                        <span className="text-lg mr-2">{activity.icon}</span>
+                        <span className="font-medium">{activity.label}</span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+              
+              {selectedActivities.length > 0 && (
+                <div className="pt-4 border-t">
+                  <h4 className="text-sm mb-2">Selected activities ({selectedActivities.length}):</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedActivities.map((activityId) => {
+                      const activity = ACTIVITIES.find(a => a.id === activityId)
+                      return (
+                        <span key={activityId} className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                          {activity?.icon} {activity?.label}
+                        </span>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {(!todayLogged || isEditMode) && (

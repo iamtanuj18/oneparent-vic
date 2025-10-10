@@ -28,18 +28,42 @@ export function TimelineSection() {
         const timeline = await fetchTimeline();
         
         if (timeline && Array.isArray(timeline) && timeline.length > 0) {
-          // define colors for progression
           const colors = [
             { bgColor: "bg-slate-50", textColor: "text-slate-600" },
             { bgColor: "bg-blue-50", textColor: "text-blue-600" },
             { bgColor: "bg-emerald-50", textColor: "text-emerald-600" },
             { bgColor: "bg-orange-50", textColor: "text-orange-600" },
-            { bgColor: "bg-purple-50", textColor: "text-purple-600" }
+            { bgColor: "bg-purple-50", textColor: "text-purple-600" },
+            { bgColor: "bg-red-50", textColor: "text-red-600" }
           ];
           
-          // take only first 5 items and process them
-          const timelineSlice = timeline.slice(0, 5);
-          const maxFamilies = Math.max(...timelineSlice.map(item => item.total_families_k));
+          const startYear = 1994;
+          const latestDataYear = Math.max(...timeline.map(item => item.year));
+          const targetYears = [];
+          
+          for (let year = startYear; year <= latestDataYear; year += 6) {
+            targetYears.push(year);
+          }
+          
+          if (targetYears[targetYears.length - 1] !== latestDataYear) {
+            const lastTargetYear = targetYears[targetYears.length - 1];
+            const nextTargetYear = lastTargetYear + 6;
+            const diffToNext = Math.abs(nextTargetYear - latestDataYear);
+            const diffToLast = Math.abs(lastTargetYear - latestDataYear);
+            
+            if (diffToNext <= diffToLast) {
+              targetYears.push(latestDataYear);
+            } else {
+              targetYears[targetYears.length - 1] = latestDataYear;
+            }
+          }
+          
+          const timelineSlice = targetYears.map(targetYear => {
+            return timeline.find(item => item.year === targetYear) || 
+                   timeline.reduce((closest, item) => 
+                     Math.abs(item.year - targetYear) < Math.abs(closest.year - targetYear) ? item : closest
+                   );
+          }).filter((item, index, arr) => arr.findIndex(x => x.year === item.year) === index);
           
           const processedData = timelineSlice.map((item, index) => {
             let growth = "baseline";

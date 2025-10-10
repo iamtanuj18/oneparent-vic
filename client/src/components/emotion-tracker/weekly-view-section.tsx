@@ -22,13 +22,24 @@ import {
   EMOTION_OPTIONS
 } from '@/lib/api/emotion-tracker'
 
+const ACTIVITIES = [
+  { id: 'exercised', label: 'Exercised', icon: '🏃' },
+  { id: 'quality_time_kids', label: 'Quality time with kids', icon: '👨‍👩‍👧‍👦' },
+  { id: 'connected_friends_family', label: 'Connected with friends/family', icon: '👥' },
+  { id: 'relaxed_rested', label: 'Relaxed or rested', icon: '🧘' },
+  { id: 'worked_personal_goal', label: 'Worked on a personal goal', icon: '🎯' },
+  { id: 'self_care', label: 'Practiced self-care', icon: '💆' }
+]
+
 interface WeekSummary {
   week: number
   logs: EmotionLog[]
   averageMood: number
   averageEnergy: number
   averageOverwhelm: number
+  averageSleep: number
   topEmotions: string[]
+  topActivities: string[]
   startDate: string
   endDate: string
 }
@@ -143,6 +154,7 @@ export function WeeklyViewSection() {
           const avgMood = weekLogs.reduce((sum, log) => sum + log.mood, 0) / weekLogs.length
           const avgEnergy = weekLogs.reduce((sum, log) => sum + log.energy, 0) / weekLogs.length
           const avgOverwhelm = weekLogs.reduce((sum, log) => sum + log.overwhelm, 0) / weekLogs.length
+          const avgSleep = weekLogs.reduce((sum, log) => sum + (log.sleepHours || 0), 0) / weekLogs.length
 
           // Count emotion frequency
           const emotionCounts: Record<string, number> = {}
@@ -152,11 +164,25 @@ export function WeeklyViewSection() {
             })
           })
 
+          // Count activity frequency
+          const activityCounts: Record<string, number> = {}
+          weekLogs.forEach(log => {
+            (log.activities || []).forEach(activity => {
+              activityCounts[activity] = (activityCounts[activity] || 0) + 1
+            })
+          })
+
           // Get top emotions
           const topEmotions = Object.entries(emotionCounts)
             .sort(([,a], [,b]) => b - a)
             .slice(0, 3)
             .map(([emotion]) => emotion)
+
+          // Get top activities
+          const topActivities = Object.entries(activityCounts)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 3)
+            .map(([activity]) => activity)
 
           allWeekSummaries.push({
             week: weekNum,
@@ -164,7 +190,9 @@ export function WeeklyViewSection() {
             averageMood: avgMood,
             averageEnergy: avgEnergy,
             averageOverwhelm: avgOverwhelm,
+            averageSleep: avgSleep,
             topEmotions,
+            topActivities,
             startDate: weekStartDateStr,
             endDate: weekEndDateStr
           })
@@ -176,7 +204,9 @@ export function WeeklyViewSection() {
             averageMood: 0,
             averageEnergy: 0,
             averageOverwhelm: 0,
+            averageSleep: 0,
             topEmotions: [],
+            topActivities: [],
             startDate: weekStartDateStr,
             endDate: weekEndDateStr
           })
@@ -369,25 +399,36 @@ export function WeeklyViewSection() {
                       <span className="text-sm font-medium">{formatDateRange(week.startDate, week.endDate)}</span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className={`flex items-center gap-2 ${
+                  <div className="flex items-center justify-end">
+                    {/* Fixed position entries count */}
+                    <div className={`flex items-center gap-2 mr-4 ${
                       isEmpty ? 'text-gray-400' : 'text-gray-600'
                     }`}>
                       <Clock className="w-4 h-4" />
                       <span className="text-sm">
-                        {isEmpty ? 'No entries' : `${week.logs.length} Entries`}
+                        {isEmpty ? 'No entries this week' : `${week.logs.length} entries this week`}
                       </span>
                     </div>
                     {/* Only show collapse button for weeks with data and non-current weeks */}
                     {!isEmpty && !(weekSummaries.length > 0 && week.week === weekSummaries[0].week) && (
                       <button
                         onClick={() => toggleWeekExpansion(week.week)}
-                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-300 ease-in-out w-48 ${
+                          expandedWeeks.has(week.week) 
+                            ? 'bg-blue-100 text-blue-700 hover:bg-blue-150' 
+                            : 'text-blue-600 hover:text-blue-700 hover:bg-blue-50 border border-blue-200 hover:border-blue-300'
+                        }`}
                       >
                         {expandedWeeks.has(week.week) ? (
-                          <ChevronUp className="w-5 h-5 text-gray-500" />
+                          <>
+                            <ChevronUp className="w-4 h-4 transition-transform duration-200" />
+                            <span>Hide Details</span>
+                          </>
                         ) : (
-                          <ChevronDown className="w-5 h-5 text-gray-500" />
+                          <>
+                            <span>View Daily Breakdown</span>
+                            <ChevronDown className="w-4 h-4 transition-transform duration-200 hover:translate-y-0.5" />
+                          </>
                         )}
                       </button>
                   )}
@@ -412,64 +453,111 @@ export function WeeklyViewSection() {
                 </div>
               </div>
             ) : (
-              <div className="p-6 space-y-6">
+              <div className="p-4 space-y-4">
                 
-                {/* summary metrics grid */}
-                <div className="grid md:grid-cols-3 gap-6">
-                
-                {/* average mood */}
-                <div className="text-center space-y-3">
-                  <div className="text-5xl">{getMoodEmoji(week.averageMood)}</div>
-                  <div>
-                    <p className="text-sm text-gray-600 font-medium mb-1">Average Mood</p>
-                    <p className="font-semibold text-gray-900">{getMoodLabel(week.averageMood)}</p>
-                    <p className="text-sm text-gray-500">({week.averageMood.toFixed(1)}/6)</p>
+                {/* Row 1: Mood, Energy/Overwhelm stacked, Sleep */}
+                <div className="grid grid-cols-3 gap-4">
+                  
+                  {/* Average Mood */}
+                  <div className="text-center">
+                    <div className="text-5xl mb-2">{getMoodEmoji(week.averageMood)}</div>
+                    <div>
+                      <p className="text-sm text-gray-600 font-medium mb-1">Average Mood</p>
+                      <p className="font-semibold text-gray-900">{getMoodLabel(week.averageMood)}</p>
+                      <p className="text-xs text-gray-500">({week.averageMood.toFixed(1)}/6)</p>
+                    </div>
+                  </div>
+
+                  {/* Energy & Overwhelm - Stacked vertically */}
+                  <div className="space-y-3">
+                    {/* Energy Level */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-gray-600 font-medium">Energy Level</span>
+                        <span className="font-semibold text-blue-600">{Math.round(week.averageEnergy)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-gradient-to-r from-blue-500 to-blue-600 h-2.5 rounded-full transition-all duration-500" 
+                          style={{ width: `${week.averageEnergy}%` }}
+                        ></div>
+                      </div>
+                    </div>
+
+                    {/* Overwhelm Level */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-gray-600 font-medium">Overwhelm Level</span>
+                        <span className="font-semibold text-orange-600">{Math.round(week.averageOverwhelm)}%</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-gradient-to-r from-orange-500 to-red-500 h-2.5 rounded-full transition-all duration-500" 
+                          style={{ width: `${week.averageOverwhelm}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Average Sleep */}
+                  <div className="text-center">
+                    <div className="text-4xl mb-2">😴</div>
+                    <div>
+                      <p className="text-sm text-gray-600 font-medium mb-1">Average Sleep</p>
+                      <p className="font-semibold text-purple-600 text-lg">{week.averageSleep.toFixed(1)}h</p>
+                      <p className="text-xs text-gray-500">Based on {week.logs.length} day{week.logs.length !== 1 ? 's' : ''} input</p>
+                    </div>
                   </div>
                 </div>
 
-                {/* energy and overwhelm levels */}
-                <div className="space-y-4">
+                {/* Row 2: Top Emotions & Activities - Matching appearance */}
+                <div className="grid grid-cols-2 gap-6">
+                  
+                  {/* Top Emotions */}
                   <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-600 font-medium">Energy Level</span>
-                      <span className="font-semibold text-blue-600">{Math.round(week.averageEnergy)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-500" 
-                        style={{ width: `${week.averageEnergy}%` }}
-                      ></div>
-                    </div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Top Emotions</h4>
+                    {week.topEmotions.length > 0 ? (
+                      <div className="space-y-2">
+                        {week.topEmotions.map((emotion) => (
+                          <div
+                            key={emotion}
+                            className="bg-blue-50 border border-blue-200 rounded-md px-3 py-2 flex items-center"
+                          >
+                            <span className="text-sm font-medium text-blue-800 flex-1">{emotion}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 italic">No emotions logged</p>
+                    )}
                   </div>
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-600 font-medium">Overwhelm Level</span>
-                      <span className="font-semibold text-orange-600">{Math.round(week.averageOverwhelm)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
-                      <div 
-                        className="bg-gradient-to-r from-orange-500 to-red-500 h-3 rounded-full transition-all duration-500" 
-                        style={{ width: `${week.averageOverwhelm}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* top emotions */}
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-900 font-semibold">Top Emotions</p>
-                  <div className="flex flex-wrap gap-2">
-                    {week.topEmotions.map((emotion) => (
-                      <span
-                        key={emotion}
-                        className={`px-3 py-1 rounded-full text-sm font-medium border ${getEmotionColor(emotion)}`}
-                      >
-                        {emotion}
-                      </span>
-                    ))}
+                  {/* Most Common Activities */}
+                  <div>
+                    <h4 className="text-sm font-semibold text-gray-900 mb-3">Most Common Activities Done this Week</h4>
+                    {week.topActivities.length > 0 ? (
+                      <div className="space-y-2">
+                        {week.topActivities.map((activityId) => {
+                          const activity = ACTIVITIES.find(a => a.id === activityId)
+                          return (
+                            <div
+                              key={activityId}
+                              className="bg-green-50 border border-green-200 rounded-md px-3 py-2 flex items-center"
+                            >
+                              <span className="text-sm font-medium text-green-800 flex-1">
+                                {activity?.label}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 italic">No activities logged</p>
+                    )}
                   </div>
                 </div>
               </div>
+            )}
 
               {/* ai insights */}
               {/* AI insights will be added later */}
@@ -477,13 +565,13 @@ export function WeeklyViewSection() {
               {/* daily breakdown - always show for current week, collapsible for others */}
               {((weekSummaries.length > 0 && week.week === weekSummaries[0].week) || expandedWeeks.has(week.week)) && (
                 <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: ANIMATION_CONFIG.duration }}
-                  className="space-y-4"
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  transition={{ duration: 0.3, ease: "easeInOut" }}
+                  className="border-t border-gray-200 px-4 pb-4 space-y-4 overflow-hidden"
                 >
-                  <div className="flex items-center gap-2 pt-4 border-t border-gray-200">
+                  <div className="flex items-center gap-2 pt-4">
                     <BarChart3 className="w-5 h-5 text-gray-500" />
                     <h4 className="text-lg font-semibold text-gray-900">Daily Breakdown</h4>
                     {weekSummaries.length > 0 && week.week === weekSummaries[0].week && (
@@ -544,12 +632,9 @@ export function WeeklyViewSection() {
                   </div>
                 </motion.div>
               )}
-
-              </div>
-            )}
           </motion.div>
-          )
-        })}
+        )
+      })}
       </div>
 
       {/* Day Details Modal */}
@@ -559,7 +644,7 @@ export function WeeklyViewSection() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto"
+            className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           >
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
@@ -595,66 +680,97 @@ export function WeeklyViewSection() {
               </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              {/* Mood */}
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-2">Overall Mood</h4>
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{getMoodEmoji(selectedDayLog.mood)}</span>
-                  <div>
-                    <p className="font-medium text-gray-900">{getMoodLabel(selectedDayLog.mood)}</p>
-                    <p className="text-sm text-gray-600">({selectedDayLog.mood}/6)</p>
-                  </div>
+            <div className="p-6 space-y-4">
+              {/* Row 1: Mood, Energy+Overwhelm, Sleep - Compact like weekly */}
+              <div className="grid grid-cols-3 gap-4">
+                {/* Average Mood */}
+                <div className="text-center">
+                  <span className="text-xl mb-1 block">{getMoodEmoji(selectedDayLog.mood)}</span>
+                  <h3 className="text-xs font-medium text-gray-600 mb-1">Mood</h3>
+                  <p className="text-sm font-semibold text-gray-900">{getMoodLabel(selectedDayLog.mood)}</p>
+                  <p className="text-xs text-gray-500">({selectedDayLog.mood}/6)</p>
                 </div>
-              </div>
 
-              {/* Energy and Overwhelm */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Energy Level</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Energy</span>
-                      <span className="font-semibold text-blue-600">{selectedDayLog.energy}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                {/* Energy + Overwhelm (compact stacked) */}
+                <div className="text-center space-y-2">
+                  {/* Energy Level */}
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-600 mb-1">Energy Level</h3>
+                    <p className="text-lg font-bold text-blue-600 mb-1">{selectedDayLog.energy}%</p>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div 
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full" 
+                        className="bg-blue-600 h-1.5 rounded-full" 
                         style={{ width: `${selectedDayLog.energy}%` }}
                       ></div>
                     </div>
                   </div>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-2">Overwhelm Level</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Overwhelm</span>
-                      <span className="font-semibold text-orange-600">{selectedDayLog.overwhelm}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-3">
+                  
+                  {/* Overwhelm Level */}
+                  <div>
+                    <h3 className="text-xs font-medium text-gray-600 mb-1">Overwhelm Level</h3>
+                    <p className="text-lg font-bold text-orange-600 mb-1">{selectedDayLog.overwhelm}%</p>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5">
                       <div 
-                        className="bg-gradient-to-r from-orange-500 to-red-500 h-3 rounded-full" 
+                        className="bg-orange-600 h-1.5 rounded-full" 
                         style={{ width: `${selectedDayLog.overwhelm}%` }}
                       ></div>
                     </div>
                   </div>
                 </div>
+
+                {/* Sleep */}
+                <div className="text-center">
+                  <span className="text-xl mb-1 block">😴</span>
+                  <h3 className="text-xs font-medium text-gray-600 mb-1">Sleep Last Night</h3>
+                  <p className="text-lg font-bold text-purple-600">
+                    {selectedDayLog.sleepHours !== undefined && selectedDayLog.sleepHours !== null 
+                      ? `${selectedDayLog.sleepHours}h` 
+                      : 'N/A'}
+                  </p>
+                </div>
               </div>
 
-              {/* All Emotions */}
+              {/* All Emotions - Bluish color for all */}
               <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Emotions Felt</h4>
-                <div className="flex flex-wrap gap-2">
-                  {selectedDayLog.emotions.map((emotion) => (
-                    <span
-                      key={emotion}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium border ${getEmotionColor(emotion)}`}
-                    >
-                      {getEmotionEmoji(emotion)} {emotion}
-                    </span>
-                  ))}
-                </div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Emotions Felt</h4>
+                {selectedDayLog.emotions.length > 0 ? (
+                  <div className="grid grid-cols-3 gap-2">
+                    {selectedDayLog.emotions.map((emotion) => (
+                      <div
+                        key={emotion}
+                        className="bg-blue-50 border border-blue-200 rounded-md px-2 py-1.5 text-center"
+                      >
+                        <span className="text-xs font-medium text-blue-800">{emotion}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 italic">No emotions logged</p>
+                )}
+              </div>
+
+              {/* All Activities - Same grid layout as emotions */}
+              <div>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Activities Done</h4>
+                {selectedDayLog.activities && selectedDayLog.activities.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {selectedDayLog.activities.map((activityId) => {
+                      const activity = ACTIVITIES.find(a => a.id === activityId)
+                      return (
+                        <div
+                          key={activityId}
+                          className="bg-green-50 border border-green-200 rounded-md px-2 py-1.5 text-center"
+                        >
+                          <span className="text-xs font-medium text-green-800">
+                            {activity?.label}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-500 italic">No activities logged</p>
+                )}
               </div>
             </div>
           </motion.div>

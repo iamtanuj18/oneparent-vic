@@ -18,9 +18,10 @@ function getPool() {
       max: CONFIG.PG_POOL_MAX || (CONFIG.NODE_ENV === "production" ? 7 : 5),
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 10_000,
-      // ssl config required for hosted postgres instances
+      // ssl config for aws rds - accept self-signed certificates
       ssl: {
         rejectUnauthorized: false,
+        require: true,
       },
     });
 

@@ -1,16 +1,18 @@
+// Test Case 4: Weeks 1 & 2 Data Injection, and Week 3 missing logs 
+
 localStorage.setItem("user-emotion-start-date", "2025-09-15");
 
 localStorage.setItem("emotion-logs", JSON.stringify([
-  {"id": "1757937600000", "date": "Mon Sep 15 2025", "timestamp": 1757937600000, "mood": 4, "energy": 70, "overwhelm": 30, "emotions": ["excited", "motivated"], "week": 1},
-  {"id": "1758024000000", "date": "Tue Sep 16 2025", "timestamp": 1758024000000, "mood": 3, "energy": 60, "overwhelm": 40, "emotions": ["okay", "busy"], "week": 1},
-  {"id": "1758110400000", "date": "Wed Sep 17 2025", "timestamp": 1758110400000, "mood": 5, "energy": 80, "overwhelm": 20, "emotions": ["joyful", "grateful"], "week": 1},
-  {"id": "1758196800000", "date": "Thu Sep 18 2025", "timestamp": 1758196800000, "mood": 4, "energy": 65, "overwhelm": 35, "emotions": ["confident", "productive"], "week": 1},
-  {"id": "1758283200000", "date": "Fri Sep 19 2025", "timestamp": 1758283200000, "mood": 3, "energy": 50, "overwhelm": 50, "emotions": ["tired", "stressed"], "week": 1},
-  {"id": "1758369600000", "date": "Sat Sep 20 2025", "timestamp": 1758369600000, "mood": 4, "energy": 75, "overwhelm": 25, "emotions": ["relaxed", "peaceful"], "week": 1},
+  {"id": "1757937600000", "date": "Mon Sep 15 2025", "timestamp": 1757937600000, "mood": 4, "energy": 70, "overwhelm": 30, "emotions": ["excited", "motivated"], "sleepHours": 7.0, "activities": ["worked_personal_goal"], "week": 1},
+  {"id": "1758024000000", "date": "Tue Sep 16 2025", "timestamp": 1758024000000, "mood": 3, "energy": 60, "overwhelm": 40, "emotions": ["average", "nervous"], "sleepHours": 6.0, "activities": ["worked_personal_goal"], "week": 1},
+  {"id": "1758110400000", "date": "Wed Sep 17 2025", "timestamp": 1758110400000, "mood": 5, "energy": 80, "overwhelm": 20, "emotions": ["joyful", "grateful"], "sleepHours": 7.5, "activities": ["connected_friends_family", "self_care"], "week": 1},
+  {"id": "1758196800000", "date": "Thu Sep 18 2025", "timestamp": 1758196800000, "mood": 4, "energy": 65, "overwhelm": 35, "emotions": ["accomplished", "productive"], "sleepHours": 6.5, "activities": ["worked_personal_goal"], "week": 1},
+  {"id": "1758283200000", "date": "Fri Sep 19 2025", "timestamp": 1758283200000, "mood": 3, "energy": 50, "overwhelm": 50, "emotions": ["tired", "anxious"], "sleepHours": 5.5, "activities": [], "week": 1},
+  {"id": "1758369600000", "date": "Sat Sep 20 2025", "timestamp": 1758369600000, "mood": 4, "energy": 75, "overwhelm": 25, "emotions": ["relaxed", "calm"], "sleepHours": 8.0, "activities": ["relaxed_rested", "quality_time_kids"], "week": 1},
 
-  {"id": "1758542400000", "date": "Mon Sep 22 2025", "timestamp": 1758542400000, "mood": 3, "energy": 55, "overwhelm": 45, "emotions": ["anxious", "overwhelmed"], "week": 2},
-  {"id": "1758715200000", "date": "Wed Sep 24 2025", "timestamp": 1758715200000, "mood": 2, "energy": 40, "overwhelm": 70, "emotions": ["sad", "frustrated"], "week": 2},
-  {"id": "1758974400000", "date": "Sat Sep 27 2025", "timestamp": 1758974400000, "mood": 4, "energy": 60, "overwhelm": 40, "emotions": ["okay", "steady"], "week": 2}
+  {"id": "1758542400000", "date": "Mon Sep 22 2025", "timestamp": 1758542400000, "mood": 3, "energy": 55, "overwhelm": 45, "emotions": ["anxious", "worried"], "sleepHours": 6.0, "activities": ["worked_personal_goal"], "week": 2},
+  {"id": "1758715200000", "date": "Wed Sep 24 2025", "timestamp": 1758715200000, "mood": 2, "energy": 40, "overwhelm": 70, "emotions": ["sad", "frustrated"], "sleepHours": 5.0, "activities": [], "week": 2},
+  {"id": "1758974400000", "date": "Sat Sep 27 2025", "timestamp": 1758974400000, "mood": 4, "energy": 60, "overwhelm": 40, "emotions": ["average", "calm"], "sleepHours": 7.0, "activities": ["relaxed_rested"], "week": 2}
 ]));
 
 localStorage.setItem("emotion-insights-generated", JSON.stringify([1, 2]));
@@ -30,7 +32,7 @@ localStorage.setItem("emotion-insights-week-1", JSON.stringify({
     ],
     "progressComparison": "No previous week data available.",
     "personalizedTips": [
-      "Schedule short, restorative breaks during your day, even just 5-10 minutes, to recharge.",
+      "Schedule short, restorative breaks during your day, even just 5–10 minutes, to recharge.",
       "When you feel overwhelmed, try deep breathing exercises or a quick walk to reset.",
       "Celebrate small wins and acknowledge your efforts, as these are significant achievements."
     ],
@@ -61,7 +63,7 @@ localStorage.setItem("emotion-insights-week-2", JSON.stringify({
     "personalizedTips": [
       "When overwhelm peaks, try breaking tasks into smaller, manageable chunks.",
       "Consider reaching out for support when you notice energy levels dropping.",
-      "Practice self-compassion during difficult periods - they're temporary."
+      "Practice self-compassion during difficult periods — they're temporary."
     ],
     "concernAreas": [
       "The significant spike in overwhelm on Wednesday suggests you may need additional support strategies for stressful days."
@@ -73,3 +75,5 @@ localStorage.setItem("emotion-insights-week-2", JSON.stringify({
   },
   "generatedAt": "2025-10-07T04:16:35.642Z"
 }));
+
+console.log(" Emotion Tracker Test Case 4 data injected successfully!");

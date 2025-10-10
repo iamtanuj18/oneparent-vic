@@ -284,6 +284,9 @@ export function AIAnalysis({ isActive = false }: AIAnalysisProps) {
     console.log(`[AI Analysis] Week ${week.weekNumber} will ${prevWeekData ? 'HAVE' : 'NOT HAVE'} previous week comparison`);
     
     // Prepare week data for API
+    const logsWithSleep = week.logs.filter(log => log.sleepHours !== undefined && log.sleepHours !== null)
+    const sleepDataCount = logsWithSleep.length
+    
     const weekData = {
       weekNumber: week.weekNumber,
       startDate: week.startDate,
@@ -292,7 +295,10 @@ export function AIAnalysis({ isActive = false }: AIAnalysisProps) {
       averageMood: week.logs.reduce((sum, log) => sum + log.mood, 0) / week.logs.length,
       averageEnergy: week.logs.reduce((sum, log) => sum + log.energy, 0) / week.logs.length,
       averageOverwhelm: week.logs.reduce((sum, log) => sum + log.overwhelm, 0) / week.logs.length,
-      topEmotions: getTopEmotions(week.logs)
+      averageSleep: sleepDataCount >= 5 ? logsWithSleep.reduce((sum, log) => sum + (log.sleepHours || 0), 0) / sleepDataCount : null,
+      sleepDataCount,
+      topEmotions: getTopEmotions(week.logs),
+      topActivities: getTopActivities(week.logs)
     }
     
     // Call AI API
@@ -368,6 +374,20 @@ export function AIAnalysis({ isActive = false }: AIAnalysisProps) {
       .sort(([,a], [,b]) => b - a)
       .slice(0, 3)
       .map(([emotion]) => emotion)
+  }
+
+  const getTopActivities = (logs: EmotionLog[]): string[] => {
+    const activityCount: { [key: string]: number } = {}
+    logs.forEach(log => {
+      (log.activities || []).forEach(activity => {
+        activityCount[activity] = (activityCount[activity] || 0) + 1
+      })
+    })
+    
+    return Object.entries(activityCount)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3)
+      .map(([activity]) => activity)
   }
 
   const toggleWeekExpansion = (weekNumber: number) => {
@@ -468,10 +488,10 @@ export function AIAnalysis({ isActive = false }: AIAnalysisProps) {
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-medium text-blue-900 mb-1">📊 How Weekly Analysis Works</h3>
+              <h3 className="font-medium text-blue-900 mb-1">How Weekly Analysis Works</h3>
               <p className="text-blue-700 text-sm leading-relaxed">
-                AI insights are generated automatically <strong>after each week ends</strong> (Sunday night). 
-                Current or future weeks won't appear here until they're complete. Keep logging daily to get comprehensive weekly analysis!
+                AI insights generate automatically <strong>after each week ends</strong> (Sunday night). 
+                Keep logging daily for comprehensive analysis!
               </p>
             </div>
           </div>
@@ -691,7 +711,7 @@ function WeekAnalysisCard({
           </div>
 
           <div className="text-xs text-gray-500 pt-2 border-t">
-            Generated: {new Date(weekAnalysis.generatedAt).toLocaleDateString()}
+            Generated on: {new Date(weekAnalysis.generatedAt).toLocaleDateString()}
           </div>
         </CardContent>
       )}

@@ -1,4 +1,5 @@
-const { Redis } = require("@upstash/redis");
+const { Redis: UpstashRedis } = require("@upstash/redis");
+const Redis = require("ioredis");
 const { CONFIG } = require("../config");
 
 // RedisService manages atomic rate limiting for Gemini API keys
@@ -6,10 +7,18 @@ const { CONFIG } = require("../config");
 // Caches shuffled key order per minute to reduce CPU overhead
 class RedisService {
   constructor() {
-    this.redis = new Redis({
-      url: CONFIG.UPSTASH_REDIS_REST_URL,
-      token: CONFIG.UPSTASH_REDIS_REST_TOKEN,
-    });
+    if (CONFIG.API_ENV === "aws-prod" || CONFIG.API_ENV === "local") {
+      this.redis = new Redis({
+        host: CONFIG.API_ENV === "aws-prod" ? "127.0.0.1" : "localhost",
+        port: 6379,
+        password: CONFIG.REDIS_PASSWORD,
+      });
+    } else {
+      this.redis = new UpstashRedis({
+        url: CONFIG.UPSTASH_REDIS_REST_URL,
+        token: CONFIG.UPSTASH_REDIS_REST_TOKEN,
+      });
+    }
     this._shuffleCache = null;
   }
 
