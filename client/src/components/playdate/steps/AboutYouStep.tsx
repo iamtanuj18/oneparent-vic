@@ -35,15 +35,15 @@ export function AboutYouStep({ formData, updateFormData, validationErrors = {} }
     updateFormData('numKids', value);
   };
 
-  // validate age range
+  // validate age range - allow 18+ for parents
   const getAgeError = () => {
     const age = Number(formData.parentAge);
     if (formData.parentAge && !isNaN(age)) {
-      if (age < 30) {
-        return 'Age must be at least 30';
+      if (age < 18) {
+        return 'Age must be at least 18';
       }
-      if (age > 40) {
-        return 'Age must be 40 or below';
+      if (age > 99) {
+        return 'Please enter a valid age';
       }
     }
     return validationErrors.parentAge;
@@ -132,7 +132,7 @@ export function AboutYouStep({ formData, updateFormData, validationErrors = {} }
             type="text"
             value={formData.parentAge || ''}
             onChange={handleAgeChange}
-            placeholder="Enter age (30-40)"
+            placeholder="Enter age (18+)"
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
           />
           {getAgeError() && (

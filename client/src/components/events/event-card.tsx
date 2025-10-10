@@ -10,7 +10,6 @@ interface EventCardProps {
   onClick?: (url?: string) => void
 }
 
-// format date string for display with fallback
 const formatEventDate = (dateStr: string): string => {
   if (!dateStr) return 'date not available'
   
@@ -19,8 +18,8 @@ const formatEventDate = (dateStr: string): string => {
     if (isNaN(date.getTime())) return dateStr
     
     return date.toLocaleDateString('en-AU', { 
+      day: 'numeric',
       month: 'long', 
-      day: '2-digit', 
       year: 'numeric' 
     })
   } catch {

@@ -1,0 +1,54 @@
+# AWS Database Deployment - Ignore Sensitive Files
+
+# Environment Files
+.env
+.env.*
+*.env
+database.env
+
+# Database Connection Files
+connection-details.txt
+db-connection.txt
+database-credentials.txt
+
+# Database Dumps and Backups
+*.sql
+*.dump
+*.backup
+*.bak
+*.db
+*.sqlite
+*.sqlite3
+dump/
+backups/
+
+# CSV Data Files (if containing sensitive data)
+# Uncomment if your CSV files contain sensitive information:
+# *.csv
+# data/
+
+# AWS CloudFormation Outputs
+stack-outputs.json
+db-outputs.json
+
+# Log Files
+*.log
+logs/
+query.log
+error.log
+slow-query.log
+
+# Temporary Files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# OS Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup Files
+*.old
+*.orig

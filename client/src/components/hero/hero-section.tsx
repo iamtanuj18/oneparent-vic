@@ -112,7 +112,7 @@ export function HeroSection() {
           <div className={`w-full max-w-lg lg:max-w-md xl:max-w-lg transition-opacity duration-1000 ${
             isMobile ? (isMobileContentVisible ? 'opacity-100' : 'opacity-0') : 'opacity-100'
           }`}>
-            <div className="bg-transparent md:bg-white/40 md:backdrop-blur-lg rounded-3xl p-6 md:p-8 lg:p-10 md:shadow-2xl md:border md:border-white/40 transform transition-all duration-300 md:hover:shadow-3xl">
+            <div className="bg-transparent md:bg-white/60 md:backdrop-blur-lg rounded-3xl p-6 md:p-8 lg:p-10 md:shadow-2xl md:border md:border-white/50 transform transition-all duration-300 md:hover:shadow-3xl">
               
               {/* main heading with gradient text */}
               <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold leading-tight tracking-tight mb-4 md:mb-8 text-center md:text-left">
@@ -123,7 +123,10 @@ export function HeroSection() {
                 <span className="text-white md:text-gray-900 drop-shadow-lg md:drop-shadow-none">
                   for{" "}
                 </span>
-                <span className="gradient-text drop-shadow-lg md:drop-shadow-none">
+                <span className="md:hidden text-white drop-shadow-lg">
+                  single parents across Victoria
+                </span>
+                <span className="hidden md:inline gradient-text">
                   single parents across Victoria
                 </span>
               </h1>

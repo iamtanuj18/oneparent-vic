@@ -19,6 +19,8 @@ import { ActivitySkeleton } from './ActivitySkeleton';
 
 export function PlayDatePlanner() {
   const [step1Error, setStep1Error] = useState('');
+  const [currentChildIndex, setCurrentChildIndex] = useState(0);
+  const [validationTrigger, setValidationTrigger] = useState(0);
   const {
     currentStep,
     formData,
@@ -42,8 +44,11 @@ export function PlayDatePlanner() {
     exportToPDF
   } = usePlayDateForm();
 
-  // dynamic steps based on plan type
   const isWithKids = formData.planFor === 'withKids';
+  const totalKids = Number(formData.numKids) || 0;
+  const isInKidsStep = isWithKids && currentStep === 2;
+  const isLastChild = currentChildIndex >= totalKids - 1;
+  
   const steps = isWithKids 
     ? [
         "Who's this for?",
@@ -58,6 +63,114 @@ export function PlayDatePlanner() {
         "Setting & time", 
         "Interests & goals"
       ];
+
+  // validate child age range based on parent age
+  const validateChildAge = (child: any) => {
+    if (!child.age) return false; // age is required
+    
+    const age = parseInt(String(child.age));
+    const parentAge = Number(formData.parentAge) || 18;
+    const maxAge = Math.max(parentAge - 18 + 1, 1);
+    
+    if (isNaN(age) || age < 1 || age > maxAge) {
+      return false; // invalid age
+    }
+    
+    return true; // age is valid
+  };
+
+  const validateCurrentChild = () => {
+    const currentChild = formData.kids[currentChildIndex];
+    
+    // check if all required fields are filled AND valid
+    if (!currentChild || 
+        !currentChild.gender || 
+        !currentChild.age || 
+        !currentChild.activityStyle ||
+        !validateChildAge(currentChild)) {
+      
+      // trigger validation in child component
+      setValidationTrigger(prev => prev + 1);
+      // scroll much higher to show step indicators and page context
+      setTimeout(() => {
+        const errorMessage = document.querySelector('[data-error-message]');
+        if (errorMessage) {
+          const rect = errorMessage.getBoundingClientRect();
+          const offsetTop = window.pageYOffset + rect.top;
+          // scroll much higher to show step indicators and page header
+          window.scrollTo({ 
+            top: offsetTop - 450, 
+            behavior: 'smooth' 
+          });
+        } else {
+          // fallback: scroll to show page header and step indicators
+          const formContent = document.querySelector('[data-form-content]');
+          if (formContent) {
+            const rect = formContent.getBoundingClientRect();
+            const offsetTop = window.pageYOffset + rect.top;
+            window.scrollTo({ 
+              top: offsetTop - 400, 
+              behavior: 'smooth' 
+            });
+          } else {
+            // Final fallback - scroll to show navigation and context
+            window.scrollTo({ top: 30, behavior: 'smooth' });
+          }
+        }
+      }, 100);
+      return false;
+    }
+    return true;
+  };
+
+  const handleCustomNext = () => {
+    if (isInKidsStep && !isLastChild) {
+      if (validateCurrentChild()) {
+        setCurrentChildIndex(prev => prev + 1);
+        // scroll like step transitions when moving to next child
+        setTimeout(() => {
+          const mainContentSection = document.getElementById('main-content-section');
+          if (mainContentSection) {
+            const elementPosition = mainContentSection.offsetTop;
+            const offsetPosition = elementPosition - 80;
+            window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+          } else {
+            // fallback scroll - not too far up
+            window.scrollTo({ top: 200, behavior: 'smooth' });
+          }
+        }, 100);
+      }
+    } else if (isInKidsStep && isLastChild) {
+      if (validateCurrentChild()) {
+        setCurrentChildIndex(0);
+        nextStep();
+      }
+    } else {
+      handleNextStep();
+    }
+  };
+
+  const handleCustomPrev = () => {
+    if (isInKidsStep && currentChildIndex > 0) {
+      setCurrentChildIndex(prev => prev - 1);
+      // scroll like step transitions when moving to previous child
+      setTimeout(() => {
+        const mainContentSection = document.getElementById('main-content-section');
+        if (mainContentSection) {
+          const elementPosition = mainContentSection.offsetTop;
+          const offsetPosition = elementPosition - 80;
+          window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+        } else {
+          // fallback scroll - not too far up
+          window.scrollTo({ top: 200, behavior: 'smooth' });
+        }
+      }, 100);
+    } else if (isInKidsStep && currentChildIndex === 0) {
+      prevStep();
+    } else {
+      prevStep();
+    }
+  };
 
   // step component configuration to reduce repetitive logic
   const getStepComponent = () => {
@@ -85,6 +198,8 @@ export function PlayDatePlanner() {
               formData={formData}
               updateFormData={updateFormData}
               validationErrors={validationErrors}
+              currentChildIndex={currentChildIndex}
+              validationTrigger={validationTrigger}
             />
           );
         } else {
@@ -156,7 +271,7 @@ export function PlayDatePlanner() {
         <Button
           variant="outline"
           size="lg"
-          onClick={prevStep}
+          onClick={handleCustomPrev}
           className="flex items-center justify-center w-full sm:w-auto order-2 sm:order-1"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -166,11 +281,23 @@ export function PlayDatePlanner() {
         <Button
           variant="primary"
           size="lg"
-          onClick={handleNextStep}
+          onClick={handleCustomNext}
           className="flex items-center justify-center w-full sm:w-auto order-1 sm:order-2"
         >
           {currentStep === steps.length - 1 ? (
             'Generate Activities'
+          ) : isInKidsStep ? (
+            isLastChild ? (
+              <>
+                Continue
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            ) : (
+              <>
+                Next Child
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            )
           ) : (
             <>
               Next
@@ -273,6 +400,8 @@ export function PlayDatePlanner() {
             <ActivityResults
               activity={currentActivity}
               isForMyself={formData.planFor === 'myself'}
+              activityDate={formData.date}
+              activityTime={formData.time}
               onRegenerate={handleRegenerate}
               onStartOver={startOver}
               onExportPDF={exportToPDF}

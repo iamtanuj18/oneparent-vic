@@ -34,9 +34,10 @@ const CONFIG = {
 
   TICKETMASTER_KEY: process.env.TICKETMASTER_KEY || "", // ticketmaster api key
   
-  // redis configuration
-  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || "", // upstash redis url
-  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || "", // upstash redis token
+  UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL || "",
+  UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN || "",
+  
+  REDIS_PASSWORD: process.env.REDIS_PASSWORD || "",
 
   // gemini 4-tier model strategy
   GEMINI_PRO_MODEL: process.env.GEMINI_PRO_MODEL || "models/gemini-2.5-pro", // tier 1 premium
@@ -45,7 +46,7 @@ const CONFIG = {
   GEMINI_STANDARD_FALLBACK: process.env.GEMINI_STANDARD_FALLBACK || "models/gemini-2.0-flash", // tier 2 standard fallback
 
   // configurable model sequences for reliable generation 
-  GENERATE_MODEL_SEQUENCE: process.env.GENERATE_MODEL_SEQUENCE || "FLASH,PRO,PRO", // generation priority
+  GENERATE_MODEL_SEQUENCE: process.env.GENERATE_MODEL_SEQUENCE || "FLASH,FLASH,PRO", // generation priority
   VALIDATE_MODEL_SEQUENCE: process.env.VALIDATE_MODEL_SEQUENCE || "LITE,FLASH", // validation priority
 
   // multi-key pool 

@@ -4,9 +4,41 @@ import { useState } from 'react';
 import { Button } from '../ui/button';
 import { ActivityResponse } from '../../lib/api/playdate';
 
+// Helper function to format date and time into human-readable format
+function formatDateTime(date?: string, time?: string): string | null {
+  if (!date || !time) return null;
+  
+  try {
+    // Parse the date (YYYY-MM-DD format)
+    const dateObj = new Date(date);
+    
+    // Parse the time (HH:MM format) 
+    const [hours, minutes] = time.split(':').map(Number);
+    
+    // Format date to "13 August 2025"
+    const formattedDate = dateObj.toLocaleDateString('en-AU', {
+      day: 'numeric',
+      month: 'long', 
+      year: 'numeric'
+    });
+    
+    // Format time to "10:10 PM"
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHour = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    const formattedTime = `${displayHour}:${minutes.toString().padStart(2, '0')} ${period}`;
+    
+    return `${formattedDate} at ${formattedTime}`;
+  } catch (error) {
+    console.error('Error formatting date/time:', error);
+    return null;
+  }
+}
+
 interface ActivityResultsProps {
   activity: ActivityResponse;
   isForMyself: boolean;
+  activityDate?: string;
+  activityTime?: string;
   onRegenerate: () => void;
   onStartOver: () => void;
   onExportPDF: () => void;
@@ -49,7 +81,7 @@ function ConfirmDialog({ isOpen, onClose, onConfirm }: ConfirmDialogProps) {
   );
 }
 
-export function ActivityResults({ activity, isForMyself, onRegenerate, onStartOver, onExportPDF }: ActivityResultsProps) {
+export function ActivityResults({ activity, isForMyself, activityDate, activityTime, onRegenerate, onStartOver, onExportPDF }: ActivityResultsProps) {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const handleStartOver = () => {
@@ -91,9 +123,22 @@ export function ActivityResults({ activity, isForMyself, onRegenerate, onStartOv
                 <DollarSign className="w-4 h-4 text-white" />
                 <span className="text-sm text-white font-medium">Budget: {activity.budget}</span>
               </div>
+              
+              {/* date/time badge on new line - only show if both date and time are provided */}
+              {formatDateTime(activityDate, activityTime) && (
+                <div className="w-full flex justify-start">
+                  <div className="flex items-center space-x-2 bg-gradient-to-r from-rose-500 to-rose-600 rounded-full px-4 py-2">
+                    <Calendar className="w-4 h-4 text-white" />
+                    <span className="text-sm text-white font-medium">Your planned date and time: {formatDateTime(activityDate, activityTime)}</span>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex items-center space-x-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full px-4 py-2">
                 <Calendar className="w-4 h-4 text-white" />
-                <span className="text-sm text-white font-medium">Location: {activity.location}</span>
+                <span className="text-sm text-white font-medium">
+                  {activity.isOutdoor ? `Suggested Location: ${activity.location}` : 'Location: Indoor'}
+                </span>
               </div>
             </div>
             
@@ -111,7 +156,7 @@ export function ActivityResults({ activity, isForMyself, onRegenerate, onStartOv
         </div>
 
         {/* weather insight - only for outdoor activities */}
-        {activity.isOutdoor && activity.weatherInsight && (
+        {activity.isOutdoor && activity.weatherInsight && typeof activity.weatherInsight === 'string' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -273,7 +318,7 @@ export function ActivityResults({ activity, isForMyself, onRegenerate, onStartOv
         >
           <Button
             onClick={onRegenerate}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 text-base font-semibold"
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold"
             size="lg"
           >
             <RotateCcw className="w-4 h-4 mr-2" />
@@ -283,7 +328,7 @@ export function ActivityResults({ activity, isForMyself, onRegenerate, onStartOv
           <Button
             onClick={onExportPDF}
             variant="outline"
-            className="flex-1 px-6 py-3 text-base font-semibold"
+            className="flex-1 font-semibold"
             size="lg"
             data-export-btn
           >
@@ -293,7 +338,7 @@ export function ActivityResults({ activity, isForMyself, onRegenerate, onStartOv
           
           <Button
             onClick={handleStartOver}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white px-6 py-3 text-base font-semibold"
+            className="flex-1 bg-red-500 hover:bg-red-600 text-white font-semibold"
             size="lg"
           >
             <Home className="w-4 h-4 mr-2" />

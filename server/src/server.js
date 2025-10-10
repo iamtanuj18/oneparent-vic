@@ -11,6 +11,7 @@ const { parameterProtection } = require("./middleware/parameterProtection");
 const { ipBruteForce } = require("./middleware/bruteForceProtection");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
 const { ping, close } = require("./db");
+const redisService = require("./services/redis");
 
 // import route handlers
 const apiHealthCheck = require("./routes/apiHealthCheck");
@@ -20,6 +21,8 @@ const playdate = require("./routes/playdate");
 const victoriaSuburbList = require("./routes/victoriaSuburbList");
 const communityMatch = require("./routes/communityMatch");
 const journeyMap = require("./routes/journeyMap");
+const emotionTracker = require("./routes/emotionTracker");
+const timeAndLearnHub = require("./routes/timeAndLearnHub");
 
 const app = express();
 
@@ -29,9 +32,6 @@ app.set("trust proxy", 1);
 // set security headers first
 security(app);
 
-// add cookie parser for auth handling
-const cookieParser = require('cookie-parser');
-// app.use(cookieParser()); // Removed - no longer needed for auth
 
 // parse json body with size limit to prevent abuse
 app.use(express.json({ 
@@ -86,16 +86,39 @@ app.use("/api", victoriaSuburbList);
 app.use("/api", insights);
 app.use("/api/community-match", communityMatch);
 app.use("/api/journey-map", journeyMap);
+app.use("/api/emotion-tracker", emotionTracker);
+app.use("/api", timeAndLearnHub);
 
 // handle not found and errors
 app.use(notFound);
 app.use(errorHandler);
+
+// keep redis alive with daily ping to prevent deletion
+async function keepRedisAlive() {
+  try {
+    await redisService.redis.set('keepalive', Date.now());
+    console.log(`[redis] keepalive ping sent`);
+  } catch (err) {
+    console.error(`[redis] keepalive failed: ${err.message}`);
+  } finally {
+    // wait 23 hours after completion before next ping
+    setTimeout(keepRedisAlive, 23 * 60 * 60 * 1000);
+  }
+}
 
 // start the server
 const server = app.listen(CONFIG.PORT, async () => {
   console.log(`[server] ${CONFIG.API_ENV} listening on :${CONFIG.PORT}`);
   const ok = await ping();
   console.log(ok ? "[db] connected" : "[db] not available");
+  
+  // only start redis keepalive if database is working
+  if (ok) {
+    keepRedisAlive();
+    console.log(`[redis] keepalive cycle started`);
+  } else {
+    console.log(`[redis] keepalive skipped - database not available`);
+  }
 });
 
 // shutdown the server gracefully

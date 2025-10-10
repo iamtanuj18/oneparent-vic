@@ -57,11 +57,11 @@ export async function apiFetch(
   }
 
   if (!res.ok) {
-    // For safety check endpoints, return the error data instead of throwing
-    if (endpoint.includes('safetychecks') && res.status === 400) {
+    // For safety check and validation endpoints, return the error data instead of throwing
+    if ((endpoint.includes('safetychecks') || endpoint.includes('validate-schedule')) && res.status === 400) {
       try {
         const errorData = await res.json()
-        return errorData // Return the error response body which contains flaggedItems
+        return errorData // Return the error response body which contains validation details
       } catch(_e) {
         // Fall back to throwing if JSON parsing fails
       }

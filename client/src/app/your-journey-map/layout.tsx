@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Your Journey Map - OneParent VIC',
+  title: 'Your Journey Map | OneParent VIC',
   description: 'Discover your personalized single parent journey with evidence-based insights from HILDA research. Get tailored support, resources, and actionable steps for your unique situation.',
   keywords: 'single parent journey, parenting support Victoria, HILDA research, single parent resources, parenting assessment, family support services',
   openGraph: {

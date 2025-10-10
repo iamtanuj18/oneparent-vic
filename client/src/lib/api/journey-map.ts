@@ -84,7 +84,8 @@ export interface RiskFactor {
 export interface ProtectiveFactor {
   category: string
   factor: string
-  impact: 'positive'
+  strength: 'low' | 'medium' | 'high' | 'very_high'
+  resilienceImpact: string
   hildaEvidence?: string
 }
 
@@ -109,6 +110,7 @@ export interface ComprehensiveAnalysis {
     dataBasedHope: string
     realisticExpectations: string
     keyOpportunities: string[]
+    housingInsight?: string
   }
   
   journeyStage: 'crisis_adjustment' | 'stabilization' | 'rebuilding' | 'established'
