@@ -46,9 +46,9 @@ const SMART_TOOLS = [
   {
     id: 6,
     image: '/images/featureimg6.png',
-    title: 'Benefits Checker',
-    description: 'Discover what government support you\'re entitled to based on your current situation, ensuring your family gets every bit of help available.',
-    route: '/benefits-entitlements'
+    title: 'Emotion Tracker',
+    description: 'Log your daily emotions and get weekly AI-powered insights, tips, and progress comparisons to support your mental wellbeing journey.',
+    route: '/emotion-tracker'
   }
 ]
 

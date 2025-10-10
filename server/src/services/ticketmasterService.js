@@ -99,7 +99,7 @@ async function getTicketmasterEvents(filters = {}) {
       return {
         id: e.id,
         title: e.name,
-        date: formatToAustralianDate(e.dates?.start?.localDate),
+        date: e.dates?.start?.dateTime || e.dates?.start?.localDate,
         rawDate: e.dates?.start?.dateTime || e.dates?.start?.localDate,
         location: `${venue?.name || "N/A"}, ${venue?.city?.name || "N/A"}`,
         description: trimDescription(e.info || e.pleaseNote),

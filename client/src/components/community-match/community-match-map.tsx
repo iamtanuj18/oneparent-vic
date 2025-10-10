@@ -42,7 +42,7 @@ const InstructionMessage: React.FC = () => {
       el.innerHTML = `
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 16px;">👆</span>
-          <span>Click on council highlighted area to see more details</span>
+          <span>Click on any highlighted suburb to view housing costs, schools & community info</span>
         </div>
       `;
       
@@ -972,7 +972,7 @@ function FilterControls() {
       // header
       const header = L.DomUtil.create("div", "", el);
       header.style.cssText = "font-weight:600;margin-bottom:8px;color:#1f2937;font-size:14px";
-      header.textContent = "Showing on Map";
+      header.textContent = "Click Suburbs to Explore";
       
       const createDisplayItem = (label: string, icon: string) => {
         const item = L.DomUtil.create("div", "", el);

@@ -19,6 +19,7 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
   const [loadingSuburbs, setLoadingSuburbs] = useState(false);
   const [suburbValidated, setSuburbValidated] = useState(!!formData.suburb);
   const [timeError, setTimeError] = useState('');
+  const [dateError, setDateError] = useState('');
   const [showTimePicker, setShowTimePicker] = useState(false);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const timePickerRef = useRef<HTMLDivElement>(null);
@@ -26,6 +27,11 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
   // get current date and time for validation
   const now = new Date();
   const today = now.toISOString().split('T')[0];
+  
+  // calculate max date (6 months from today)
+  const maxDate = new Date();
+  maxDate.setMonth(maxDate.getMonth() + 6);
+  const maxDateString = maxDate.toISOString().split('T')[0];
 
   // generate time options in 30-minute intervals
   const generateTimeOptions = () => {
@@ -33,8 +39,8 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
     const isToday = formData.date === today;
     
     // for today: start from 1 hour from now
-    // for other days: start from midnight (00:00)
-    let startHour = 0;
+    // for other days: start from 6 AM
+    let startHour = 6;
     let startMinute = 0;
     
     if (isToday) {
@@ -50,13 +56,13 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
       }
     }
     
-    // generate times from start time to 11:55 PM
+    // generate times from start time to 11:00 PM
     for (let hour = startHour; hour <= 23; hour++) {
       const minuteStart = (hour === startHour) ? startMinute : 0;
       
       for (let minute = minuteStart; minute < 60; minute += 30) {
-        // stop at 11:55 PM (23:55)
-        if (hour === 23 && minute > 55) break;
+        // stop at 11:00 PM (23:00)
+        if (hour === 23 && minute > 0) break;
         
         const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         
@@ -162,12 +168,62 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
   // validate selected date is not in past
   const handleDateChange = (date: string) => {
     setTimeError(''); // clear time error when date changes
+    setDateError(''); // clear date error when date changes
     setShowTimePicker(false); // close time picker when date changes
+    
+    // always update the form data to allow smooth typing
     updateFormData('date', date);
     
+    // only validate if we have a complete date and it's not empty
+    if (date && date.length >= 8) { // allow both YYYY-MM-DD and partial dates
+      // try to parse the date
+      const selectedDate = new Date(date + 'T00:00:00');
+      
+      // only show errors for properly formatted but invalid dates
+      if (date.length === 10) {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(date)) {
+          setDateError('Please enter a valid date format');
+          return;
+        }
+        
+        if (isNaN(selectedDate.getTime())) {
+          setDateError('Please enter a valid date');
+          return;
+        }
+        
+        // check if date is not in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        selectedDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < today) {
+          setDateError('Date cannot be in the past');
+          return;
+        }
+        
+        // check if date is not too far in the future (6 months max)
+        const maxAllowedDate = new Date();
+        maxAllowedDate.setMonth(maxAllowedDate.getMonth() + 6);
+        maxAllowedDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate > maxAllowedDate) {
+          setDateError('Please choose a date within 6 months from now');
+          return;
+        }
+      }
+    }
+    
     // clear time if the selected time would be invalid for the new date
-    if (formData.time && !isTimeValidForToday(date, formData.time)) {
+    if (formData.time && date && !isTimeValidForToday(date, formData.time)) {
       updateFormData('time', '');
+    }
+  };
+
+  // validate on blur (when user finishes typing and clicks away)
+  const handleDateBlur = () => {
+    if (formData.date && formData.date.length > 0 && formData.date.length < 10) {
+      setDateError('Please enter a complete date');
     }
   };
 
@@ -176,7 +232,7 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
     setTimeError(''); // clear any previous error
     
     // if it's today's date, validate the time is at least 1 hour from now
-    if (!isTimeValidForToday(formData.date, time)) {
+    if (formData.date && !isTimeValidForToday(formData.date, time)) {
       setTimeError('Please select a time at least 1 hour from now');
       return;
     }
@@ -360,9 +416,9 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
           </label>
           <div className="grid grid-cols-3 gap-3">
             {[
-              { value: '15-30', label: '15–30 mins' },
-              { value: '30-60', label: '30–60 mins' },
-              { value: '1-2', label: '1–2 hrs' }
+              { value: '15 to 30 minutes', label: '15–30 mins' },
+              { value: '30 to 60 minutes', label: '30–60 mins' },
+              { value: '1 to 2 hours', label: '1–2 hrs' }
             ].map((option) => (
               <motion.button
                 key={option.value}
@@ -430,12 +486,17 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
                 id="planned-date"
                 value={formData.date}
                 min={today}
+                max={maxDateString}
                 onChange={(e) => handleDateChange(e.target.value)}
+                onBlur={handleDateBlur}
                 className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  hasValidationError && isOutdoorMode && !formData.date ? 'border-red-300' : 'border-gray-300'
+                  (hasValidationError && isOutdoorMode && !formData.date) || dateError ? 'border-red-300' : 'border-gray-300'
                 }`}
               />
-              {hasValidationError && isOutdoorMode && !formData.date && (
+              {dateError && (
+                <p className="text-red-500 text-sm mt-2">{dateError}</p>
+              )}
+              {hasValidationError && isOutdoorMode && !formData.date && !dateError && (
                 <p className="text-red-500 text-sm mt-2">Please select a date</p>
               )}
             </div>
@@ -452,7 +513,7 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
                   className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-left flex items-center justify-between transition-colors ${
                     !formData.date 
                       ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
-                      : hasValidationError && isOutdoorMode && !formData.time 
+                      : (hasValidationError && isOutdoorMode && !formData.time) || timeError
                         ? 'border-red-300 bg-white hover:border-gray-400' 
                         : 'border-gray-300 bg-white hover:border-gray-400'
                   }`}
@@ -507,12 +568,14 @@ export function LocationTimeStep({ formData, updateFormData, validationErrors = 
                     )}
                   </div>
                 )}
+
+                {timeError && (
+                  <p className="text-red-500 text-sm mt-2">{timeError}</p>
+                )}
+                {hasValidationError && isOutdoorMode && !formData.time && !timeError && formData.date && (
+                  <p className="text-red-500 text-sm mt-2">Please select a time</p>
+                )}
               </div>
-              {(hasValidationError && isOutdoorMode && !formData.time) || timeError ? (
-                <p className="text-red-500 text-sm mt-2">
-                  {timeError || 'Please select a start time'}
-                </p>
-              ) : null}
             </div>
           </div>
         )}

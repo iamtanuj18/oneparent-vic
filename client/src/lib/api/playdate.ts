@@ -48,7 +48,7 @@ export interface ActivityResponse {
   duration: string;
   budget: string;
   isOutdoor: boolean;
-  weatherInsight?: string;
+  weatherInsight?: string | boolean;
   outcomes: string[];
   materials: string[];
   steps: Array<{

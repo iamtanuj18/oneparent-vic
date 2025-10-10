@@ -15,7 +15,9 @@ pnpm-debug.log*
 client/.env
 client/.env.*         
 server/.env
-server/.env.*     
+server/.env.*
+aws/*.env
+aws/**/*.env     
 
 # --- Editor / OS junk ---
 .DS_Store
@@ -31,9 +33,14 @@ coverage/
 # --- Local runtime ---
 *.pid
 
-# --- Development Documentation ---
-WORKING_STYLE_GUIDE.md
-AI_DEVELOPER_INSTRUCTIONS.md
 
 # --- Consolidated Environment File ---
 all.env
+
+# --- AWS / Deployment Secrets ---
+aws/client/.aws/
+aws/server/.aws/
+aws/**/*.pem
+aws/**/*.key
+**/aws-config.json
+**/credentials.json

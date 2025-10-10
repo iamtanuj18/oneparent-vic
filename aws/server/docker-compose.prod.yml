@@ -1,0 +1,127 @@
+# docker compose configuration for oneparent vic server production deployment
+# handles blue-green deployments with zero downtime
+
+networks:
+  oneparent-network:
+    external: true
+
+services:
+  # blue deployment - current production container
+  oneparent-server-blue:
+    image: oneparent-vic-server:latest
+    container_name: oneparent-server-blue
+    restart: unless-stopped
+    
+    # internal port mapping - not exposed to host
+    ports:
+      - "127.0.0.1:5000:5000"
+    
+    # connect to shared network with redis
+    networks:
+      - oneparent-network
+    
+    # environment variables
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - REDIS_URL=redis://oneparent-redis:6379
+    
+    # environment file for sensitive config
+    env_file:
+      - .env.production
+    
+    # health check configuration
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/api-status', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # resource limits for t3.micro
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+          cpus: '0.25'
+    
+    # logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # depends on redis container
+    depends_on:
+      - redis-check
+
+  # green deployment - new version during deployment
+  oneparent-server-green:
+    image: oneparent-vic-server:latest
+    container_name: oneparent-server-green
+    restart: unless-stopped
+    
+    # alternative port for green deployment
+    ports:
+      - "127.0.0.1:5001:5000"
+    
+    # connect to shared network with redis
+    networks:
+      - oneparent-network
+    
+    # environment variables
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - REDIS_URL=redis://oneparent-redis:6379
+    
+    # environment file for sensitive config
+    env_file:
+      - .env.production
+    
+    # health check configuration
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/api/api-status', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # resource limits for t3.micro
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.5'
+        reservations:
+          memory: 128m
+          cpus: '0.25'
+    
+    # logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # depends on redis container
+    depends_on:
+      - redis-check
+    
+    # profile for conditional startup
+    profiles:
+      - green-deployment
+
+  # redis connection check service
+  redis-check:
+    image: redis:7-alpine
+    container_name: redis-connection-check
+    command: redis-cli -h oneparent-redis -p 6379 ping
+    networks:
+      - oneparent-network
+    profiles:
+      - redis-test

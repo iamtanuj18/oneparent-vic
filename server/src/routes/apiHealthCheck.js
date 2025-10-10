@@ -9,7 +9,7 @@ const router = express.Router();
 router.get("/api-status", apiHealthCheckLimiter, (_req, res) => {
   res.json({
     ok: true,
-    service: "oneparent vic api from " + CONFIG.API_ENV,
+    service: "oneparent vic api v2 from " + CONFIG.API_ENV,
     time: new Date().toISOString()
   });
 });

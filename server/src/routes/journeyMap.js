@@ -4,7 +4,6 @@ const { getPool } = require("../db");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { geminiValidateJson } = require("../services/gemini");
 
-// CORE HELPER FUNCTIONS
 
 function calculateTimeSince(journeyStartDate) {
   const journeyStart = new Date(journeyStartDate);
@@ -52,9 +51,10 @@ async function getMentalHealthData(timeSince = null) {
 async function getChildcareCosts() {
   const pool = getPool();
   const query = `
-    SELECT category, subcategory, value, source_attribution
+    SELECT category, subcategory, measure, value, period, source_attribution
     FROM hilda.childcare_usage
-    ORDER BY category, subcategory
+    WHERE category = 'Parent type' AND measure = 'median_weekly'
+    ORDER BY period DESC, subcategory
   `;
   const result = await pool.query(query);
   return result.rows;
@@ -63,15 +63,15 @@ async function getChildcareCosts() {
 async function getHousingStressData() {
   const pool = getPool();
   const query = `
-    SELECT family_type, stress_pct, source_attribution
+    SELECT family_type, stress_pct, year, source_attribution
     FROM hilda.housing_stress
+    WHERE year = (SELECT MAX(year) FROM hilda.housing_stress)
     ORDER BY family_type
   `;
   const result = await pool.query(query);
   return result.rows;
 }
 
-// MAIN COMPREHENSIVE ANALYSIS FUNCTION
 
 async function generateComprehensiveAnalysis(journeyData) {
   const {
@@ -137,26 +137,29 @@ async function generateComprehensiveAnalysis(journeyData) {
   // If we have some results, proceed with what we have
   console.log(`[Journey Analysis] Completed with ${errors.length} errors out of 4 components`);
 
+  // If critical components are missing, throw error for proper handling
+  if (!analysisResults.riskContext || !analysisResults.journeyPrediction || !analysisResults.mainActions || !analysisResults.challengeGoal) {
+    throw new Error('Incomplete analysis: One or more AI components failed to generate required content');
+  }
+
   return {
-    riskFactors: analysisResults.riskContext?.riskFactors || [],
-    protectiveFactors: analysisResults.riskContext?.protectiveFactors || [],
-    financialStress: analysisResults.riskContext?.financialStress || { level: 'unknown', factors: [], recommendations: [] },
-    overallRiskScore: analysisResults.riskContext ? calculateOverallRisk(analysisResults.riskContext.riskFactors, analysisResults.riskContext.protectiveFactors, journeyData.stressLevel) : 5,
+    riskFactors: analysisResults.riskContext.riskFactors,
+    protectiveFactors: analysisResults.riskContext.protectiveFactors,
+    financialStress: analysisResults.riskContext.financialStress,
+    contextualInsights: analysisResults.riskContext.contextualInsights,
+    journeyStage: analysisResults.journeyPrediction.currentStage,
+    trajectoryPrediction: analysisResults.journeyPrediction.prediction,
+    personalizedTimeline: analysisResults.journeyPrediction.timeline,
+    successProbabilities: analysisResults.journeyPrediction.probabilities,
+    personalizedActions: analysisResults.mainActions.actions,
+    nextSteps: analysisResults.mainActions.nextSteps,
+    milestones: analysisResults.mainActions.milestones,
     
-    contextualInsights: analysisResults.riskContext?.contextualInsights || { situationContext: 'Analysis in progress', dataBasedHope: 'Support systems available', keyOpportunities: [] },
-    journeyStage: analysisResults.journeyPrediction?.currentStage || 'assessment_in_progress',
-    trajectoryPrediction: analysisResults.journeyPrediction?.prediction || { stageDescription: 'Analysis being generated based on your situation' },
-    personalizedTimeline: analysisResults.journeyPrediction?.timeline || {},
-    successProbabilities: analysisResults.journeyPrediction?.probabilities || {},
-    personalizedActions: analysisResults.mainActions?.actions || [],
-    nextSteps: analysisResults.mainActions?.nextSteps || {},
-    milestones: analysisResults.mainActions?.milestones || [],
+    challengeSpecificActions: analysisResults.challengeGoal.challengeSpecificActions,
+    goalSpecificActions: analysisResults.challengeGoal.goalSpecificActions,
     
-    challengeSpecificActions: analysisResults.challengeGoal?.challengeSpecificActions || [],
-    goalSpecificActions: analysisResults.challengeGoal?.goalSpecificActions || [],
-    
-    situationSummary: analysisResults.journeyPrediction?.situationSummary || 'Your personalized analysis is being generated using HILDA research data and evidence-based insights.',
-    progressSummary: analysisResults.journeyPrediction?.progressSummary || null,
+    situationSummary: analysisResults.journeyPrediction.situationSummary,
+    progressSummary: analysisResults.journeyPrediction.progressSummary,
     
     // Add metadata about analysis completeness
     analysisCompleteness: {
@@ -193,7 +196,7 @@ PARENT'S COMPLETE PROFILE:
 - Goals: ${improvementGoals.join(', ')}
 
 COMPREHENSIVE HILDA DATA CONTEXT:
-${relevantHildaData}
+${JSON.stringify(relevantHildaData, null, 2)}
 
 REQUIRED: Generate complete analysis for ALL FOUR components:
 
@@ -226,7 +229,8 @@ Return JSON with ALL four sections: {
     "uniqueFactors": ["3-4 specific factors that make your situation unique or typical"],
     "dataBasedHope": "Encouraging insight based on HILDA data trends for you",
     "realisticExpectations": "What the data suggests you can realistically expect",
-    "keyOpportunities": ["2-3 specific opportunities your situation presents"]
+    "keyOpportunities": ["2-3 specific opportunities your situation presents"],
+    "housingInsight": "Specific insight about their housing type and its implications for their family wellbeing and stability, personalized to their exact housing situation"
   },
   "financialStress": {
     "level": "low|medium|high|very_high",
@@ -282,8 +286,8 @@ You are conducting comprehensive journey stage identification and predictive ana
 COMPLETE PARENT PROFILE:
 - Journey Duration: ${timeSince.years} years, ${timeSince.months} months into single parenthood
 - Family: ${numberOfChildren} children, youngest ${childAge === 0 ? 'under 1 year old' : childAge === 5 ? 'over 4 years old' : `${childAge} years old`}
-- Current stress: ${stressLevel}/10 (${stressLevel >= 8 ? 'very high stress' : stressLevel >= 6 ? 'high stress' : stressLevel >= 4 ? 'moderate stress' : 'manageable stress'})
-- Support network: ${supportNetworkStrength}/5 (${supportNetworkStrength <= 2 ? 'very limited support' : supportNetworkStrength === 3 ? 'moderate support' : 'strong support'})
+- Current stress: ${stressLevel}/10
+- Support network: ${supportNetworkStrength}/5
 - Employment: ${employmentStatus}
 - Housing: ${housingType}
 - Income: ${incomeBracket}
@@ -291,7 +295,7 @@ COMPLETE PARENT PROFILE:
 - Goals: ${improvementGoals.join(', ')}
 
 SIMILAR HILDA PROFILES: ${JSON.stringify(similarProfiles, null, 2)}
-CROSS-DATASET INSIGHTS: ${crossDatasetInsights}
+CROSS-DATASET INSIGHTS: ${JSON.stringify(crossDatasetInsights, null, 2)}
 
 ${previousAssessment ? `PREVIOUS ASSESSMENT FOR PROGRESS COMPARISON:
 Previous (${Math.round((new Date() - new Date(previousAssessment.timestamp)) / (1000 * 60 * 60 * 24))} days ago):
@@ -382,11 +386,11 @@ async function generateConsolidatedMainActions(journeyData, hildaDatasets, conte
 You are creating intelligent action plans and timelines for a single parent in Victoria, Australia using HILDA research data.
 
 COMPLETE PARENT PROFILE:
-- Location: Victoria, Australia (access to Centrelink, state services, local support)
+- Location: Based on HILDA survey area and available services data
 - Journey: ${timeSince.years} years, ${timeSince.months} months into single parenthood
 - Family: ${numberOfChildren} children, youngest ${childAge === 0 ? 'under 1 year old' : childAge === 5 ? 'over 4 years old' : `${childAge} years old`}
-- Current stress: ${stressLevel}/10 (${stressLevel >= 8 ? 'very high' : stressLevel >= 6 ? 'high' : stressLevel >= 4 ? 'moderate' : 'manageable'})
-- Support network: ${supportNetworkStrength}/5 (${supportNetworkStrength <= 2 ? 'very limited' : supportNetworkStrength === 3 ? 'moderate' : 'strong'})
+- Current stress: ${stressLevel}/10
+- Support network: ${supportNetworkStrength}/5
 - Employment: ${employmentStatus}
 - Housing: ${housingType}
 - Income: ${incomeBracket}
@@ -394,8 +398,8 @@ COMPLETE PARENT PROFILE:
 - Main challenges: ${biggestChallenges.join(', ')}
 - Goals: ${improvementGoals.join(', ')}
 
-SUCCESS PATTERNS FROM HILDA DATA:
-${successPatterns}
+HILDA DATABASE CONTEXT:
+${JSON.stringify(successPatterns, null, 2)}
 
 REQUIRED: Generate main action plan with timeline and milestones:
 IMPORTANT: Include actions for ALL timeframes - at least 2-3 immediate actions, 2-3 short-term actions, and 2-3 long-term actions.
@@ -500,7 +504,7 @@ Return JSON: {
       "action": "Practical action plan", 
       "evidenceBase": "HILDA success data",
       "timeframe": "Realistic timeline",
-      "victoriaResources": "Victoria programs/services",
+      "localResources": "Programs and services from database",
       "firstStep": "Immediate action",
       "supportRequired": "Support needed",
       "successIndicators": "Progress markers"
@@ -522,8 +526,8 @@ Return JSON: {
     }
 
     return {
-      challengeSpecificActions: analysis.challengeSpecificActions || [],
-      goalSpecificActions: analysis.goalSpecificActions || []
+      challengeSpecificActions: analysis.challengeSpecificActions,
+      goalSpecificActions: analysis.goalSpecificActions
     };
   } catch (error) {
     console.error('Challenge/goal actions analysis error:', error);
@@ -531,263 +535,135 @@ Return JSON: {
   }
 }
 
-// ESSENTIAL HELPER FUNCTIONS (ONLY THOSE ACTUALLY USED)
 
 function extractRelevantHildaData(assessmentData, hildaDatasets) {
+  // Return only raw database data 
   const { timeSince, childAge, numberOfChildren, employmentStatus } = assessmentData;
   
-  let relevantData = [];
-  
-  // Mental health trajectory data
-  const mentalHealthPoint = hildaDatasets.mentalHealthData?.find(
-    row => row.year_from_onset === timeSince.years
-  );
-  if (mentalHealthPoint) {
-    relevantData.push(`Mental health: ${mentalHealthPoint.single_parent_pct}% of single parents at ${timeSince.years} years still face challenges`);
-  }
-
-  // Childcare cost data
-  relevantData.push(`Childcare costs: Average weekly costs vary significantly by child age and usage patterns`);
-
-  // Housing stress data
-  const housingStress = hildaDatasets.housingData?.find(
-    row => row.family_type === 'Single parent with dependent children'
-  );
-  if (housingStress) {
-    relevantData.push(`Housing stress: ${housingStress.stress_pct}% of single-parent families experience housing stress`);
-  }
-
-  return relevantData.join('\n');
+  return {
+    userContext: {
+      timeSince: timeSince,
+      childAge: childAge,
+      numberOfChildren: numberOfChildren,
+      employmentStatus: employmentStatus
+    },
+    mentalHealthData: hildaDatasets.mentalHealthData?.find(
+      row => row.year_from_onset === timeSince.years
+    ) || null,
+    housingData: hildaDatasets.housingData?.find(
+      row => row.family_type === 'Single parent with dependent children'
+    ) || null,
+    childcareData: hildaDatasets.childcareData || []
+  };
 }
 
 function analyzeCrossDatasetPatterns(assessmentData, hildaDatasets) {
-  const patterns = [];
+  // Return only raw database patterns 
   const { timeSince, numberOfChildren, employmentStatus, incomeBracket, housingType } = assessmentData;
 
-  // Analyze mental health patterns
-  if (hildaDatasets.mentalHealthData) {
-    const relevantMentalHealth = hildaDatasets.mentalHealthData.find(
+  return {
+    userProfile: {
+      timeSince: timeSince,
+      numberOfChildren: numberOfChildren,
+      employmentStatus: employmentStatus,
+      incomeBracket: incomeBracket,
+      housingType: housingType
+    },
+    mentalHealthPatterns: hildaDatasets.mentalHealthData?.find(
       row => row.year_from_onset <= timeSince.years
-    );
-    if (relevantMentalHealth) {
-      patterns.push(`Mental health data: ${relevantMentalHealth.single_parent_pct}% of single parents at ${timeSince.years} years still experience stress`);
-    }
-  }
-
-  // Analyze childcare patterns
-  if (hildaDatasets.childcareData) {
-    patterns.push(`Childcare patterns: Single parents typically spend significant portion of income on childcare`);
-  }
-
-  // Analyze housing patterns
-  if (hildaDatasets.housingData) {
-    const housingData = hildaDatasets.housingData.find(row => 
+    ) || null,
+    housingPatterns: hildaDatasets.housingData?.find(row => 
       row.family_type === 'Single parent with dependent children'
-    );
-    if (housingData) {
-      patterns.push(`Housing stress: ${housingData.stress_pct}% of single-parent families experience housing affordability stress`);
-    }
-  }
-
-  return patterns.join('\n');
+    ) || null,
+    childcarePatterns: hildaDatasets.childcareData || []
+  };
 }
 
 function analyzeSuccessPatterns(assessmentData, hildaDatasets) {
+  // Return only raw HILDA database data 
   const { timeSince, numberOfChildren, employmentStatus, supportNetworkStrength } = assessmentData;
   
-  let successFactors = [];
-  
-  if (timeSince.years >= 2) {
-    successFactors.push("Families 2+ years into their single parenthood journey typically achieve greater stability");
-  }
-  
-  if (employmentStatus === 'unemployed' || employmentStatus === 'casual') {
-    successFactors.push("HILDA data shows 70% of single parents gain stable employment within 18 months with proper support");
-  }
-  
-  if (supportNetworkStrength >= 3) {
-    successFactors.push("Strong support networks correlate with 85% better outcomes across all wellbeing measures");
-  } else {
-    successFactors.push("Building support networks is the #1 predictor of positive trajectory");
-  }
-  
-  successFactors.push("Housing stability is foundational - addressing housing first accelerates all other improvements");
-  
-  return successFactors.join('\n');
+  return {
+    mentalHealthData: hildaDatasets.mentalHealthData || [],
+    housingData: hildaDatasets.housingData || [],
+    childcareData: hildaDatasets.childcareData || [],
+    userProfile: {
+      journeyYears: timeSince.years,
+      journeyMonths: timeSince.months,
+      numberOfChildren,
+      employmentStatus,
+      supportNetworkStrength
+    }
+  };
 }
 
 async function findSimilarHildaProfiles(journeyData, hildaDatasets) {
+  // Return only raw user data and database patterns 
   const { 
     timeSince, stressLevel, supportNetworkStrength, employmentStatus, 
     housingType, incomeBracket, numberOfChildren, childAge 
   } = journeyData;
 
-  const similarityFactors = {
-    timeInJourney: timeSince.totalMonths,
-    stressLevel: stressLevel,
-    supportLevel: supportNetworkStrength,
-    hasChildren: numberOfChildren > 0,
-    childAge: parseInt(childAge) || 0,
-    employmentStable: employmentStatus.includes('full') || employmentStatus.includes('part'),
-    housingSecure: housingType.includes('own') || housingType.includes('rent'),
-    incomeLevel: incomeBracket.includes('30') ? 'low' : incomeBracket.includes('60') ? 'medium' : 'high'
-  };
-
-  const patterns = {
-    stressPatterns: hildaDatasets.mentalHealthData || [],
-    housingPatterns: hildaDatasets.housingData || [],
-    childcarePatterns: hildaDatasets.childcareData || []
-  };
-
   return {
-    similarityFactors,
-    patterns,
-    profileCount: 'Multiple HILDA participants with similar characteristics',
-    keyInsights: `Single parents in Victoria with ${stressLevel}/10 stress levels and ${supportNetworkStrength}/5 support strength`
-  };
-}
-
-async function gatherFinancialEvidence(assessmentData, hildaDatasets) {
-  const { incomeBracket, numberOfChildren, timeSince } = assessmentData;
-  
-  const evidence = {
+    userProfile: {
+      timeInJourney: timeSince.totalMonths,
+      stressLevel: stressLevel,
+      supportLevel: supportNetworkStrength,
+      numberOfChildren: numberOfChildren,
+      childAge: parseInt(childAge) || 0,
+      employmentStatus: employmentStatus,
+      housingType: housingType,
+      incomeBracket: incomeBracket
+    },
     hildaPatterns: {
-      housingStress: hildaDatasets.housingData?.filter(d => d.family_type?.includes('single') || d.family_type?.includes('Single parent')) || [],
-      childcareCosts: hildaDatasets.childcareData || [],
-      incomeDistribution: `HILDA single parent income patterns for ${incomeBracket} bracket`
-    },
-    victoriaContext: {
-      centrelinkPayments: {
-        parentingPayment: 'Up to $967.50/fortnight for single parents (2025 rates)',
-        familyTaxBenefit: 'Up to $197.96/fortnight per child',
-        childCareSubsidy: 'Up to 85% of childcare costs for eligible families'
-      },
-      costOfLiving: {
-        medianRent: 'Victoria median rent varies by area - Melbourne metro vs regional',
-        childcareCosts: 'Average $100-150/day in Victoria for long daycare',
-        transportCosts: 'Myki concessions available for eligible families'
-      },
-      supportServices: {
-        financialCounseling: 'Free through community health centers across Victoria',
-        emergencyRelief: 'Available through councils and community organizations',
-        utilityConcessions: 'Victoria energy and water concessions for eligible families'
-      }
-    },
-    profileComparison: `Single parents in Victoria with ${numberOfChildren} children using childcare in ${incomeBracket} income bracket`
+      mentalHealthData: hildaDatasets.mentalHealthData || [],
+      housingData: hildaDatasets.housingData || [],
+      childcareData: hildaDatasets.childcareData || []
+    }
   };
-  
-  return evidence;
 }
 
 async function gatherChallengeEvidence(challenges, assessmentData, hildaDatasets) {
+  // Return only database data and user challenges - no hardcoded service information
   const { incomeBracket, numberOfChildren, timeSince } = assessmentData;
   
-  const evidence = {
+  return {
     challengeTypes: challenges,
+    userContext: {
+      incomeBracket: incomeBracket,
+      numberOfChildren: numberOfChildren,
+      journeyYears: timeSince.years,
+      journeyMonths: timeSince.months
+    },
     hildaPatterns: {
-      financialStress: hildaDatasets.housingData?.filter(d => d.family_type?.includes('single')) || [],
-      mentalHealth: hildaDatasets.mentalHealthData?.filter(d => d.year_from_onset <= timeSince.years) || [],
-      childcareCosts: hildaDatasets.childcareData || []
-    },
-    victoriaContext: {
-      centrelinkServices: 'Parenting Payment, Family Tax Benefits, Child Care Subsidy available',
-      housingSupport: 'VicHomes, rental assistance, bond loans through DHHS',
-      mentalHealthServices: 'Medicare Mental Health Care Plans, community health centers',
-      employmentServices: 'jobactive providers, TAFE training programs, flexible work initiatives'
-    },
-    similarProfileOutcomes: `Single parents in Victoria with ${incomeBracket} income and ${numberOfChildren} children`
+      housingData: hildaDatasets.housingData?.filter(d => d.family_type?.includes('single')) || [],
+      mentalHealthData: hildaDatasets.mentalHealthData?.filter(d => d.year_from_onset <= timeSince.years) || [],
+      childcareData: hildaDatasets.childcareData || []
+    }
   };
-  
-  return evidence;
 }
 
 async function gatherGoalEvidence(goals, assessmentData, hildaDatasets) {
+  // Return only database data and user goals 
   const { incomeBracket, employmentStatus, timeSince } = assessmentData;
   
-  const evidence = {
-    goalTypes: goals,
-    hildaPatterns: {
-      stressReduction: hildaDatasets.mentalHealthData?.filter(d => d.year_from_onset >= timeSince.years) || [],
-      financialImprovement: hildaDatasets.housingData?.filter(d => d.family_type?.includes('single')) || [],
-      housingStability: hildaDatasets.housingData || []
-    },
-    victoriaPrograms: {
-      stressSupport: 'Medicare Mental Health Care Plans, community counseling, mindfulness programs',
-      financialSupport: 'Financial counseling services, budgeting workshops, emergency relief',
-      careerSupport: 'TAFE programs, jobactive services, Skills First training',
-      housingSupport: 'VicHomes applications, rental assistance, transitional housing'
-    },
-    successRates: `HILDA data for single parents in ${incomeBracket} income bracket with ${employmentStatus} employment`
-  };
-  
-  return evidence;
-}
-
-function generatePersonalizedTimeline(journeyData) {
-  const { biggestChallenges, improvementGoals, timeSince, employmentStatus } = journeyData;
-  
-  let week1 = "Start with immediate needs review";
-  let month1 = "Establish basic stability and routines";
-  let month3 = "Build on early progress and expand support";
-  let month6 = "Evaluate achievements and set new goals";
-
-  if (biggestChallenges.includes('financial_stress') || biggestChallenges.includes('accessing_services')) {
-    week1 = "Gather documents for government support applications";
-    month1 = "Complete benefit applications and establish financial routines";
-  }
-
-  if (biggestChallenges.includes('social_isolation')) {
-    week1 = "Research and contact local single parent support groups";
-    month1 = "Attend first support group meetings and establish social connections";
-  }
-
-  if (biggestChallenges.includes('childcare_costs')) {
-    month1 = "Apply for Child Care Subsidy and explore local childcare options";
-  }
-
-  if (improvementGoals.includes('career_growth') || improvementGoals.includes('education')) {
-    month3 = "Focus on skill development, training opportunities, and career planning";
-  }
-
-  if (improvementGoals.includes('better_housing')) {
-    month3 = "Research housing options and financial planning for housing stability";
-  }
-
-  if (improvementGoals.includes('reduce_stress') || improvementGoals.includes('self_care')) {
-    month3 = "Develop consistent self-care routines and stress management practices";
-  }
-
-  if (timeSince.totalMonths < 12) {
-    month6 = "Evaluate initial stability and plan for next phase of adjustment";
-  } else if (timeSince.totalMonths < 36) {
-    month6 = "Assess progress towards stability and explore growth opportunities";
-  } else {
-    month6 = "Review long-term goals and plan for continued personal development";
-  }
-
   return {
-    week1,
-    month1,
-    month3,
-    month6
+    goalTypes: goals,
+    userContext: {
+      incomeBracket: incomeBracket,
+      employmentStatus: employmentStatus,
+      journeyYears: timeSince.years,
+      journeyMonths: timeSince.months
+    },
+    hildaPatterns: {
+      mentalHealthData: hildaDatasets.mentalHealthData?.filter(d => d.year_from_onset >= timeSince.years) || [],
+      housingData: hildaDatasets.housingData?.filter(d => d.family_type?.includes('single')) || [],
+      allHousingData: hildaDatasets.housingData || [],
+      childcareData: hildaDatasets.childcareData || []
+    }
   };
 }
 
-function calculateOverallRisk(riskFactors, protectiveFactors, stressLevel) {
-  let score = stressLevel;
-
-  riskFactors.forEach(factor => {
-    switch (factor.severity) {
-      case 'high': score += 2; break;
-      case 'medium': score += 1; break;
-      default: score += 0.5; break;
-    }
-  });
-
-  protectiveFactors.forEach(() => score -= 1);
-
-  return Math.max(1, Math.min(10, Math.round(score)));
-}
 
 // MAIN JOURNEY MAPPING ENDPOINT
 
@@ -867,6 +743,17 @@ router.post("/journey", asyncHandler(async (req, res) => {
       }
     });
     
+    // Generate frontend-compatible data objects from database
+    const mentalHealthMatch = mentalHealthData.find(row => row.year_from_onset === timeSince.years) || {};
+    
+    // Get housing data for single parents and general population
+    const singleParentHousing = housingData.find(row => row.family_type === 'Single parent with dependent children') || {};
+    const generalPopHousing = housingData.find(row => row.family_type === 'All people') || {};
+    
+    // Get childcare data for single parents and couples (use most recent period)
+    const singleParentChildcare = childcareData.find(row => row.subcategory === 'Single parents') || {};
+    const coupleParentChildcare = childcareData.find(row => row.subcategory === 'Couple parents') || {};
+
     return res.json({
       success: true,
       userPosition: {
@@ -887,42 +774,62 @@ router.post("/journey", asyncHandler(async (req, res) => {
         improvementGoals,
         assessmentDate: new Date().toISOString()
       },
-      
-      mentalHealth: {
-        singleParentChallengesPct: mentalHealthData[0]?.single_parent_pct || 85,
-        populationChallengesPct: mentalHealthData[0]?.population_pct || 45,
-        userBetterThan: Math.max(0, 100 - (mentalHealthData[0]?.single_parent_pct || 85)),
-        isExactYearMatch: mentalHealthData[0]?.year_from_onset === timeSince.years,
-        yearDataUsed: mentalHealthData[0]?.year_from_onset || timeSince.years
-      },
-      
-      childcare: {
-        ageSpecificCost: childcareData.find(row => row.category === 'Age of youngest child')?.value || 350,
-        singleParentAvgCost: childcareData.find(row => row.subcategory === 'Single parents')?.value || 280,
-        coupleParentAvgCost: childcareData.find(row => row.subcategory === 'Couple parents')?.value || 320,
-        singleParentSavings: (() => {
-          const singleParentCost = childcareData.find(row => row.subcategory === 'Single parents')?.value || 280;
-          const coupleParentCost = childcareData.find(row => row.subcategory === 'Couple parents')?.value || 320;
-          return Math.max(0, coupleParentCost - singleParentCost);
-        })(),
-        isOlderThanFour: childAge >= 5
-      },
-      
-      housingStress: {
-        singleParentStressPct: housingData.find(row => row.family_type === 'Single parent with dependent children')?.stress_pct || 45,
-        allPeopleStressPct: housingData.find(row => row.family_type === 'All people')?.stress_pct || 28,
-        riskMultiplier: 1.6
-      },
-      
       comprehensiveAnalysis,
+      mentalHealth: {
+        singleParentChallengesPct: mentalHealthMatch.single_parent_pct ? parseFloat(mentalHealthMatch.single_parent_pct) : 0,
+        populationChallengesPct: mentalHealthMatch.population_pct ? parseFloat(mentalHealthMatch.population_pct) : 0,
+        userBetterThan: mentalHealthMatch.single_parent_pct 
+          ? Math.max(0, 100 - parseFloat(mentalHealthMatch.single_parent_pct))
+          : 0,
+        isExactYearMatch: !!mentalHealthMatch.year_from_onset
+      },
+      childcare: {
+        ageSpecificCost: singleParentChildcare.value ? parseFloat(singleParentChildcare.value) : null,
+        singleParentAvgCost: singleParentChildcare.value ? parseFloat(singleParentChildcare.value) : null,
+        coupleParentAvgCost: coupleParentChildcare.value ? parseFloat(coupleParentChildcare.value) : null,
+        singleParentSavings: singleParentChildcare.value && coupleParentChildcare.value 
+          ? Math.max(0, parseFloat(coupleParentChildcare.value) - parseFloat(singleParentChildcare.value))
+          : null,
+        isOlderThanFour: childAge > 4,
+        note: childAge > 4 ? 'Childcare costs may be lower for older children' : null
+      },
+      housingStress: {
+        singleParentStressPct: singleParentHousing.stress_pct ? parseFloat(singleParentHousing.stress_pct) : 0,
+        allPeopleStressPct: generalPopHousing.stress_pct ? parseFloat(generalPopHousing.stress_pct) : 0,
+        riskMultiplier: singleParentHousing.stress_pct && generalPopHousing.stress_pct 
+          ? Math.round((parseFloat(singleParentHousing.stress_pct) / parseFloat(generalPopHousing.stress_pct)) * 10) / 10
+          : 1.0,
+        medianRent: null,
+        affordabilityThreshold: 30
+      },
       dataSource: "HILDA Survey Statistical Report 2024, Melbourne Institute, CC-BY 3.0 AU"
     });
     
   } catch (error) {
     console.error('Journey mapping error:', error);
+    
+    // Provide specific error messages based on error type
+    if (error.message.includes('Incomplete analysis') || error.message.includes('Failed to generate')) {
+      return res.status(500).json({ 
+        error: "AI Analysis Unavailable",
+        message: "Our AI analysis service is temporarily experiencing issues. Your data is secure, but we're unable to generate personalized insights right now. Please try again in a few minutes, or contact support if the problem persists.",
+        suggestion: "You can still access general support resources while we restore full functionality."
+      });
+    }
+    
+    if (error.message.includes('HILDA') || error.message.includes('database')) {
+      return res.status(500).json({ 
+        error: "Data Service Temporarily Unavailable",
+        message: "We're experiencing temporary issues accessing the HILDA research database that powers your personalized insights. Please try again in a few minutes.",
+        suggestion: "For immediate support, visit your local family services center."
+      });
+    }
+    
+    // Generic fallback for other errors
     return res.status(500).json({ 
-      error: "Unable to process assessment",
-      message: "Please try again later"
+      error: "Service Temporarily Unavailable",
+      message: "We're experiencing technical difficulties processing your assessment. Your information is secure. Please try again in a few minutes.",
+      suggestion: "If this continues, you can access general single parent support resources."
     });
   }
 }));

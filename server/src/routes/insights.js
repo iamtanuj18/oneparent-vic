@@ -58,30 +58,26 @@ router.get("/insights/timeline", asyncHandler(async (req, res) => {
       WHERE year NOT IN (2019,2020,2021,2022)
       GROUP BY year
     ),
-    stats AS (
-      SELECT MIN(year) AS min_year, MAX(year) AS max_year, COUNT(*) AS n_years
-      FROM cleaned
+    target_years AS (
+      SELECT generate_series(1994, (SELECT MAX(year) FROM cleaned), 6) AS target_year
     ),
-    pivots AS (
-      SELECT year FROM cleaned
-      WHERE year IN (
-        (SELECT min_year FROM stats),
-        (SELECT max_year FROM stats),
-        (SELECT year FROM cleaned ORDER BY year
-           OFFSET (SELECT n_years/4    FROM stats) LIMIT 1),
-        (SELECT year FROM cleaned ORDER BY year
-           OFFSET (SELECT n_years/4*2  FROM stats) LIMIT 1),
-        (SELECT year FROM cleaned ORDER BY year
-           OFFSET (SELECT n_years/4*3  FROM stats) LIMIT 1)
-      )
+    closest_matches AS (
+      SELECT DISTINCT ON (t.target_year)
+        t.target_year,
+        c.year AS actual_year,
+        c.total_families_k,
+        c.families_with_young_dependants_k,
+        ABS(c.year - t.target_year) AS year_diff
+      FROM target_years t
+      CROSS JOIN cleaned c
+      ORDER BY t.target_year, ABS(c.year - t.target_year), c.year
     )
     SELECT
-      c.year,
-      ROUND(c.total_families_k,1) AS total_families_k,
-      ROUND(c.families_with_young_dependants_k,1) AS families_with_young_dependants_k
-    FROM cleaned c
-    JOIN pivots p USING (year)
-    ORDER BY c.year
+      actual_year AS year,
+      ROUND(total_families_k,1) AS total_families_k,
+      ROUND(families_with_young_dependants_k,1) AS families_with_young_dependants_k
+    FROM closest_matches
+    ORDER BY actual_year
   `;
   const { rows } = await pool.query(sql);
   const timelineData = rows.map(r => ({

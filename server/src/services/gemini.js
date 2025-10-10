@@ -78,24 +78,18 @@ ${prompt}`
   const finishReason = candidate?.finishReason;
   const usage = data?.usageMetadata;
   
-  // console.log(`[gemini] response length: ${out?.length || 0} chars`);
-  if (usage?.thoughtsTokenCount) {
-    // console.log(`[gemini] thinking tokens: ${usage.thoughtsTokenCount}, output tokens: ${usage.candidatesTokenCount || 0}`);
-  }
-  
   if (!out || !out.trim()) {
-    // console.log(`[gemini] debug - full response:`, JSON.stringify(data, null, 2));
+    console.error(`[gemini] empty response (finish: ${finishReason || 'unknown'})`);
     const err = new Error(`empty gemini response (finish: ${finishReason || 'unknown'})`);
     err.isEmpty = true;
     err.finishReason = finishReason;
-    err.thoughtsTokenCount = usage?.thoughtsTokenCount || 0;
     throw err;
   }
   
   try {
     return JSON.parse(out);
   } catch (parseErr) {
-    // console.log(`[gemini] JSON parse error for response: ${out}`);
+    console.error(`[gemini] json parse failed: ${parseErr.message}`);
     throw new Error(`Invalid JSON response: ${parseErr.message}`);
   }
 }
@@ -189,10 +183,9 @@ function geminiGenerateJson({
   prompt, 
   jsonSchemaNote = "Return valid JSON object",
   temperature = 0.4, 
-  maxOutputTokens = 2500, // increased default for 2.5 models with thinking tokens
-  retries = 3 // increased for reliability
+  maxOutputTokens = 2500,
+  retries = 3
 }) {
-  // console.log("[gemini] generate request - using configured model sequence");
   return callGeminiWithKeyRotation({ 
     modelList: GENERATE_MODELS,
     prompt, 
@@ -200,6 +193,9 @@ function geminiGenerateJson({
     temperature, 
     maxOutputTokens,
     retries
+  }).catch(error => {
+    console.error(`[gemini] generation failed: ${error.message}`);
+    throw error;
   });
 }
 
@@ -208,10 +204,9 @@ function geminiValidateJson({
   prompt, 
   jsonSchemaNote = "Return valid JSON object",
   temperature = 0.4, 
-  maxOutputTokens = 800, // increased from 500 for validation
-  retries = 3 // increased for reliability
+  maxOutputTokens = 800,
+  retries = 3
 }) {
-  // console.log("[gemini] validate request - using configured validation sequence");
   return callGeminiWithKeyRotation({ 
     modelList: VALIDATE_MODELS,
     prompt, 
@@ -219,6 +214,9 @@ function geminiValidateJson({
     temperature, 
     maxOutputTokens,
     retries
+  }).catch(error => {
+    console.error(`[gemini] validation failed: ${error.message}`);
+    throw error;
   });
 }
 

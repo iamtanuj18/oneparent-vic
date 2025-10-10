@@ -14,12 +14,14 @@ import {
   Edit3,
   BarChart3,
   Clock,
-  BookOpen
+  BookOpen,
+  ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
 import { ANIMATION_CONFIG, FADE_UP_VARIANT } from '@/lib/animation';
 import { AssessmentResponse, submitAssessment } from '@/lib/api/journey-map';
+import { formatText, formatTimeframe, formatCategory, formatLevel } from '@/lib/textUtils';
 
 interface JourneyResultsProps {
   assessmentResults: AssessmentResponse;
@@ -417,6 +419,14 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
       .replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
+  // Scroll to top function for the prompt button
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
   // helper function to format time since separation
   const formatTimeSince = (timeSince: { years: number; months: number } | undefined) => {
     if (!timeSince) return '0 years';
@@ -453,34 +463,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
     }
   };
 
-  // helper function to format challenge/goal names with proper casing and spacing
-  const formatChallengeGoalName = (name: string | undefined) => {
-    if (!name) return '';
-    
-    // Handle specific common names with better formatting
-    const specialCases: { [key: string]: string } = {
-      'childcare_costs': 'Childcare Costs',
-      'mental_health': 'Mental Health',
-      'time_management': 'Time Management',
-      'child_wellbeing': 'Child Wellbeing',
-      'reduce_stress': 'Reduce Stress',
-      'better_housing': 'Better Housing',
-      'financial_stress': 'Financial Stress',
-      'social_isolation': 'Social Isolation',
-      'accessing_services': 'Accessing Services',
-      'employment_stability': 'Employment Stability',
-      'education_training': 'Education & Training'
-    };
-    
-    if (specialCases[name]) {
-      return specialCases[name];
-    }
-    
-    // General formatting: replace underscores and capitalize
-    return name
-      .replace(/_/g, ' ')
-      .replace(/\b\w/g, (l) => l.toUpperCase());
-  };
+
 
   // helper function to format timeframes with better readability
   const formatTimeframe = (timeframe: string | undefined) => {
@@ -498,7 +481,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
       'long-term': 'Long-term (6+ months)'
     };
     
-    return timeframeMap[timeframe.toLowerCase()] || formatChallengeGoalName(timeframe);
+    return timeframeMap[timeframe.toLowerCase()] || formatText(timeframe);
   };
 
   const { userPosition, comprehensiveAnalysis, mentalHealth, childcare, housingStress } = assessmentResults;
@@ -733,24 +716,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
           <h4 className="font-semibold text-blue-900 mb-2">Your Housing Situation Impact</h4>
           <p className="text-blue-800 text-sm">
             You&apos;re in <strong>{formatLabel(userPosition.housingType)}</strong> housing. 
-            {(() => {
-              switch(userPosition.housingType) {
-                case 'owned':
-                  return ' Home ownership provides stability and can be a protective factor for your family.';
-                case 'rental_private':
-                  return ' Private rental can increase stress due to costs and uncertainty, but there are supports available including rental assistance and bond loans.';
-                case 'rental_social':
-                  return ' Social housing provides stability and affordability, which are significant protective factors for single parent families.';
-                case 'family_friends':
-                  return ' Staying with family/friends can provide immediate support but may create dependency concerns. Planning for independent housing is important.';
-                case 'transitional':
-                  return ' Transitional housing provides temporary stability. Focus on accessing permanent housing support and assistance programs.';
-                case 'other':
-                  return ' Your unique housing situation may present both challenges and opportunities. Consider available housing support services.';
-                default:
-                  return ' Stable housing is crucial for family wellbeing and there are various support options available.';
-              }
-            })()}
+            {assessmentResults?.comprehensiveAnalysis?.contextualInsights?.housingInsight ? ` ${assessmentResults.comprehensiveAnalysis.contextualInsights.housingInsight}` : ''}
           </p>
         </div>
       </div>
@@ -800,7 +766,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
             {(userPosition.biggestChallenges || []).map((challenge, index) => (
               <div key={index} className="flex items-center gap-2 p-2 bg-red-50 rounded-lg">
                 <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span className="text-red-800 text-sm font-medium">{formatChallengeGoalName(challenge)}</span>
+                <span className="text-red-800 text-sm font-medium">{formatText(challenge)}</span>
               </div>
             ))}
           </div>
@@ -815,7 +781,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
             {(userPosition.improvementGoals || []).map((goal, index) => (
               <div key={index} className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-green-800 text-sm font-medium">{formatChallengeGoalName(goal)}</span>
+                <span className="text-green-800 text-sm font-medium">{formatText(goal)}</span>
               </div>
             ))}
           </div>
@@ -874,7 +840,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
                   <div key={index} className="p-3 bg-green-50 rounded-lg border-l-4 border-green-500">
                     <div className="font-medium text-green-800">{strength.factor}</div>
                     <div className="text-sm text-green-600 mt-1">
-                      Category: {strength.category} | Impact: {strength.impact || ''}
+                      Category: {formatText(strength.category)} | Strength: {formatText(strength.strength || '')} | Impact: {strength.resilienceImpact || ''}
                     </div>
                   </div>
                 ))
@@ -905,7 +871,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
           
           <div className="text-center p-4 bg-purple-50 rounded-lg">
             <div className="text-lg font-bold text-purple-600 mb-2">
-              {(userPosition.incomeBracket || '').replace('_', '-').toUpperCase()}
+              {formatText(userPosition.incomeBracket || '')}
             </div>
             <div className="text-sm text-gray-600">Income Bracket</div>
           </div>
@@ -1025,10 +991,10 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
           <h4 className="font-semibold text-gray-800">Immediate Actions (Next 30 Days)</h4>
           {(() => {
             const immediateActions = (comprehensiveAnalysis.personalizedActions || [])
-              .filter(action => action.timeframe === 'immediate')
-              .reduce((unique, action) => {
+              .filter((action: any) => action.timeframe === 'immediate')
+              .reduce((unique: any[], action: any) => {
                 // deduplicate by action title
-                if (!unique.some(a => a.action === action.action)) {
+                if (!unique.some((a: any) => a.action === action.action)) {
                   unique.push(action);
                 }
                 return unique;
@@ -1063,7 +1029,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
                       <div className="mt-2">
                         <p className="text-orange-600 text-sm font-medium">⚠️ Dependencies:</p>
                         <ul className="text-orange-600 text-sm ml-4">
-                          {(action.dependencies || []).map((dep, i) => (
+                          {(action.dependencies || []).map((dep: string, i: number) => (
                             <li key={i}>• {dep}</li>
                           ))}
                         </ul>
@@ -1087,12 +1053,12 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
           <h4 className="font-semibold text-gray-800">Medium-term Actions (1-6 Months)</h4>
           {(() => {
             const usedActions = new Set((comprehensiveAnalysis.personalizedActions || [])
-              .filter(action => action.timeframe === 'immediate')
-              .map(action => action.action));
+              .filter((action: any) => action.timeframe === 'immediate')
+              .map((action: any) => action.action));
             
             const mediumTermActions = (comprehensiveAnalysis.personalizedActions || [])
-              .filter(action => action.timeframe === 'short-term' && !usedActions.has(action.action))
-              .reduce((unique, action) => {
+              .filter((action: any) => action.timeframe === 'short-term' && !usedActions.has(action.action))
+              .reduce((unique: any[], action: any) => {
                 // deduplicate by action title
                 if (!unique.some(a => a.action === action.action)) {
                   unique.push(action);
@@ -1142,8 +1108,8 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
               .map(action => action.action));
             
             const longTermActions = (comprehensiveAnalysis.personalizedActions || [])
-              .filter(action => action.timeframe === 'long-term' && !usedActions.has(action.action))
-              .reduce((unique, action) => {
+              .filter((action: any) => action.timeframe === 'long-term' && !usedActions.has(action.action))
+              .reduce((unique: any[], action: any) => {
                 // deduplicate by action title
                 if (!unique.some(a => a.action === action.action)) {
                   unique.push(action);
@@ -1152,7 +1118,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
               }, []);
             
             return longTermActions.length > 0 ? (
-              longTermActions.map((action, index) => (
+              longTermActions.map((action: any, index: number) => (
               <div key={`long-${index}`} className="p-4 border-l-4 border-green-500 bg-green-50 rounded-lg">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1">
@@ -1226,7 +1192,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
             <div className="space-y-2">
               {(comprehensiveAnalysis.challengeSpecificActions || []).map((challengeAction, index) => (
                 <div key={index} className="p-3 bg-red-50 rounded-lg">
-                  <div className="text-md font-semibold text-red-800 mb-1">{formatChallengeGoalName(challengeAction.challenge)}</div>
+                  <div className="text-md font-semibold text-red-800 mb-1">{formatText(challengeAction.challenge)}</div>
                   <div className="text-sm text-red-600 mb-2">
                     {challengeAction.action}
                   </div>
@@ -1246,7 +1212,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
                       (challengeAction as any).urgency === 'medium' ? 'text-orange-600' :
                       'text-yellow-600'
                     }`}>
-                      ⚡ Priority: {((challengeAction as any).urgency || '').charAt(0).toUpperCase() + ((challengeAction as any).urgency || '').slice(1)}
+                      ⚡ Priority: {formatLevel((challengeAction as any).urgency || '')}
                     </div>
                   )}
                 </div>
@@ -1266,7 +1232,7 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
             <div className="space-y-2">
               {(comprehensiveAnalysis.goalSpecificActions || []).map((goalAction, index) => (
                 <div key={index} className="p-3 bg-green-50 rounded-lg">
-                  <div className="text-md font-semibold text-green-800 mb-1">{formatChallengeGoalName(goalAction.goal)}</div>
+                  <div className="text-md font-semibold text-green-800 mb-1">{formatText(goalAction.goal)}</div>
                   <div className="text-sm text-green-600 mb-2">
                     {goalAction.action}
                   </div>
@@ -2002,8 +1968,40 @@ export function JourneyResults({ assessmentResults: initialAssessmentResults, on
           {activeTab === 'update' && <UpdateDashboard />}
         </motion.div>
 
+        {/* Scroll Up Prompt */}
+        <div className="mt-8 mb-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="text-center"
+          >
+            <Button
+              onClick={scrollToTop}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center gap-2 shadow-sm hover:shadow-md mx-auto"
+            >
+              <motion.div
+                animate={{ 
+                  y: [0, -3, 0]
+                }}
+                transition={{ 
+                  duration: 1.2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <ChevronUp className="w-4 h-4" />
+              </motion.div>
+              See Your Complete Journey Analysis
+            </Button>
+            <p className="text-xs text-gray-500 mt-3">
+              Your personalized overview, action plan, and detailed insights are waiting above
+            </p>
+          </motion.div>
+        </div>
+
         {/* Footer Actions */}
-        <div className="mt-12 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-white rounded-lg shadow-lg">
+        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 p-6 bg-white rounded-lg shadow-lg">
           <div className="text-sm text-gray-600 flex-1">
             <div className="mb-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500">
               <div className="font-semibold text-blue-900 mb-1">Data Attribution</div>

@@ -63,18 +63,24 @@ export const metadata: Metadata = {
   openGraph: {
     title: "OneParent VIC",
     description: "Making life easier for single parents across Victoria - Whether you have just began your journey as a single parent or already navigating through it, our platform offers simple tools and features to help make everyday life a little easier.",
-    url: "https://oneparentvic.me",
+    url: "https://www.oneparentvic.me",
     siteName: "OneParent VIC",
     images: [
       {
-        url: "/opvic-og.png",
+        url: "https://www.oneparentvic.me/opvic-og.png",
         width: 1200,
         height: 630,
-        alt: "OneParent VIC",
+        alt: "OneParent VIC - Supporting single parents across Victoria",
       },
     ],
     locale: "en_AU",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OneParent VIC",
+    description: "Making life easier for single parents across Victoria - Whether you have just began your journey as a single parent or already navigating through it, our platform offers simple tools and features to help make everyday life a little easier.",
+    images: ["https://www.oneparentvic.me/opvic-og.png"],
   },
   icons: {
     icon: ["/favicon.ico?v=3"],

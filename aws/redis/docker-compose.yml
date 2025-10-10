@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: oneparent-redis
+    restart: unless-stopped
+    
+    # expose Redis port for internal Node.js server access
+    ports:
+      - "127.0.0.1:6379:6379"  # internal access only via SSH tunnel
+    
+    # persistent data volume
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    
+    # custom redis configuration with password
+    command: redis-server /usr/local/etc/redis/redis.conf
+    
+    # health check for container monitoring
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # resource limits for t3.micro compatibility
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    
+    # environment variables
+    environment:
+      - REDIS_MAXMEMORY=256mb
+      - REDIS_MAXMEMORY_POLICY=allkeys-lru
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    
+    # security settings
+    user: "999:999"  # redis user
+    
+    # logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# persistent volumes
+volumes:
+  redis_data:
+    driver: local

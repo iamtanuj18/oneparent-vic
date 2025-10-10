@@ -19,7 +19,7 @@ export interface FormData {
   date: string;
   time: string;
   preference: 'indoor' | 'outdoor' | '';
-  timeAvailable: '15-30' | '30-60' | '1-2' | '';
+  timeAvailable: '15 to 30 minutes' | '30 to 60 minutes' | '1 to 2 hours' | '';
   budget: 'free' | '15' | '30' | '50' | '';
   energyLevel: number[];
   interests: string[];
@@ -343,7 +343,7 @@ export function usePlayDateForm() {
         return true;
       } else {
         setSafetyCheckError({
-          message: '', // Will use generic message in component
+          message: response.message || '', // Use backend message
           issues: response.issues || [],
           flaggedItems: response.flaggedItems || []
         });
@@ -352,7 +352,7 @@ export function usePlayDateForm() {
       }
     } catch (error) {
       setSafetyCheckError({
-        message: '', // Will use generic message in component
+        message: 'Safety validation failed. Please review your inputs and try again.',
         issues: [],
         flaggedItems: []
       });
