@@ -8,8 +8,13 @@ const { CONFIG } = require("../config");
 class RedisService {
   constructor() {
     if (CONFIG.API_ENV === "aws-prod" || CONFIG.API_ENV === "local") {
+      // Determine Redis host based on environment:
+      // local: localhost (with SSH tunnel to EC2 Redis)
+      // aws-prod: oneparent-redis (Docker container name)
+      const redisHost = CONFIG.API_ENV === "aws-prod" ? "oneparent-redis" : "localhost";
+      
       this.redis = new Redis({
-        host: CONFIG.API_ENV === "aws-prod" ? "127.0.0.1" : "localhost",
+        host: redisHost,
         port: 6379,
         password: CONFIG.REDIS_PASSWORD,
       });
