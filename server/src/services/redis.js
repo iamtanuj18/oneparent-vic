@@ -13,12 +13,24 @@ class RedisService {
       // aws-prod: oneparent-redis (Docker container name)
       const redisHost = CONFIG.API_ENV === "aws-prod" ? "oneparent-redis" : "localhost";
       
+      console.log(` [Redis] Initializing Redis connection - Environment: ${CONFIG.API_ENV}, Host: ${redisHost}`);
+      
       this.redis = new Redis({
         host: redisHost,
         port: 6379,
         password: CONFIG.REDIS_PASSWORD,
       });
+
+      // Add connection event listeners for debugging
+      this.redis.on('connect', () => {
+        console.log(' [Redis] Successfully connected to Redis server');
+      });
+      
+      this.redis.on('error', (err) => {
+        console.error('  [Redis] Connection error:', err.message);
+      });
     } else {
+      console.log(` [Redis] Using Upstash Redis for environment: ${CONFIG.API_ENV}`);
       this.redis = new UpstashRedis({
         url: CONFIG.UPSTASH_REDIS_REST_URL,
         token: CONFIG.UPSTASH_REDIS_REST_TOKEN,
@@ -37,8 +49,11 @@ class RedisService {
     const dayWindow    = this.getCurrentDay();
     const limits       = this.getModelLimits(tier);
 
+    console.log(` [Redis] Key rotation request - Model: ${model}, Tier: ${tier}, Available keys: ${keys.length}`);
+
     // Use cached shuffled keys to spread load evenly
     const shuffled = this.getShuffledKeys(minuteWindow);
+    console.log(` [Redis] Using shuffled key order for minute ${minuteWindow} (${shuffled.length} keys)`);
 
     for (const k of shuffled) {
       const h    = this.hashKey(k);
@@ -51,8 +66,11 @@ class RedisService {
       const mCount = parseInt(mCountRaw || 0, 10);
       const dCount = parseInt(dCountRaw || 0, 10);
 
+      console.log(`[Redis] Key ${k.slice(-8)}... usage - Minute: ${mCount}/${limits.rpm}, Daily: ${dCount}/${limits.rpd}`);
+
       // Skip key if daily limit reached with safety buffer
       if (dCount >= limits.rpd - 1) {
+        console.log(`  [Redis] Key ${k.slice(-8)}... skipped - daily limit reached`);
         continue;
       }
 
@@ -62,6 +80,7 @@ class RedisService {
       if (newMinute > limits.rpm - 1) {
         // Minute limit exceeded so undo reservation and try next key
         await this.redis.decr(mKey);
+        console.log(` [Redis] Key ${k.slice(-8)}... skipped - minute limit reached (${newMinute}/${limits.rpm})`);
         continue;
       }
 
@@ -74,6 +93,8 @@ class RedisService {
       if (dCount === 0)
         await this.redis.expire(dKey, this.getSecondsUntil5AM());
 
+      console.log(` [Redis] Selected key ${k.slice(-8)}... - New counts: Minute ${newMinute}/${limits.rpm}, Daily ${dCount + 1}/${limits.rpd}`);
+
       return {
         apiKey: k,
         keyInfo: {
@@ -84,6 +105,7 @@ class RedisService {
       };
     }
 
+    console.error(` [Redis] All ${keys.length} keys exhausted for model ${model} (${tier}) in minute ${minuteWindow}`);
     throw new Error("All keys exhausted for current window");
   }
 
