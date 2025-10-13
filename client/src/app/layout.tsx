@@ -9,65 +9,58 @@ import AuthGuard from "@/components/AuthGuard";
 export const metadata: Metadata = {
   metadataBase: new URL("https://oneparentvic.me"),
   title: "OneParent VIC",
-  description: "Supporting single parents across Victoria",
+  description: "Practical tools and support for single parents across Victoria, Australia. Find community connections, track emotions, plan activities, and navigate your single parenting journey with confidence.",
   keywords: [
-    "single parent",
-    "single parents",
     "single parent victoria",
-    "single parent australia", 
-    "single parent support",
-    "single parent resources",
-    "single parent help",
-    "single parent community",
-    "single parent events",
-    "single parent services",
-    "single parent assistance",
-    "single parent programs",
-    "single parent benefits",
-    "single parent groups",
-    "single parent activities",
-    "single parent family",
-    "single parent children",
-    "single parent advice",
-    "single parent legal aid",
-    "single parent financial support",
-    "single parent housing",
-    "single parent mental health",
-    "single parent wellbeing",
-    "parenting victoria",
-    "parenting australia",
-    "family support victoria",
-    "family support australia",
-    "childcare victoria",
-    "childcare australia",
-    "government support single parent",
-    "centrelink single parent",
-    "victoria single parent benefits",
-    "melbourne single parent",
-    "regional victoria single parent",
-    "lone parent victoria",
-    "lone parent australia",
-    "solo parent victoria",
-    "solo parent australia",
-    "support for single mums victoria",
-    "support for single dads victoria",
-    "single mother victoria",
+    "single parent melbourne", 
+    "single parent australia",
+    "single parent support victoria",
+    "single parent resources melbourne",
+    "single parent help australia",
+    "single parent community victoria",
+    "single parent services melbourne",
+    "single parent assistance victoria",
+    "single parent benefits australia",
+    "single parent activities melbourne",
+    "single parent housing victoria",
+    "single parent mental health melbourne",
+    "single parent wellbeing victoria",
+    "single mum victoria",
+    "single dad melbourne",
+    "single mother australia",
     "single father victoria",
-    "single mum australia",
-    "single dad australia",
-    "victoria parenting help",
-    "victoria family events",
-    "victoria parent community"
+    "lone parent melbourne",
+    "solo parent victoria",
+    "single parent tools",
+    "single parent app australia",
+    "single parent emotional support",
+    "single parent community matching",
+    "single parent activity planner",
+    "single parent journey map",
+    "single parent time management",
+    "single parent playdate planner",
+    "centrelink single parent",
+    "government support single parent victoria",
+    "family support services melbourne",
+    "parenting support victoria",
+    "childcare support melbourne",
+    "regional victoria single parent",
+    "geelong single parent",
+    "ballarat single parent",
+    "bendigo single parent",
+    "single parent groups melbourne",
+    "single parent events victoria",
+    "single parent financial help australia"
   ],
   authors: [{ name: "OneParent VIC" }],
   openGraph: {
     title: "OneParent VIC",
     description: "Making life easier for single parents across Victoria - Whether you have just began your journey as a single parent or already navigating through it, our platform offers simple tools and features to help make everyday life a little easier.",
-    url: "https://www.oneparentvic.me",
+    url: "https://oneparentvic.me",
     siteName: "OneParent VIC",
     images: [
       {
-        url: "https://www.oneparentvic.me/opvic-og.png",
+        url: "https://oneparentvic.me/opvic-og.png",
         width: 1200,
         height: 630,
         alt: "OneParent VIC - Supporting single parents across Victoria",
@@ -80,7 +73,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "OneParent VIC",
     description: "Making life easier for single parents across Victoria - Whether you have just began your journey as a single parent or already navigating through it, our platform offers simple tools and features to help make everyday life a little easier.",
-    images: ["https://www.oneparentvic.me/opvic-og.png"],
+    images: ["https://oneparentvic.me/opvic-og.png"],
   },
   icons: {
     icon: ["/favicon.ico?v=3"],
@@ -108,6 +101,38 @@ export default function RootLayout({
         <link rel="shortcut icon" href="/favicon.ico?v=3" />
         <link rel="apple-touch-icon" href="/favicon.ico?v=3" />
         <meta name="msapplication-TileImage" content="/favicon.ico?v=3" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "OneParent VIC",
+              "url": "https://oneparentvic.me",
+              "logo": "https://oneparentvic.me/opvic-og.png",
+              "description": "Supporting single parents across Victoria with practical tools and resources",
+              "areaServed": {
+                "@type": "State",
+                "name": "Victoria",
+                "containedInPlace": {
+                  "@type": "Country",
+                  "name": "Australia"
+                }
+              },
+              "serviceType": [
+                "Single Parent Support Services",
+                "Community Matching",
+                "Mental Health Resources",
+                "Activity Planning",
+                "Time Management Tools"
+              ],
+              "audience": {
+                "@type": "Audience",
+                "audienceType": "Single Parents"
+              }
+            })
+          }}
+        />
       </head>
       <body>
         <AuthGuard>

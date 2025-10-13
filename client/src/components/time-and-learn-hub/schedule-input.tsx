@@ -9,23 +9,20 @@ import { validateScheduleInputs, ScheduleData } from '@/lib/api/time-and-learn-h
 interface DaySchedule {
   day: string
   schedule: string
-  activities: string[]
 }
 
 interface ScheduleInputProps {
-  scheduleData: any[]
-  onScheduleUpdate: (data: any[]) => void
   onViewChange?: (view: string) => void
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: ScheduleInputProps) {
+export function ScheduleInput({ onViewChange }: ScheduleInputProps) {
+  // schedule state
   const [daySchedules, setDaySchedules] = useState<DaySchedule[]>(
     DAYS.map(day => ({
       day,
-      schedule: '',
-      activities: []
+      schedule: ''
     }))
   )
   
@@ -43,8 +40,18 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
   
   const [savedSchedule, setSavedSchedule] = useState<DaySchedule[]>([])
   const [hasChanges, setHasChanges] = useState(false)
+  const [characterErrors, setCharacterErrors] = useState<{[key: string]: string}>({})
+
+  const SCHEDULE_CHAR_LIMIT = 500 // 500 characters for daily schedule
+
+  // Check if any day exceeds character limit
+  const hasCharacterLimitErrors = () => {
+    return daySchedules.some(day => day.schedule.length > SCHEDULE_CHAR_LIMIT) || 
+           Object.keys(characterErrors).length > 0
+  }
 
   useEffect(() => {
+    // load saved schedule
     const saved = localStorage.getItem('timeLearnHub-approvedSchedule')
     if (saved) {
       try {
@@ -52,7 +59,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
         setSavedSchedule(parsedSchedule)
         setDaySchedules(parsedSchedule)
       } catch (e) {
-        console.error('Failed to parse saved schedule')
+        // failed to parse saved schedule
       }
     }
   }, [])
@@ -64,11 +71,27 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
   }, [daySchedules, savedSchedule])
 
   const handleScheduleChange = (day: string, schedule: string) => {
+    // Always update the schedule first (allow typing but track errors)
     setDaySchedules(prev => prev.map(item => 
       item.day === day ? { ...item, schedule } : item
     ))
     
-    // clear errors when user starts typing
+    // Check character limit and set/clear errors
+    if (schedule.length > SCHEDULE_CHAR_LIMIT) {
+      setCharacterErrors({
+        ...characterErrors,
+        [day]: `Schedule must be ${SCHEDULE_CHAR_LIMIT} characters or less`
+      })
+    } else {
+      // Clear character error if within limit
+      if (characterErrors[day]) {
+        const newErrors = { ...characterErrors }
+        delete newErrors[day]
+        setCharacterErrors(newErrors)
+      }
+    }
+    
+    // clear validation errors when user starts typing
     if (schedule.trim().length > 0) {
       setValidationState({ type: null, message: '' })
     }
@@ -95,7 +118,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
     // clear previous errors
     setValidationState({ type: null, message: '' })
 
-    // check for empty days - all days must have content
+    // check for empty days all days must have content
     const emptyDays = daySchedules.filter(day => day.schedule.trim().length === 0)
 
     if (emptyDays.length > 0) {
@@ -131,18 +154,14 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
       const result = await validateScheduleInputs(scheduleData)
 
       if (result.valid) {
-        console.log('Validation passed, switching to visualization tab')
         localStorage.setItem('timeLearnHub-approvedSchedule', JSON.stringify(daySchedules))
         localStorage.removeItem('timeLearnHub-analysis')
         setSavedSchedule([...daySchedules])
         setHasChanges(false)
-        setValidationState({ type: null, message: '' })
         
+        // automatically switch to schedule analysis tab when validation passes
         if (onViewChange) {
-          console.log('Calling onViewChange with visualization')
           onViewChange('visualization')
-        } else {
-          console.error('onViewChange is not available')
         }
       } else {
         setValidationState({
@@ -152,7 +171,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
         })
       }
 
-      // scroll to message with longer timeout to ensure element is rendered
+      // scroll to message
       setTimeout(() => {
         const messageElement = document.getElementById('validation-message')
         if (messageElement) {
@@ -166,7 +185,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
         message: 'Unable to validate schedule at this time. Please try again.'
       })
       
-      // scroll to error message for network errors too
+      // scroll to error message
       setTimeout(() => {
         const messageElement = document.getElementById('validation-message')
         if (messageElement) {
@@ -185,7 +204,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
         <p className="text-gray-600">Describe your weekly schedule in plain English for each day</p>
       </div>
 
-      {/* Day Tabs */}
+      {/* day tabs */}
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           {DAYS.map((day) => (
@@ -204,7 +223,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
         </nav>
       </div>
 
-      {/* Consolidated Validation Messages */}
+      {/* validation messages */}
       {validationState.type && (
         <div 
           id="validation-message"
@@ -232,7 +251,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
                 {validationState.message}
               </div>
               
-              {/* Show flagged days for both empty days and Gemini errors */}
+              {/* show flagged days */}
               {((validationState.type === 'empty' || validationState.type === 'error') && validationState.flaggedDays && validationState.flaggedDays.length > 0) && (
                 <div className="mt-3">
                   <p className="text-sm text-red-700 font-bold">
@@ -249,7 +268,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
         </div>
       )}
 
-      {/* Current Day Input */}
+      {/* current day input */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center">
@@ -264,7 +283,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
                   onChange={(e) => {
                     if (e.target.value) {
                       copyFromDay(e.target.value, currentDay)
-                      e.target.value = '' // Reset dropdown
+                      e.target.value = '' 
                     }
                   }}
                   className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -299,18 +318,37 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
             <textarea
               value={daySchedules.find(d => d.day === currentDay)?.schedule || ''}
               onChange={(e) => handleScheduleChange(currentDay, e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px]"
-              placeholder={`Example: "Wake up at 7am, breakfast with kids at 8am, work from 9am to 5pm, pick up kids from school at 3:30pm, dinner at 6pm, bedtime routine at 8pm"`}
+              maxLength={SCHEDULE_CHAR_LIMIT}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[120px] ${
+                characterErrors[currentDay] ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
+              placeholder={`Example: "6am wake up, 7am breakfast, 8am drop kids at school, 9am-5pm work, 12:30pm lunch break free time, 5:30pm pick up kids, 7pm dinner, 8:30pm kids to bed, 9pm finally some me time, 11pm sleep"`}
             />
+            
+            {/* Character counter and error message */}
+            <div className="flex justify-between items-center mt-2">
+              {characterErrors[currentDay] && (
+                <p className="text-red-600 text-sm flex items-center gap-1">
+                  <AlertTriangle size={16} />
+                  {characterErrors[currentDay]}
+                </p>
+              )}
+              <div className={`text-sm ml-auto ${
+                (daySchedules.find(d => d.day === currentDay)?.schedule.length || 0) > 450 ? 'text-orange-600' : 
+                (daySchedules.find(d => d.day === currentDay)?.schedule.length || 0) > 480 ? 'text-red-600' : 'text-gray-500'
+              }`}>
+                {daySchedules.find(d => d.day === currentDay)?.schedule.length || 0}/{SCHEDULE_CHAR_LIMIT} characters
+              </div>
+            </div>
           </div>
           
           <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-900 mb-2">💡 Tips for better analysis of your schedule:</h4>
+            <h4 className="text-sm font-medium text-blue-900 mb-2">Tips for better analysis of your schedule:</h4>
             <ul className="text-sm text-blue-700 space-y-1">
-              <li>• <strong>Always include specific times</strong> (e.g., "work from 9am to 5pm")</li>
-              <li>• Mention activities with your children</li>
-              <li>• Include breaks and personal time</li>
-              <li>• Use the "Copy from day" dropdown for similar routines</li>
+              <li><strong>Show your free time clearly</strong> (e.g., "lunch break free time", "finally some me time")</li>
+              <li><strong>Include specific times</strong> (e.g., "9am-5pm work", "8pm kids to bed")</li>
+              <li><strong>Mention gaps between activities</strong> - these are learning opportunities!</li>
+              <li><strong>Include personal time</strong> like "relax time", "quiet time", "personal time"</li>
             </ul>
           </div>
 
@@ -318,7 +356,7 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
         </div>
       </Card>
 
-      {/* Schedule Summary */}
+      {/* schedule summary */}
       <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900">Weekly Schedule Summary</h3>
@@ -346,16 +384,33 @@ export function ScheduleInput({ scheduleData, onScheduleUpdate, onViewChange }: 
           ))}
         </div>
         
+        {/* Character limit error message */}
+        {hasCharacterLimitErrors() && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-700 text-sm flex items-center gap-2">
+              <AlertTriangle size={16} />
+              <strong>Cannot analyze schedule:</strong> Some days exceed the {SCHEDULE_CHAR_LIMIT} character limit. Please shorten your schedule descriptions.
+            </p>
+          </div>
+        )}
+        
         <div className="mt-6 flex justify-end">
           <Button 
             onClick={saveSchedule} 
-            disabled={isValidating || (!hasChanges && savedSchedule.length > 0)}
-            className={`flex items-center ${(!hasChanges && savedSchedule.length > 0) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isValidating || (!hasChanges && savedSchedule.length > 0) || hasCharacterLimitErrors()}
+            className={`flex items-center ${
+              (!hasChanges && savedSchedule.length > 0) || hasCharacterLimitErrors() ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
             {isValidating ? (
               <>
                 <Loader className="w-4 h-4 mr-2 animate-spin" />
                 Validating Schedule...
+              </>
+            ) : hasCharacterLimitErrors() ? (
+              <>
+                <AlertTriangle className="w-4 h-4 mr-2" />
+                Fix Character Limits First
               </>
             ) : (!hasChanges && savedSchedule.length > 0) ? (
               <>

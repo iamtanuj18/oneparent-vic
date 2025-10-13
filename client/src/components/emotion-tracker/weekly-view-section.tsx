@@ -137,12 +137,14 @@ export function WeeklyViewSection() {
           weekStartDateStr = weekStartMonday.toLocaleDateString('en-US', { 
             weekday: 'short', 
             month: 'short', 
-            day: 'numeric' 
+            day: 'numeric',
+            year: 'numeric'
           })
           weekEndDateStr = weekEndSunday.toLocaleDateString('en-US', { 
             weekday: 'short', 
             month: 'short', 
-            day: 'numeric' 
+            day: 'numeric',
+            year: 'numeric'
           })
         } else {
           weekStartDateStr = 'Week ' + weekNum
@@ -294,6 +296,24 @@ export function WeeklyViewSection() {
     if (startDate === endDate) {
       return startDate
     }
+    
+    // Parse dates to maintain day names while optimizing year display
+    const startParts = startDate.split(', ') // ["Mon", "Oct 6", "2025"]
+    const endParts = endDate.split(', ')     // ["Sun", "Oct 12", "2025"]
+    
+    if (startParts.length >= 3 && endParts.length >= 3) {
+      const startYear = startParts[2]
+      const endYear = endParts[2]
+      
+      if (startYear === endYear) {
+        // Same year - show full format with day names: "Mon, Oct 6 - Sun, Oct 12, 2025"
+        const startDayMonth = `${startParts[0]}, ${startParts[1]}` // "Mon, Oct 6"
+        const endDayMonth = `${endParts[0]}, ${endParts[1]}`       // "Sun, Oct 12"
+        return `${startDayMonth} - ${endDayMonth}, ${startYear}`
+      }
+    }
+    
+    // Fallback to full format if years are different or parsing fails
     return `${startDate} - ${endDate}`
   }
 
@@ -302,12 +322,14 @@ export function WeeklyViewSection() {
     // Align both dates to Monday of their respective weeks
     const startOfFirstWeek = new Date(startDate)
     startOfFirstWeek.setDate(startDate.getDate() - startDate.getDay() + 1) // Monday of first week
+    startOfFirstWeek.setUTCHours(0, 0, 0, 0) // Normalize to UTC midnight to handle DST
     
     const startOfCurrentWeek = new Date(date)
     startOfCurrentWeek.setDate(date.getDate() - date.getDay() + 1) // Monday of current week
+    startOfCurrentWeek.setUTCHours(0, 0, 0, 0) // Normalize to UTC midnight to handle DST
     
     const diffTime = startOfCurrentWeek.getTime() - startOfFirstWeek.getTime()
-    const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000))
+    const diffWeeks = Math.round(diffTime / (7 * 24 * 60 * 60 * 1000)) // Use Math.round for DST safety
     
     return Math.max(1, diffWeeks + 1)
   }

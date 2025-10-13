@@ -10,6 +10,7 @@ import {
   AIInsights, 
   EmotionLog
 } from '@/lib/api/emotion-tracker'
+import { generateWeeklySummaries, formatDateRange, WeekSummary } from '@/lib/utils/week-calculator'
 import { 
   Brain, 
   ChevronDown, 
@@ -148,64 +149,23 @@ export function AIAnalysis({ isActive = false }: AIAnalysisProps) {
   }
 
   const getCompletedWeeksWithLogs = (logs: EmotionLog[], startDate: string): UserWeek[] => {
-    const now = new Date()
-    const userStartDate = new Date(startDate)
-    const weeks: UserWeek[] = []
+    // Use the shared week calculation logic - no more duplication!
+    const weeklySummaries = generateWeeklySummaries(logs)
+    const currentWeekNumber = weeklySummaries.length
     
-    // Calculate which week we're currently in
-    const currentWeekNumber = getUserWeekNumber(now, userStartDate)
-    
-    // Only process completed weeks (not current week)
-    for (let weekNum = 1; weekNum < currentWeekNumber; weekNum++) {
-      const { startDate: weekStart, endDate: weekEnd } = getWeekDates(weekNum, userStartDate)
-      const weekLogs = logs.filter(log => {
-        const logDate = new Date(log.date)
-        return logDate >= new Date(weekStart) && logDate <= new Date(weekEnd)
-      })
-      
-      weeks.push({
-        weekNumber: weekNum,
-        startDate: weekStart,
-        endDate: weekEnd,
-        logs: weekLogs,
-        hasLogs: weekLogs.length > 0
-      })
-    }
-    
-    return weeks // Return all weeks including empty ones
+    // Only process completed weeks (not current week) and convert to UserWeek format
+    return weeklySummaries
+      .filter(week => week.week < currentWeekNumber) // Only completed weeks
+      .map(week => ({
+        weekNumber: week.week,
+        startDate: week.startDate,
+        endDate: week.endDate,
+        logs: week.logs,
+        hasLogs: week.logs.length > 0
+      }))
   }
 
-  const getUserWeekNumber = (date: Date, startDate: Date): number => {
-    // Align both dates to Monday of their respective weeks
-    const startOfFirstWeek = new Date(startDate)
-    startOfFirstWeek.setDate(startDate.getDate() - startDate.getDay() + 1) // Monday of first week
-    
-    const startOfCurrentWeek = new Date(date)
-    startOfCurrentWeek.setDate(date.getDate() - date.getDay() + 1) // Monday of current week
-    
-    const diffTime = startOfCurrentWeek.getTime() - startOfFirstWeek.getTime()
-    const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000))
-    
-    return Math.max(1, diffWeeks + 1)
-  }
-
-  const getWeekDates = (weekNumber: number, userStartDate: Date): { startDate: string, endDate: string } => {
-    // Calculate week start based on Monday of user's first week
-    const firstWeekMonday = new Date(userStartDate)
-    firstWeekMonday.setDate(userStartDate.getDate() - userStartDate.getDay() + 1) // Monday of first week
-    
-    const weekStart = new Date(firstWeekMonday)
-    weekStart.setDate(firstWeekMonday.getDate() + (weekNumber - 1) * 7)
-    
-    // Week end is 6 days after week start
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
-    
-    return {
-      startDate: weekStart.toISOString().split('T')[0],
-      endDate: weekEnd.toISOString().split('T')[0]
-    }
-  }
+  // Removed duplicate date calculation functions - now using shared logic from week-calculator.ts
 
   const getGeneratedWeeks = (): number[] => {
     try {
@@ -275,13 +235,11 @@ export function AIAnalysis({ isActive = false }: AIAnalysisProps) {
   }
 
   const generateWeekAnalysis = async (week: UserWeek, startDate: string) => {
-    console.log(`[AI Analysis] Generating analysis for Week ${week.weekNumber} (${week.startDate} to ${week.endDate})`);
     
     // Get all logs for previous week comparison
     const allLogs = getAllEmotionLogs()
     const prevWeekData = getPreviousWeekData(week.weekNumber, allLogs, startDate)
     
-    console.log(`[AI Analysis] Week ${week.weekNumber} will ${prevWeekData ? 'HAVE' : 'NOT HAVE'} previous week comparison`);
     
     // Prepare week data for API
     const logsWithSleep = week.logs.filter(log => log.sleepHours !== undefined && log.sleepHours !== null)
@@ -323,30 +281,18 @@ export function AIAnalysis({ isActive = false }: AIAnalysisProps) {
   const getPreviousWeekData = (currentWeekNumber: number, allLogs: EmotionLog[], startDate: string) => {
     if (currentWeekNumber <= 1) return null
     
-    console.log(`[AI Analysis] Using startDate:`, startDate);
     
     const prevWeekNumber = currentWeekNumber - 1
-    const userStart = new Date(startDate)
     
-    console.log(`[AI Analysis] userStart date object:`, userStart);
+    // Use shared logic to get week data instead of custom calculations
+    const weeklySummaries = generateWeeklySummaries(allLogs)
+    const prevWeekSummary = weeklySummaries.find(w => w.week === prevWeekNumber)
+    const prevLogs = prevWeekSummary?.logs || []
     
-    const { startDate: prevStart, endDate: prevEnd } = getWeekDates(prevWeekNumber, userStart)
+    // Previous week's logs are already correctly filtered by the shared logic
     
-    console.log(`[AI Analysis] Looking for Week ${prevWeekNumber} data (${prevStart} to ${prevEnd})`);
-    
-    const prevLogs = allLogs.filter(log => {
-      const logDate = new Date(log.date)
-      const inRange = logDate >= new Date(prevStart) && logDate <= new Date(prevEnd)
-      if (inRange) {
-        console.log(`[AI Analysis] Found previous week log: ${log.date}`);
-      }
-      return inRange
-    })
-    
-    console.log(`[AI Analysis] Week ${prevWeekNumber} logs found: ${prevLogs.length}`);
     
     if (prevLogs.length === 0) {
-      console.log(`[AI Analysis] No previous week data for Week ${currentWeekNumber}`);
       return null
     }
     
@@ -358,7 +304,6 @@ export function AIAnalysis({ isActive = false }: AIAnalysisProps) {
       topEmotions: getTopEmotions(prevLogs)
     }
     
-    console.log(`[AI Analysis] Previous week ${prevWeekNumber} data:`, prevWeekData);
     return prevWeekData
   }
 
@@ -595,21 +540,15 @@ function WeekAnalysisCard({
   isExpanded: boolean
   onToggle: () => void
 }) {
-  const getWeekDates = (weekNumber: number): { start: string, end: string } => {
-    const startDate = new Date(userStartDate)
-    const weekStart = new Date(startDate)
-    weekStart.setDate(startDate.getDate() + (weekNumber - 1) * 7)
-    
-    const weekEnd = new Date(weekStart)
-    weekEnd.setDate(weekStart.getDate() + 6)
-    
-    return {
-      start: weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      end: weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    }
-  }
+  // All date calculations now use shared logic from week-calculator.ts
 
-  const { start, end } = getWeekDates(weekAnalysis.weekNumber)
+  // Get the correctly formatted date range using shared logic
+  const savedLogs = localStorage.getItem('emotion-logs')
+  const allLogs = savedLogs ? JSON.parse(savedLogs) : []
+  const weeklySummaries = generateWeeklySummaries(allLogs)
+  const weekSummary = weeklySummaries.find(w => w.week === weekAnalysis.weekNumber)
+  const dateRange = weekSummary ? formatDateRange(weekSummary.startDate, weekSummary.endDate) : ''
+  
   const insights = weekAnalysis.analysis
 
   return (
@@ -626,7 +565,7 @@ function WeekAnalysisCard({
                 Week {weekAnalysis.weekNumber}
               </h3>
               <p className="text-sm text-gray-600">
-                {start} - {end}
+                {dateRange}
               </p>
             </div>
           </div>
@@ -684,7 +623,7 @@ function WeekAnalysisCard({
             </ul>
           </div>
 
-          {/* Progress Comparison (if exists and meaningful) */}
+          {/* Progress Comparison  */}
           {insights.progressComparison && 
            !insights.progressComparison.toLowerCase().includes('no previous') &&
            !insights.progressComparison.toLowerCase().includes('not available') && (
@@ -711,7 +650,7 @@ function WeekAnalysisCard({
           </div>
 
           <div className="text-xs text-gray-500 pt-2 border-t">
-            Generated on: {new Date(weekAnalysis.generatedAt).toLocaleDateString()}
+            Generated on: {new Date(weekAnalysis.generatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </div>
         </CardContent>
       )}
@@ -727,6 +666,8 @@ interface EmptyWeekCardProps {
 }
 
 function EmptyWeekCard({ weekNumber, startDate, endDate }: EmptyWeekCardProps) {
+  const dateRange = formatDateRange(startDate, endDate)
+  
   return (
     <Card className="border border-gray-300 border-dashed bg-gray-50/50">
       <CardHeader className="pb-4">
@@ -740,8 +681,7 @@ function EmptyWeekCard({ weekNumber, startDate, endDate }: EmptyWeekCardProps) {
               <div className="flex items-center gap-2 text-gray-400">
                 <Calendar className="w-4 h-4" />
                 <span className="text-sm">
-                  {new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {' '}
-                  {new Date(endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {dateRange}
                 </span>
               </div>
             </div>

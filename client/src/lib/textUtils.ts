@@ -170,7 +170,7 @@ export function formatTimeframe(timeframe: string | undefined): string {
 }
 
 /**
- * Format challenge/goal names - legacy compatibility
+ * Format challenge/goal names 
  */
 export function formatChallengeGoalName(name: string | undefined): string {
   return formatText(name);

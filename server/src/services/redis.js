@@ -49,11 +49,11 @@ class RedisService {
     const dayWindow    = this.getCurrentDay();
     const limits       = this.getModelLimits(tier);
 
-    console.log(` [Redis] Key rotation request - Model: ${model}, Tier: ${tier}, Available keys: ${keys.length}`);
+    // console.log(` [Redis] Key rotation request - Model: ${model}, Tier: ${tier}, Available keys: ${keys.length}`);
 
     // Use cached shuffled keys to spread load evenly
     const shuffled = this.getShuffledKeys(minuteWindow);
-    console.log(` [Redis] Using shuffled key order for minute ${minuteWindow} (${shuffled.length} keys)`);
+    // console.log(` [Redis] Using shuffled key order for minute ${minuteWindow} (${shuffled.length} keys)`);
 
     for (const k of shuffled) {
       const h    = this.hashKey(k);
@@ -66,11 +66,11 @@ class RedisService {
       const mCount = parseInt(mCountRaw || 0, 10);
       const dCount = parseInt(dCountRaw || 0, 10);
 
-      console.log(`[Redis] Key ${k.slice(-8)}... usage - Minute: ${mCount}/${limits.rpm}, Daily: ${dCount}/${limits.rpd}`);
+      // console.log(`[Redis] Key ${k.slice(-8)}... usage - Minute: ${mCount}/${limits.rpm}, Daily: ${dCount}/${limits.rpd}`);
 
       // Skip key if daily limit reached with safety buffer
       if (dCount >= limits.rpd - 1) {
-        console.log(`  [Redis] Key ${k.slice(-8)}... skipped - daily limit reached`);
+        // console.log(`  [Redis] Key ${k.slice(-8)}... skipped - daily limit reached`);
         continue;
       }
 
@@ -80,7 +80,7 @@ class RedisService {
       if (newMinute > limits.rpm - 1) {
         // Minute limit exceeded so undo reservation and try next key
         await this.redis.decr(mKey);
-        console.log(` [Redis] Key ${k.slice(-8)}... skipped - minute limit reached (${newMinute}/${limits.rpm})`);
+        // console.log(` [Redis] Key ${k.slice(-8)}... skipped - minute limit reached (${newMinute}/${limits.rpm})`);
         continue;
       }
 
@@ -93,7 +93,7 @@ class RedisService {
       if (dCount === 0)
         await this.redis.expire(dKey, this.getSecondsUntil5AM());
 
-      console.log(` [Redis] Selected key ${k.slice(-8)}... - New counts: Minute ${newMinute}/${limits.rpm}, Daily ${dCount + 1}/${limits.rpd}`);
+      // console.log(` [Redis] Selected key ${k.slice(-8)}... - New counts: Minute ${newMinute}/${limits.rpm}, Daily ${dCount + 1}/${limits.rpd}`);
 
       return {
         apiKey: k,

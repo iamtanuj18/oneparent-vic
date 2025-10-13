@@ -429,7 +429,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                             const actualLowest = Math.min(...modalData.map((d: any) => d.vic_total))
                             
                             return sampledData.map((item: any, idx: number) => {
-                              const percentage = ((item.vic_total - minValue) / (maxValue - minValue)) * 100
+                              const percentage = (item.vic_total / maxValue) * 100
                               const isActualLatest = item.date === actualLatest.date
                               const isActualPeak = item.vic_total === actualPeak
                               const isActualLowest = item.vic_total === actualLowest
@@ -663,6 +663,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                     {familyTypes['One parent families'].map((item: any, idx: number) => {
                                       const maxValue = Math.max(...familyTypes['One parent families'].map((i: any) => i.families_k))
                                       const percentage = (item.families_k / maxValue) * 100
+                                      const adjustedWidth = Math.max(8, percentage * 0.85)
                                       
                                       return (
                                         <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
@@ -673,7 +674,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                           <div className="w-full bg-emerald-200 rounded-full h-4 mb-2">
                                             <div
                                               className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-4 rounded-full transition-all duration-700 ease-out"
-                                              style={{ width: `${Math.max(15, percentage)}%` }}
+                                              style={{ width: `${adjustedWidth}%` }}
                                             ></div>
                                           </div>
                                           <div className="text-xs text-gray-600">
@@ -720,6 +721,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                     {familyTypes['Couple families'].map((item: any, idx: number) => {
                                       const maxValue = Math.max(...familyTypes['Couple families'].map((i: any) => i.families_k))
                                       const percentage = (item.families_k / maxValue) * 100
+                                      const adjustedWidth = Math.max(8, percentage * 0.85)
                                       
                                       return (
                                         <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
@@ -730,7 +732,7 @@ function ModalContent({ modalId, onClose }: { modalId: string; onClose: () => vo
                                           <div className="w-full bg-blue-200 rounded-full h-4 mb-2">
                                             <div
                                               className="bg-gradient-to-r from-blue-500 to-blue-600 h-4 rounded-full transition-all duration-700 ease-out"
-                                              style={{ width: `${Math.max(15, percentage)}%` }}
+                                              style={{ width: `${adjustedWidth}%` }}
                                             ></div>
                                           </div>
                                           <div className="text-xs text-gray-600">

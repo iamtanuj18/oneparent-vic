@@ -10,10 +10,10 @@ import { ANIMATION_CONFIG } from '@/lib/animation'
 const SMART_TOOLS = [
   {
     id: 1,
-    image: '/images/featureimg1.png',
-    title: 'PlayDate Planner',
-    description: 'Get personalized activities generated for yourself or to do with your kids based on your preferences',
-    route: '/playdate'
+    image: '/images/featureimg3.png',
+    title: 'Single Parent Journey Map',
+    description: 'See where you are in your single parenting journey and know what to expect at each step, from early days to now',
+    route: '/your-journey-map'
   },
   {
     id: 2,
@@ -24,31 +24,31 @@ const SMART_TOOLS = [
   },
   {
     id: 3,
-    image: '/images/featureimg3.png',
-    title: 'Single Parent Journey Map',
-    description: 'See where you are in your single parenting journey and know what to expect at each step, from early days to now',
-    route: '/your-journey-map'
+    image: '/images/featureimg6.png',
+    title: 'Emotion Tracker',
+    description: 'Log your daily emotions and get weekly AI-powered insights, tips, and progress comparisons to support your mental wellbeing journey.',
+    route: '/emotion-tracker'
   },
   {
     id: 4,
+    image: '/images/featureimg1.png',
+    title: 'PlayDate Planner',
+    description: 'Get personalized activities generated for yourself or to do with your kids based on your preferences',
+    route: '/playdate'
+  },
+  {
+    id: 5,
     image: '/images/featureimg4.png',
     title: 'Community Match',
     description: 'Find suburbs where your cultural background is celebrated and your family feels truly at home, connecting with neighbors who share your values.',
     route: '/community-match'
   },
   {
-    id: 5,
+    id: 6,
     image: '/images/featureimg5.png',
     title: 'Find Events',
     description: 'Discover all family events from multiple providers in one place, so you never miss out on creating precious memories with your children.',
     route: '/events'
-  },
-  {
-    id: 6,
-    image: '/images/featureimg6.png',
-    title: 'Emotion Tracker',
-    description: 'Log your daily emotions and get weekly AI-powered insights, tips, and progress comparisons to support your mental wellbeing journey.',
-    route: '/emotion-tracker'
   }
 ]
 

@@ -201,14 +201,16 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
   const getWeekNumber = (date: Date, firstLogDate: Date): number => {
     const startOfFirstWeek = new Date(firstLogDate)
     startOfFirstWeek.setDate(firstLogDate.getDate() - firstLogDate.getDay() + 1) // Monday of first week
+    startOfFirstWeek.setUTCHours(0, 0, 0, 0) // Normalize to UTC midnight to handle DST
     
     const startOfCurrentWeek = new Date(date)
     startOfCurrentWeek.setDate(date.getDate() - date.getDay() + 1) // Monday of current week
+    startOfCurrentWeek.setUTCHours(0, 0, 0, 0) // Normalize to UTC midnight to handle DST
     
     const diffTime = startOfCurrentWeek.getTime() - startOfFirstWeek.getTime()
-    const diffWeeks = Math.floor(diffTime / (7 * 24 * 60 * 60 * 1000))
+    const diffWeeks = Math.round(diffTime / (7 * 24 * 60 * 60 * 1000)) // Use Math.round for DST safety
     
-    return diffWeeks + 1
+    return Math.max(1, diffWeeks + 1)
   }
 
   // get current week number
@@ -231,7 +233,7 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
     // Get user start date (Monday of first log's week)
     let userStartDate = localStorage.getItem('user-emotion-start-date')
     if (!userStartDate) {
-      const firstLogDate = new Date(existingLogs.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date)
+      const firstLogDate = new Date(existingLogs.reduce((earliest, log) => log.timestamp < earliest.timestamp ? log : earliest).timestamp)
       const mondayOfFirstWeek = new Date(firstLogDate)
       mondayOfFirstWeek.setDate(firstLogDate.getDate() - firstLogDate.getDay() + 1)
       userStartDate = mondayOfFirstWeek.toISOString().split('T')[0]
@@ -368,6 +370,32 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
     
     // Use the same start date logic as AI Analysis to ensure consistency
     let userStartDate = localStorage.getItem('user-emotion-start-date')
+    console.log(`[DEBUG] Stored user start date: ${userStartDate}`)
+    
+    // Force recalculation of start date if there are existing logs to ensure consistency
+    // This fixes any previously stored incorrect start dates due to date vs timestamp bugs
+    const savedLogs = localStorage.getItem('emotion-logs')
+    if (savedLogs) {
+      const existingLogs = JSON.parse(savedLogs)
+      if (existingLogs.length > 0) {
+        const firstLogDate = new Date(existingLogs.reduce((earliest: any, log: any) => log.timestamp < earliest.timestamp ? log : earliest).timestamp)
+        const mondayOfFirstWeek = new Date(firstLogDate)
+        mondayOfFirstWeek.setDate(firstLogDate.getDate() - firstLogDate.getDay() + 1)
+        const calculatedStartDate = mondayOfFirstWeek.toISOString().split('T')[0]
+        
+        console.log(`[DEBUG] First log timestamp: ${existingLogs.reduce((earliest: any, log: any) => log.timestamp < earliest.timestamp ? log : earliest).timestamp}`)
+        console.log(`[DEBUG] First log date: ${firstLogDate.toDateString()}`)
+        console.log(`[DEBUG] Calculated start date (Monday): ${calculatedStartDate}`)
+        
+        // Always update to ensure consistency - fixes any incorrect stored dates
+        if (userStartDate !== calculatedStartDate) {
+          console.log(`[DEBUG] Correcting user start date from ${userStartDate} to ${calculatedStartDate}`)
+          userStartDate = calculatedStartDate
+          localStorage.setItem('user-emotion-start-date', userStartDate)
+        }
+      }
+    }
+    
     if (!userStartDate) {
       if (logs.length > 0) {
         const firstLogDate = new Date(logs.reduce((earliest, log) => log.timestamp < earliest.timestamp ? log : earliest).timestamp)
@@ -381,7 +409,7 @@ export function EmotionLogForm({ onDataChange }: EmotionLogFormProps) {
         if (savedLogs) {
           const existingLogs = JSON.parse(savedLogs)
           if (existingLogs.length > 0) {
-            const firstLogDate = new Date(existingLogs.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())[0].date)
+            const firstLogDate = new Date(existingLogs.reduce((earliest: any, log: any) => log.timestamp < earliest.timestamp ? log : earliest).timestamp)
             const mondayOfFirstWeek = new Date(firstLogDate)
             mondayOfFirstWeek.setDate(firstLogDate.getDate() - firstLogDate.getDay() + 1)
             userStartDate = mondayOfFirstWeek.toISOString().split('T')[0]

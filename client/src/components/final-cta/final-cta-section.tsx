@@ -11,7 +11,7 @@ export function FinalCtaSection() {
   const router = useRouter()
 
   const handleTryNow = () => {
-    router.push('/playdate')
+    router.push('/your-journey-map')
   }
   return (
     <section className="bg-orange-50/30 py-20">
@@ -30,12 +30,12 @@ export function FinalCtaSection() {
               className="p-8 lg:p-12 space-y-6 order-2 lg:order-1"
             >
               <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
-                Ready for Your Next PlayDate?
+                Discover Your Single Parenting Journey
               </h2>
               
               <p className="text-lg text-gray-600 leading-relaxed">
-                Let our PlayDate Planner create the perfect activity for you and your kids. 
-                Personalized suggestions based on your budget, time, and child's interests.
+                See where you are in your single parenting journey and know what to expect at each step, from early days to now. 
+                Get personalized insights about your current stage and future milestones.
               </p>
               
               <div className="pt-4">
@@ -43,7 +43,7 @@ export function FinalCtaSection() {
                   onClick={handleTryNow}
                   className="btn-primary group"
                 >
-                  Try Now
+                  Explore Your Journey
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" />
                 </button>
               </div>

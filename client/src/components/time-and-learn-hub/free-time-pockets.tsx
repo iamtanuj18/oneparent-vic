@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Clock, ChevronDown, ChevronUp, Zap, BookOpen, Coffee } from 'lucide-react'
+import { Clock, Target } from 'lucide-react'
 
 interface FreeTimePocketsProps {
-  scheduleData: any[]
+  onViewChange?: (view: string) => void
 }
 
 interface FreeTimeSlot {
@@ -17,11 +17,10 @@ interface FreeTimeSlot {
   suggestedActivities: string[]
 }
 
-export function FreeTimePockets({ scheduleData }: FreeTimePocketsProps) {
+export function FreeTimePockets({ onViewChange }: FreeTimePocketsProps) {
   const [freeTimeSlots, setFreeTimeSlots] = useState<FreeTimeSlot[]>([])
-  const [timeOptimizationTips, setTimeOptimizationTips] = useState<string[]>([])
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [expandedSlots, setExpandedSlots] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     const savedAnalysis = localStorage.getItem('timeLearnHub-analysis')
@@ -31,25 +30,26 @@ export function FreeTimePockets({ scheduleData }: FreeTimePocketsProps) {
         if (analysisData.freeTimePockets) {
           setFreeTimeSlots(analysisData.freeTimePockets)
         }
-        if (analysisData.timeOptimizationTips) {
-          setTimeOptimizationTips(analysisData.timeOptimizationTips)
+        // check for suggestions in multiple possible locations
+        let loadedSuggestions: string[] = []
+        
+        if (analysisData.suggestions && analysisData.suggestions.length > 0) {
+          loadedSuggestions = analysisData.suggestions
+        } else if (analysisData.timeOptimizationTips && analysisData.timeOptimizationTips.length > 0) {
+          loadedSuggestions = analysisData.timeOptimizationTips
+        } else if (analysisData.freeTimeAnalysis?.suggestions && analysisData.freeTimeAnalysis.suggestions.length > 0) {
+          loadedSuggestions = analysisData.freeTimeAnalysis.suggestions
         }
+        
+        setSuggestions(loadedSuggestions)
       } catch (e) {
-        console.error('Failed to parse analysis data')
+        // failed to parse analysis data
       }
     }
     setIsLoading(false)
   }, [])
 
-  const toggleSlot = (index: number) => {
-    const newExpanded = new Set(expandedSlots)
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index)
-    } else {
-      newExpanded.add(index)
-    }
-    setExpandedSlots(newExpanded)
-  }
+
 
   const getDurationColor = (duration: string) => {
     const durationFloat = parseFloat(duration)
@@ -93,121 +93,71 @@ export function FreeTimePockets({ scheduleData }: FreeTimePocketsProps) {
       {freeTimeSlots.length === 0 ? (
         <Card className="p-8 text-center">
           <Clock className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No Free Time Slots Found</h3>
-          <p className="text-gray-600 mb-4">
-            Complete your schedule analysis first to discover available time pockets.
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Free Time Pockets Found</h3>
+          <p className="text-gray-600 mb-6">
+            Your schedule appears to be fully packed! Try updating your schedule with more realistic time gaps between activities, or consider if some activities could be shortened to create free time opportunities.
           </p>
+          {onViewChange && (
+            <Button 
+              onClick={() => onViewChange('schedule-input')}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Update Your Schedule
+            </Button>
+          )}
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {freeTimeSlots.map((slot, index) => {
-            const isExpanded = expandedSlots.has(index)
-            
-            return (
-              <Card key={index} className="p-4 hover:shadow-md transition-shadow">
-                {/* Day and time in corner */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-sm text-gray-600">
-                    <div className="font-medium">{slot.day}</div>
-                    <div className="flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
-                      {slot.startTime} - {slot.endTime}
-                    </div>
-                  </div>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${getDurationColor(slot.duration)}`}>
-                    {slot.duration}
+          {freeTimeSlots.map((slot, index) => (
+            <Card key={index} className="p-4 hover:shadow-md transition-shadow">
+              {/* day and time in corner */}
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm text-gray-600">
+                  <div className="font-medium">{slot.day}</div>
+                  <div className="flex items-center">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {slot.startTime} - {slot.endTime}
                   </div>
                 </div>
-                
-                {/* Activities button */}
-                <Button
-                  variant="outline"
-                  onClick={() => toggleSlot(index)}
-                  className="w-full mb-2 justify-between"
-                >
-                  {isExpanded ? 'Hide Activities' : 'Suggested Activities'}
-                  {isExpanded ? (
-                    <ChevronUp className="w-4 h-4 ml-2" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 ml-2" />
-                  )}
-                </Button>
-                
-                {/* Expanded activities */}
-                {isExpanded && slot.suggestedActivities && (
-                  <div className="mt-3 space-y-2">
-                    {slot.suggestedActivities.map((activity, activityIndex) => {
-                      const durationFloat = parseFloat(slot.duration)
-                      let icon = Coffee
-                      let timeEstimate = '30-60 min'
-                      
-                      if (durationFloat >= 2) {
-                        icon = BookOpen
-                        timeEstimate = '2+ hours'
-                      } else if (durationFloat >= 1) {
-                        icon = Zap
-                        timeEstimate = '90-120 min'
-                      }
-                      
-                      const Icon = icon
-                      
-                      return (
-                        <div key={activityIndex} className="flex items-center p-2 bg-gray-50 rounded-lg">
-                          <Icon className="w-4 h-4 mr-2 text-gray-600" />
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-gray-900">{activity}</div>
-                            <div className="text-xs text-gray-500">({timeEstimate})</div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </Card>
-            )
-          })}
+                <div className={`px-2 py-1 rounded-full text-xs font-medium ${getDurationColor(slot.duration)}`}>
+                  {slot.duration}
+                </div>
+              </div>
+            </Card>
+          ))}
         </div>
       )}
       
-      {/* Time Optimization Tips Section */}
-      {timeOptimizationTips.length > 0 && (
-        <Card className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
+      {/* schedule optimization suggestions */}
+      {freeTimeSlots.length > 0 && (
+        <Card className="p-6 bg-gradient-to-r from-blue-50 to-sky-50 border-blue-200">
           <div className="flex items-center mb-6">
-            <Zap className="w-6 h-6 text-blue-600 mr-3" />
-            <h3 className="text-xl font-semibold text-gray-900">Time Optimization Tips</h3>
+            <Target className="w-6 h-6 text-blue-600 mr-3" />
+            <h3 className="text-xl font-semibold text-gray-900">Schedule Optimization Tips</h3>
           </div>
+          <p className="text-sm text-gray-600 mb-6">Smart ways to improve your current routine and utilize free time</p>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Learning Sessions</h4>
-              <p className="text-gray-700 text-sm mb-4">
-                {timeOptimizationTips[0] || 'Use longer slots for focused learning and skill development.'}
+          {suggestions && suggestions.length > 0 ? (
+            <div className="space-y-4">
+              {suggestions.map((suggestion: string, index: number) => (
+                <div key={index} className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-900">{suggestion}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-sm">
+                Complete your schedule analysis to get personalized optimization tips.
               </p>
             </div>
-            
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Quick Wins</h4>
-              <p className="text-gray-700 text-sm mb-4">
-                {timeOptimizationTips[1] || 'Turn short breaks into micro-learning opportunities.'}
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Consistency</h4>
-              <p className="text-gray-700 text-sm mb-4">
-                {timeOptimizationTips[2] || 'Regular daily slots work better than sporadic long sessions.'}
-              </p>
-            </div>
-            
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3">Energy Management</h4>
-              <p className="text-gray-700 text-sm mb-4">
-                {timeOptimizationTips[3] || 'Match challenging topics to your peak energy times.'}
-              </p>
-            </div>
-          </div>
+          )}
         </Card>
       )}
+
     </div>
   )
 }

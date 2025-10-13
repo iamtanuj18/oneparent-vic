@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://oneparentvic.me/sitemap.xml
+
+# optimize crawl budget
+Crawl-delay: 1
+
+# block any development or api endpoints if they exist
+Disallow: /api/
+Disallow: /_next/
+Disallow: /admin/
