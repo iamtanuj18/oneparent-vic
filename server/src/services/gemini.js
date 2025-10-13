@@ -4,8 +4,7 @@ const redisService = require("./redis");
 // gemini api base url for all requests
 const BASE = "https://generativelanguage.googleapis.com/v1beta";
 
-// model lists optimized for free tier usage with configurable sequences
-// parse sequences from config like "flash,pro,pro" -> [flash, pro, pro]
+// parse model sequences from config
 function parseModelSequence(sequence) {
   return sequence.split(',').map(name => {
     const normalized = name.trim().toUpperCase();
@@ -14,7 +13,7 @@ function parseModelSequence(sequence) {
       case 'FLASH': return CONFIG.GEMINI_STANDARD_MODEL;
       case 'LITE': return CONFIG.GEMINI_PRO_FALLBACK;
       case 'STANDARD': return CONFIG.GEMINI_STANDARD_FALLBACK;
-      default: return CONFIG.GEMINI_STANDARD_MODEL; // fallback to flash
+      default: return CONFIG.GEMINI_STANDARD_MODEL;
     }
   });
 }
@@ -94,15 +93,15 @@ ${prompt}`
   }
 }
 
-// main function with redis key rotation and aggressive model fallback never-fail strategy
+// main function with redis key rotation and model fallback strategy
 async function callGeminiWithKeyRotation({
   modelList, 
   prompt, 
   jsonSchemaNote = "Return valid JSON object",
-  retries = 3, // increased from 2 for reliability
+  retries = 3,
   backoffMs = 1500,
   temperature = 0.4, 
-  maxOutputTokens = 2500 // increased default for thinking tokens
+  maxOutputTokens = 2500
 }) {
   if (!CONFIG.GEMINI_API_KEYS?.length) {
     const e = new Error("gemini not configured - no api keys available");
@@ -112,35 +111,28 @@ async function callGeminiWithKeyRotation({
 
   let lastErr;
   let totalAttempts = 0;
-  const maxTotalAttempts = modelList.length * (retries + 1); // never give up
-  
-  // console.log(`[gemini] starting generation with sequence: ${modelList.map(m => m.split('/').pop()).join(' → ')}`);
+  const maxTotalAttempts = modelList.length * (retries + 1);
 
   for (const model of modelList) {
-    // console.log(`[gemini] trying model: ${model.split('/').pop()}`);
-
     for (let attempt = 0; attempt <= retries; attempt++) {
       totalAttempts++;
       try {
         // reserve redis key slot atomically before making api call
         const keySel = await redisService.getBestApiKey(model);
         const apiKey = keySel.apiKey;
-        // console.log(`[gemini] attempt ${totalAttempts}/${maxTotalAttempts} using key: ${keySel.keyInfo.keyHash} for model: ${model.split('/').pop()}`);
 
         const result = await callGeminiOnce({
           apiKey, model, prompt,
           jsonSchemaNote, temperature, maxOutputTokens
         });
         
-        // console.log(`[gemini] success on attempt ${totalAttempts} with ${model.split('/').pop()}`);
         return result;
         
       } catch (err) {
         lastErr = err;
-        // console.warn(`[gemini] attempt ${totalAttempts} failed: ${err.message}`);
 
         if (err.status === 429) {
-          // Use actual retry-after time or exponential backoff with jitter
+          // use actual retry after time or exponential backoff with jitter
           const delay = err.retryAfterMs ||
                         Math.round(backoffMs * Math.pow(1.5, attempt) *
                                    (0.75 + Math.random() * 0.5));
@@ -150,35 +142,30 @@ async function callGeminiWithKeyRotation({
         }
 
         if (err.isEmpty) {
-          // console.warn(`[gemini] empty response (${err.finishReason}), trying next key/model`);
-          // For empty responses, try next attempt immediately
+          // for empty responses try next attempt immediately
           continue;
         }
 
-        // For other errors, try next attempt with small delay
+        // for other errors try next attempt with small delay
         if (attempt < retries) {
           await new Promise(r => setTimeout(r, 500));
           continue;
         }
 
-        // console.warn(`[gemini] model ${model.split('/').pop()} exhausted after ${retries + 1} attempts`);
         break;
       }
     }
-
-    // console.warn(`[gemini] switching to next model in sequence`);
   }
 
-  // If we get here, all models and retries exhausted
+  // if we get here all models and retries exhausted
   const errorMsg = lastErr?.isEmpty 
     ? `All models exhausted with empty responses (${totalAttempts} attempts). Try increasing maxOutputTokens.`
     : `All models exhausted: ${lastErr?.message || 'unknown error'} (${totalAttempts} attempts)`;
     
-  // console.error(`[gemini] GENERATION FAILED: ${errorMsg}`);
   throw new Error(errorMsg);
 }
 
-// Generate JSON using configurable model sequence (with higher default tokens for thinking models)
+// generate json using configurable model sequence
 function geminiGenerateJson({
   prompt, 
   jsonSchemaNote = "Return valid JSON object",
@@ -199,7 +186,7 @@ function geminiGenerateJson({
   });
 }
 
-// Validate JSON using configured validation sequence
+// validate json using configured validation sequence
 function geminiValidateJson({
   prompt, 
   jsonSchemaNote = "Return valid JSON object",

@@ -2,19 +2,66 @@
 
 import { useState, useEffect } from 'react'
 import { Card } from '@/components/ui/card'
-import { BarChart3, PieChart, Clock, Calendar, Target, Zap, BarChart2, Loader } from 'lucide-react'
-import { analyzeSchedule, ScheduleAnalysisResponse } from '@/lib/api/time-and-learn-hub'
+import { Button } from '@/components/ui/button'
+import { BarChart3, Clock, Calendar, BarChart2, Loader } from 'lucide-react'
+import { 
+  ScheduleAnalysisResponse,
+  analyzeCategoriesSequential,
+  analyzeMetricsSequential,
+  analyzeFreeTimeSequential,
+  analyzePatternsSequential
+} from '@/lib/api/time-and-learn-hub'
 
 interface ScheduleVisualizationProps {
   scheduleData: any[]
+  onViewChange?: (view: string) => void
+  onAnalysisStateChange?: (isAnalyzing: boolean) => void
 }
 
-export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationProps) {
+export function ScheduleVisualization({ scheduleData, onViewChange, onAnalysisStateChange }: ScheduleVisualizationProps) {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [analysisData, setAnalysisData] = useState<ScheduleAnalysisResponse['analysis'] | null>(null)
   const [error, setError] = useState<string | null>(null)
   
   const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+  // calculate total free time from free time pockets
+  const parseDurationToHours = (durationStr: string): number => {
+    if (!durationStr) return 0
+    
+    const str = durationStr.toLowerCase().trim()
+    
+    // Handle "X hour" or "X hours" format
+    const hourMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:hour|hr)s?/)
+    if (hourMatch) {
+      return parseFloat(hourMatch[1])
+    }
+    
+    // Handle "X min" or "X minutes" format - convert to hours
+    const minMatch = str.match(/(\d+(?:\.\d+)?)\s*(?:min|minute)s?/)
+    if (minMatch) {
+      return parseFloat(minMatch[1]) / 60
+    }
+    
+    // Handle "X.X h" format
+    const shortHourMatch = str.match(/(\d+(?:\.\d+)?)\s*h$/)
+    if (shortHourMatch) {
+      return parseFloat(shortHourMatch[1])
+    }
+    
+    // Fallback - try to extract just the number (assume hours)
+    const numMatch = str.match(/(\d+(?:\.\d+)?)/)
+    if (numMatch) {
+      return parseFloat(numMatch[1])
+    }
+    
+    return 0
+  }
+
+  const totalFreeTime = analysisData?.freeTimePockets?.reduce((acc: number, slot: any) => {
+    const hours = parseDurationToHours(slot.duration)
+    return acc + hours
+  }, 0) || 0
 
   useEffect(() => {
     const savedAnalysis = localStorage.getItem('timeLearnHub-analysis')
@@ -25,7 +72,7 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
         setAnalysisData(JSON.parse(savedAnalysis))
         return
       } catch (e) {
-        console.error('Failed to parse saved analysis')
+        // failed to parse saved analysis
       }
     }
     
@@ -37,6 +84,7 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
   const performAnalysis = async () => {
     try {
       setIsAnalyzing(true)
+      onAnalysisStateChange?.(true)
       setError(null)
       
       const savedSchedule = localStorage.getItem('timeLearnHub-approvedSchedule')
@@ -54,104 +102,83 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
         }
       })
 
-      const result = await analyzeSchedule(scheduleData)
+      // use sequential analysis for better reliability
       
-      if (result.success && result.analysis) {
-        setAnalysisData(result.analysis)
-        localStorage.setItem('timeLearnHub-analysis', JSON.stringify(result.analysis))
-      } else {
-        setError(result.message || 'Analysis failed')
+      // analyze categories
+      const categoryResult = await analyzeCategoriesSequential(scheduleData)
+      if (!categoryResult.success || !categoryResult.categoryBreakdown) {
+        throw new Error(categoryResult.message || 'Category analysis failed')
       }
+      
+      // analyze metrics
+      const metricsResult = await analyzeMetricsSequential(scheduleData, categoryResult.categoryBreakdown)
+      if (!metricsResult.success || !metricsResult.metrics) {
+        throw new Error(metricsResult.message || 'Metrics analysis failed')
+      }
+      
+      // analyze free time pockets
+      const freeTimeResult = await analyzeFreeTimeSequential(scheduleData)
+      if (!freeTimeResult.success || !freeTimeResult.freeTimePockets) {
+        throw new Error(freeTimeResult.message || 'Free time analysis failed')
+      }
+      
+      // analyze daily patterns
+      const patternsResult = await analyzePatternsSequential(scheduleData, categoryResult.categoryBreakdown)
+      if (!patternsResult.success || !patternsResult.dailyPatterns) {
+        throw new Error(patternsResult.message || 'Pattern analysis failed')
+      }
+      
+      // consolidate results into expected format
+      const consolidatedAnalysis = {
+        categoryBreakdown: categoryResult.categoryBreakdown,
+        metrics: metricsResult.metrics,
+        freeTimePockets: freeTimeResult.freeTimePockets,
+        suggestions: freeTimeResult.suggestions || [],
+        dailyPatterns: patternsResult.dailyPatterns,
+        timeOptimizationTips: freeTimeResult.timeOptimizationTips || []
+      }
+      
+      setAnalysisData(consolidatedAnalysis)
+      localStorage.setItem('timeLearnHub-analysis', JSON.stringify(consolidatedAnalysis))
+      
     } catch (error: any) {
-      setError('Unable to analyze schedule. Please try again.')
-      console.error('Analysis error:', error)
+      // handle api errors
+      let errorMessage = 'Unable to analyze schedule. Please try again.'
+      
+      if (!navigator.onLine) {
+        errorMessage = 'You appear to be offline. Please check your internet connection and try again.'
+      } else if (error?.response?.status >= 500) {
+        errorMessage = 'Our analysis servers are temporarily unavailable. Please try again in a few minutes.'
+      } else if (error?.response?.status === 429) {
+        errorMessage = 'Analysis requests are being rate limited. Please wait a moment and try again.'
+      } else if (error?.message?.includes('network') || error?.message?.includes('fetch')) {
+        errorMessage = 'Network error occurred during analysis. Please check your connection.'
+      }
+      
+      setError(errorMessage)
     } finally {
       setIsAnalyzing(false)
+      onAnalysisStateChange?.(false)
     }
   }
-  
-  const getTimeSlots = () => {
-    const slots = []
-    for (let hour = 6; hour <= 23; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`)
-    }
-    return slots
-  }
-
-  const timeSlots = getTimeSlots()
-
-  const isTimeSlotOccupied = (day: string, time: string) => {
-    return scheduleData.some(item => {
-      if (item.day !== day) return false
-      
-      const itemStart = item.startTime
-      const itemEnd = item.endTime
-      const slotTime = time
-      
-      return slotTime >= itemStart && slotTime < itemEnd
-    })
-  }
-
-  const getScheduleItemForSlot = (day: string, time: string) => {
-    return scheduleData.find(item => {
-      if (item.day !== day) return null
-      
-      const itemStart = item.startTime
-      const itemEnd = item.endTime
-      const slotTime = time
-      
-      return slotTime >= itemStart && slotTime < itemEnd
-    })
-  }
-
-  const getCategoryStats = () => {
-    const stats: { [key: string]: number } = {}
-    scheduleData.forEach(item => {
-      if (item.endTime && item.startTime) {
-        const start = new Date(`2024-01-01 ${item.startTime}`)
-        const end = new Date(`2024-01-01 ${item.endTime}`)
-        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-        stats[item.category] = (stats[item.category] || 0) + hours
-      }
-    })
-    return stats
-  }
-
-  const categoryStats = getCategoryStats()
-  const totalHours = Object.values(categoryStats).reduce((a, b) => a + b, 0)
 
   const getCategoryColor = (category: string) => {
     const colors = {
-      Work: '#3B82F6',
-      Personal: '#10B981',
-      Family: '#8B5CF6',
-      Health: '#EF4444',
-      Learning: '#F59E0B',
-      Chores: '#6B7280',
-      Other: '#6366F1'
+      'Work': '#3B82F6',
+      'Personal': '#10B981', 
+      'Family': '#8B5CF6',
+      'Family/Social': '#8B5CF6',
+      'Health': '#EF4444',
+      'Learning': '#F59E0B',
+      'Chores': '#6B7280',
+      'Chores/Errands': '#6B7280',
+      'Sleep': '#4C1D95',
+      'Meals': '#059669',
+      'Leisure/Free Time': '#DC2626',
+      'Other': '#6366F1'
     }
     return colors[category as keyof typeof colors] || colors.Other
   }
-
-  const getDayStats = () => {
-    const dayStats: { [key: string]: number } = {}
-    DAYS.forEach(day => {
-      dayStats[day] = scheduleData
-        .filter(item => item.day === day)
-        .reduce((acc, item) => {
-          if (item.endTime && item.startTime) {
-            const start = new Date(`2024-01-01 ${item.startTime}`)
-            const end = new Date(`2024-01-01 ${item.endTime}`)
-            return acc + (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-          }
-          return acc
-        }, 0)
-    })
-    return dayStats
-  }
-
-  const dayStats = getDayStats()
-  const maxDayHours = Math.max(...Object.values(dayStats))
 
   if (isAnalyzing) {
     return (
@@ -170,16 +197,10 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
           </div>
           
           <div className="text-center space-y-2">
-            <h3 className="text-lg font-semibold text-gray-900">Analysis in Progress</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Please don't close the browser while we analyse</h3>
             <p className="text-gray-600 max-w-md">
-              Please don't close this page. Our AI is thoroughly analyzing your schedule, 
-              finding optimal free time pockets, and calculating insights.
+              This could take upto 2 mins thank you
             </p>
-            <p className="text-sm text-gray-500">This process may take up to 2 minutes.</p>
-          </div>
-          
-          <div className="w-full max-w-md bg-gray-200 rounded-full h-2">
-            <div className="bg-blue-600 h-2 rounded-full animate-pulse" style={{ width: '60%' }}></div>
           </div>
         </div>
       </div>
@@ -216,10 +237,34 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
   if (!analysisData) {
     return (
       <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Schedule Analysis</h2>
-          <p className="text-gray-600">No analysis data available</p>
+        {/* header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Schedule Analysis</h2>
+            <p className="text-gray-600">Analyze your schedule patterns and identify optimization opportunities</p>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-gray-600">Analysis Status</p>
+            <p className="text-2xl font-bold text-blue-600">Pending</p>
+          </div>
         </div>
+
+        {/* empty state card */}
+        <Card className="p-8 text-center">
+          <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No Analysis Data Available</h3>
+          <p className="text-gray-600 mb-6">
+            Complete your schedule input first to generate detailed analysis and insights.
+          </p>
+          {onViewChange && (
+            <Button 
+              onClick={() => onViewChange('schedule-input')}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Complete Your Schedule Input
+            </Button>
+          )}
+        </Card>
       </div>
     )
   }
@@ -257,7 +302,7 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
                 </div>
               </div>
               <div className="p-4 bg-green-50 rounded-lg group relative">
-                <div className="text-2xl font-bold text-green-600">{analysisData.metrics.weeklyFreeTime}h</div>
+                <div className="text-2xl font-bold text-green-600">{totalFreeTime.toFixed(0)}h</div>
                 <div className="text-sm text-gray-600">Free Time/Week</div>
                 <div className="absolute invisible group-hover:visible bg-gray-800 text-white text-xs rounded-lg px-3 py-2 top-full left-1/2 transform -translate-x-1/2 mt-2 w-64 z-10">
                   Total unscheduled waking hours available for spontaneous activities or rest.
@@ -292,29 +337,41 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
             <BarChart2 className="w-5 h-5 mr-2 text-green-600" />
             Category Breakdown
           </h3>
-          <p className="text-sm text-gray-600 mb-4">Detailed time allocation with percentages</p>
+          <p className="text-sm text-gray-600 mb-4">
+            How you spend your 168 weekly hours (7 days × 24 hours). Hours per activity and percentage of your total week.
+          </p>
           
           <div className="space-y-4">
-            {Object.entries(analysisData.categoryBreakdown).map(([category, data]) => (
-              <div key={category}>
-                <div className="flex items-center justify-between text-sm font-medium text-gray-700">
-                  <span>{category}</span>
-                  <div className="flex items-center space-x-2">
-                    <span>{data.hours}h</span>
-                    <span className="text-gray-500">{data.percentage.toFixed(1)}%</span>
+            {(() => {
+              const entries = Object.entries(analysisData.categoryBreakdown)
+                .filter(([category, data]) => data.hours > 0)
+              const maxPercentage = Math.max(...entries.map(([, data]) => data.percentage))
+              
+              return entries.map(([category, data]) => {
+                const adjustedWidth = Math.max(8, (data.percentage / maxPercentage) * 85)
+                
+                return (
+                  <div key={category}>
+                    <div className="flex items-center justify-between text-sm font-medium text-gray-700">
+                      <span>{category}</span>
+                      <div className="flex items-center space-x-2">
+                        <span>{data.hours}h</span>
+                        <span className="text-gray-500">{data.percentage.toFixed(1)}%</span>
+                      </div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                      <div 
+                        className="h-3 rounded-full transition-all duration-700 ease-out" 
+                        style={{ 
+                          width: `${adjustedWidth}%`,
+                          backgroundColor: getCategoryColor(category)
+                        }} 
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div 
-                    className="h-3 rounded-full" 
-                    style={{ 
-                      width: `${data.percentage}%`,
-                      backgroundColor: getCategoryColor(category)
-                    }} 
-                  />
-                </div>
-              </div>
-            ))}
+                )
+              })
+            })()}
           </div>
         </Card>
       </div>
@@ -347,13 +404,34 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
                       </div>
                       
                       <div className="relative" style={{ height: `${18 * 24}px` }}>
-                        {/* Default background for free time */}
-                        <div className="absolute inset-0 bg-gray-100" style={{ height: '100%' }} title="Free Time" />
+                        {/* render free time pockets from analysis data */}
+                        {(analysisData.freeTimePockets || [])
+                          .filter((pocket: any) => pocket.day === day)
+                          .map((pocket: any, index: number) => {
+                            const startHour = parseInt(pocket.startTime.split(':')[0])
+                            const endHour = parseInt(pocket.endTime.split(':')[0])
+                            if (startHour < 6 || startHour > 23) return null
+                            
+                            const topPosition = (startHour - 6) * 24
+                            const height = (endHour - startHour) * 24
+                            return (
+                              <div
+                                key={`free-${index}`}
+                                className="absolute bg-gray-100"
+                                style={{
+                                  top: `${topPosition}px`,
+                                  height: `${height}px`,
+                                  width: '100%'
+                                }}
+                                title={`Free Time: ${pocket.startTime} - ${pocket.endTime}`}
+                              />
+                            )
+                          })}
                         
-                        {/* Render activities from analysis data */}
+                        {/* render activities from analysis data */}
                         {(analysisData.dailyPatterns?.[day] || []).map((slot: any, index: number) => {
                           const hour = parseInt(slot.hour.split(':')[0])
-                          if (hour < 6 || hour > 23) return null // Only show 6AM-11PM
+                          if (hour < 6 || hour > 23) return null
                           
                           const topPosition = (hour - 6) * 24
                           return (
@@ -384,7 +462,7 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
           </div>
         )}
         
-        {scheduleData.length === 0 && (
+        {!analysisData && scheduleData.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <Clock className="w-12 h-12 mx-auto mb-2 opacity-50" />
             <p>No schedule items to visualize</p>
@@ -393,31 +471,40 @@ export function ScheduleVisualization({ scheduleData }: ScheduleVisualizationPro
         )}
       </Card>
 
-      <Card className="p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-          <Target className="w-5 h-5 mr-2 text-blue-600" />
-          Schedule Optimization Suggestions
-        </h3>
-        <p className="text-sm text-gray-600 mb-6">Personalized recommendations to optimize your routine</p>
-        
-        {analysisData.suggestions && analysisData.suggestions.length > 0 ? (
-          <div className="space-y-4">
-            {analysisData.suggestions.map((suggestion: string, index: number) => (
-              <div key={index} className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-gray-900">{suggestion}</p>
+      {/* Schedule Optimization Tips */}
+      {analysisData.freeTimePockets && analysisData.freeTimePockets.length > 0 && (
+        <Card className="p-6 bg-gradient-to-r from-blue-50 to-sky-50 border-blue-200">
+          <div className="flex items-center mb-6">
+            <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">Schedule Optimization Tips</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-6">Smart ways to improve your current routine and utilize free time</p>
+          
+          {analysisData.suggestions && analysisData.suggestions.length > 0 ? (
+            <div className="space-y-4">
+              {analysisData.suggestions.map((suggestion: string, index: number) => (
+                <div key={index} className="flex items-start space-x-3">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-900">{suggestion}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            <Target className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>Optimization suggestions will appear here after analysis completes</p>
-          </div>
-        )}
-      </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500 text-sm">
+                Complete your schedule analysis to get personalized optimization tips.
+              </p>
+            </div>
+          )}
+        </Card>
+      )}
+
     </div>
   )
 }

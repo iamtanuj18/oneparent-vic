@@ -28,10 +28,10 @@ DATABASE_STACK_NAME=oneparent-vic-database
 FRONTEND_STACK_NAME=oneparent-vic-frontend-infrastructure
 
 # ec2 instance information
-EC2_INSTANCE_ID=i-09371c6a4bfd6a904
-EC2_PUBLIC_IP=3.27.169.253
-SSH_COMMAND="ssh -i ../oneparent-vic-key.pem ec2-user@3.27.169.253"
-API_ENDPOINT=http://3.27.169.253/api
+EC2_INSTANCE_ID=i-
+EC2_PUBLIC_IP=
+SSH_COMMAND="
+API_ENDPOINT=
 
 # important notes:
 # - keep ssh key file secure with proper permissions (600 on linux/mac)
