@@ -12,24 +12,24 @@ const NAV_ITEMS = [
     href: '/'
   },
   {
-    label: 'PlayDate Planner',
-    href: '/playdate'
+    label: 'Your Journey Map',
+    href: '/your-journey-map'
   },
   {
     label: 'Time & Learn Hub', 
     href: '/time-and-learn-hub'
   },
   {
-    label: 'Your Journey Map',
-    href: '/your-journey-map'
+    label: 'Emotion Tracker',
+    href: '/emotion-tracker'
+  },
+  {
+    label: 'PlayDate Planner',
+    href: '/playdate'
   },
   {
     label: 'Community Match',
     href: '/community-match'
-  },
-  {
-    label: 'Emotion Tracker',
-    href: '/emotion-tracker'
   },
   {
     label: 'Find Events',

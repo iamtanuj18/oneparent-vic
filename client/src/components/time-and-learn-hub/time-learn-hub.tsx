@@ -9,79 +9,146 @@ import { ScheduleVisualization } from './schedule-visualization'
 import { FreeTimePockets } from './free-time-pockets'
 import { CourseCreation } from './course-creation'
 import { CourseProgress } from './course-progress'
-
-interface ScheduleItem {
-  id: string
-  title: string
-  day: string
-  startTime: string
-  endTime: string
-  category: string
-  description?: string
-}
-
-interface Course {
-  id: string
-  title: string
-  description: string
-  category: string
-  totalModules: number
-  estimatedHours: number
-  modules: any[]
-  createdAt: string
-  progress?: number
-  completedModules?: string[]
-}
+import { ScheduleItem, Course, ViewType, DaySchedule } from '@/types/time-learn-hub'
+import { storage } from '@/lib/utils/time-learn-hub'
 
 export function TimeLearnHub() {
   const [activeView, setActiveView] = useState('overview')
-  const [scheduleData, setScheduleData] = useState<ScheduleItem[]>([])
   const [courses, setCourses] = useState<Course[]>([])
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null)
+  const [activeModule, setActiveModule] = useState<string | null>(null)
 
   const handleViewChange = (view: string) => {
-    console.log('TimeLearnHub: View change requested from', activeView, 'to', view)
+    if (isAnalyzing || isGenerating) return
+    
     setActiveView(view)
+    
+    // clear active module when switching to any main view
+    if (activeModule) {
+      setActiveModule(null)
+    }
+    
+    setTimeout(() => {
+      window.scrollTo({ top: 230, behavior: 'smooth' })
+    }, 100)
   }
+
+  const handleAnalysisStateChange = (analyzing: boolean) => {
+    setIsAnalyzing(analyzing)
+  }
+
+  const handleModuleSelect = (moduleId: string) => {
+    setActiveModule(moduleId)
+    setActiveView('progress')
+  }
+
+  // auto select course when courses are available
+  useEffect(() => {
+    if (courses.length > 0 && !selectedCourse) {
+      setSelectedCourse(courses[courses.length - 1])
+    }
+  }, [courses, selectedCourse])
+
+
 
   useEffect(() => {
-    const savedSchedule = localStorage.getItem('timeLearnSchedule')
-    const savedCourses = localStorage.getItem('timeLearnCourses')
+    // clean up old personalization data
+    storage.remove('timeLearnHub-profile')
     
-    if (savedSchedule) {
-      setScheduleData(JSON.parse(savedSchedule))
+    // clean up any old image data
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('image_course_') || key.startsWith('image_module_')) {
+        storage.remove(key)
+      }
+    })
+    
+    // use consistent localstorage keys with timelearn prefix
+    const savedSchedule = storage.get<DaySchedule[] | null>('timeLearnHub-approvedSchedule', null)
+    const savedCourses = storage.get<Course[]>('timeLearnHub-courses', [])
+    
+    // convert old schedule format if it exists
+    const oldSchedule = storage.get<ScheduleItem[] | null>('timeLearnSchedule', null)
+    if (oldSchedule && !savedSchedule) {
+      const convertedSchedule = oldSchedule.map((item: ScheduleItem) => ({
+        day: item.day,
+        schedule: `${item.title} (${item.startTime} - ${item.endTime})`
+      }))
+      storage.set('timeLearnHub-approvedSchedule', convertedSchedule)
+      storage.remove('timeLearnSchedule')
     }
     
-    if (savedCourses) {
-      setCourses(JSON.parse(savedCourses))
+    // convert old courses format if it exists
+    const oldCourses = storage.get<Course[] | null>('timeLearnCourses', null)
+    if (oldCourses && savedCourses.length === 0) {
+      storage.set('timeLearnHub-courses', oldCourses)
+      storage.remove('timeLearnCourses')
+      setCourses(oldCourses)
+    } else {
+      // ensure completedquizzes is properly initialized for backward compatibility
+      const coursesWithQuizData = savedCourses.map(course => ({
+        ...course,
+        completedQuizzes: (course.completedQuizzes && typeof course.completedQuizzes === 'object' && !Array.isArray(course.completedQuizzes)) 
+          ? course.completedQuizzes 
+          : {}
+      }))
+      
+      setCourses(coursesWithQuizData)
     }
-  }, [])
 
-  const handleScheduleUpdate = (newScheduleData: ScheduleItem[]) => {
-    setScheduleData(newScheduleData)
-    localStorage.setItem('timeLearnSchedule', JSON.stringify(newScheduleData))
-  }
+  }, [])
 
   const handleCourseUpdate = (newCourses: Course[]) => {
     setCourses(newCourses)
-    localStorage.setItem('timeLearnCourses', JSON.stringify(newCourses))
+    storage.set('timeLearnHub-courses', newCourses)
+  }
+
+  const handleDeleteCourse = () => {
+    setCourses([])
+    storage.remove('timeLearnHub-courses')
+    setSelectedCourse(null)
+    setActiveModule(null)
+    setActiveView('courses')
+  }
+
+  const hasAnyData = () => {
+    // Check if there are courses or any localStorage data
+    if (courses.length > 0) return true
+    
+    return Object.keys(localStorage).some(key => 
+      key.startsWith('timeLearnHub-') || key.startsWith('timeLearn')
+    )
+  }
+
+  const handleDeleteAllData = () => {
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('timeLearnHub-') || key.startsWith('timeLearn')) {
+        localStorage.removeItem(key)
+      }
+    })
+    setCourses([])
+    setSelectedCourse(null)
+    setActiveModule(null)
+    setActiveView('overview')
   }
 
   const renderView = () => {
     switch (activeView) {
       case 'overview':
-        return <TimeLearnOverview scheduleData={scheduleData} courses={courses} />
-      case 'schedule':
-        return <ScheduleInput scheduleData={scheduleData} onScheduleUpdate={handleScheduleUpdate} onViewChange={handleViewChange} />
+        return <TimeLearnOverview scheduleData={[]} courses={courses} onViewChange={handleViewChange} />
+      case 'schedule-input':
+        return <ScheduleInput onViewChange={handleViewChange} />
       case 'visualization':
-        return <ScheduleVisualization scheduleData={scheduleData} />
+        return <ScheduleVisualization scheduleData={[]} onViewChange={handleViewChange} onAnalysisStateChange={handleAnalysisStateChange} />
       case 'free-time':
-        return <FreeTimePockets scheduleData={scheduleData} />
+        return <FreeTimePockets onViewChange={handleViewChange} />
       case 'courses':
-        return <CourseCreation courses={courses} onCourseUpdate={handleCourseUpdate} />
+        return <CourseCreation courses={courses} onCourseUpdate={handleCourseUpdate} onViewChange={handleViewChange} onGeneratingChange={setIsGenerating} />
       case 'progress':
-        return <CourseProgress courses={courses} onCourseUpdate={handleCourseUpdate} />
+        return <CourseProgress courses={courses} onCourseUpdate={handleCourseUpdate} activeModule={activeModule} selectedCourse={selectedCourse} onModuleSelect={handleModuleSelect} />
       default:
-        return <TimeLearnOverview scheduleData={scheduleData} courses={courses} />
+        return <TimeLearnOverview scheduleData={[]} courses={courses} onViewChange={handleViewChange} />
     }
   }
 
@@ -90,11 +157,23 @@ export function TimeLearnHub() {
       <PageHeader
         title="Time & Learn"
         titleGradientText="Hub"
-        subtitle="Your personal time management and micro-learning companion"
+        subtitle="Map your schedule, discover free pockets, and turn quiet moments into personal growth"
       />
 
       <div className="relative flex min-h-screen">
-        <TimeLearnSidebar activeView={activeView} onViewChange={handleViewChange} />
+        <TimeLearnSidebar 
+          activeView={activeView} 
+          onViewChange={handleViewChange} 
+          isAnalyzing={isAnalyzing} 
+          isGenerating={isGenerating} 
+          courses={courses}
+          selectedCourse={selectedCourse}
+          onModuleSelect={handleModuleSelect}
+          activeModule={activeModule || undefined}
+          onDeleteCourse={handleDeleteCourse}
+          onDeleteAllData={handleDeleteAllData}
+          hasData={hasAnyData()}
+        />
         <div className="flex-1">
           <section className="py-12 lg:py-20">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">

@@ -5,24 +5,23 @@ import { useRouter } from 'next/navigation'
 // footer navigation grouped by categories
 const FOOTER_LINKS = [
   {
-    title: 'Smart Tools',
+    title: 'Planning & Learning',
     links: [
-      { label: 'PlayDate Planner', href: '/playdate' },
+      { label: 'Your Journey Map', href: '/your-journey-map' },
       { label: 'Time & Learn Hub', href: '/time-and-learn-hub' }
     ]
   },
   {
-    title: 'Single Parenting Journey',
+    title: 'Wellness & Activities',
     links: [
-      { label: 'Your Journey Map', href: '/your-journey-map' },
-      { label: 'Community Match', href: '/community-match' }
-    
+      { label: 'Emotion Tracker', href: '/emotion-tracker' },
+      { label: 'PlayDate Planner', href: '/playdate' }
     ]
   },
   {
-    title: 'More Resources',
+    title: 'Community & Events',
     links: [
-      { label: 'Emotion Tracker', href: '/emotion-tracker' },
+      { label: 'Community Match', href: '/community-match' },
       { label: 'Find Events', href: '/events' }
     ]
   }

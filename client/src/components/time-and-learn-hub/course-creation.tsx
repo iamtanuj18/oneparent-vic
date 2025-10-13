@@ -3,390 +3,626 @@
 import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, X, BookOpen, Clock, Target, Lightbulb, Save } from 'lucide-react'
-
-interface CourseModule {
-  id: string
-  title: string
-  description: string
-  estimatedMinutes: number
-  resources: string[]
-}
-
-interface Course {
-  id: string
-  title: string
-  description: string
-  category: string
-  totalModules: number
-  estimatedHours: number
-  modules: CourseModule[]
-  createdAt: string
-}
-
+import { Plus, X, BookOpen, Clock, Save, AlertTriangle } from 'lucide-react'
+import { generateCourseId } from '@/lib/utils/time-learn-hub'
+import { validateLearningPlan, generateLearningPlan } from '@/lib/api/time-and-learn-hub'
+import { Course } from '@/types/time-learn-hub'
 interface CourseCreationProps {
   courses: Course[]
   onCourseUpdate: (courses: Course[]) => void
+  onViewChange?: (view: string) => void
+  onGeneratingChange?: (generating: boolean) => void
 }
 
 const COURSE_CATEGORIES = [
-  'Parenting Skills', 'Personal Development', 'Health & Wellness', 
-  'Career Growth', 'Financial Literacy', 'Creative Skills', 'Other'
+  { id: 'creative', label: 'Creative Hobbies', examples: ['Photography', 'Digital Art', 'Cooking', 'Gardening', 'Crafting', 'Painting'] },
+  { id: 'tech', label: 'Basic Tech Skills', examples: ['Phone Photography', 'Social Media Basics', 'Computer Basics', 'Photo Editing', 'Online Safety'] },
+  { id: 'languages', label: 'Languages', examples: ['Spanish Basics', 'French Phrases', 'Italian Essentials', 'German Basics', 'Japanese Basics'] }
 ]
 
-export function CourseCreation({ courses, onCourseUpdate }: CourseCreationProps) {
+const INTEREST_LEVELS = ['Beginner', 'Curious', 'Enthusiast']
+const LEARNING_STYLES = ['Visual Learner', 'Hands-on Practice', 'Reading-focused']
+
+export function CourseCreation({ courses, onCourseUpdate, onViewChange, onGeneratingChange }: CourseCreationProps) {
   const [showForm, setShowForm] = useState(false)
   const [courseData, setCourseData] = useState({
-    title: '',
-    description: '',
-    category: 'Personal Development'
+    category: 'creative',
+    interestLevel: 'Beginner',
+    learningStyle: 'Visual Learner',
+    specificInterests: [] as string[]
   })
-  const [modules, setModules] = useState<Omit<CourseModule, 'id'>[]>([])
-  const [currentModule, setCurrentModule] = useState({
-    title: '',
-    description: '',
-    estimatedMinutes: 15,
-    resources: ['']
-  })
+  const [customInterest, setCustomInterest] = useState('')
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({})
+  const [showValidation, setShowValidation] = useState(false)
+  const [safetyCheckLoading, setSafetyCheckLoading] = useState(false)
+  const [safetyCheckError, setSafetyCheckError] = useState('')
+  const [courseGenerating, setCourseGenerating] = useState(false)
 
-  const handleAddModule = () => {
-    if (!currentModule.title.trim()) return
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {}
     
-    const newModule = {
-      ...currentModule,
-      resources: currentModule.resources.filter(r => r.trim())
+    if (!courseData.category) {
+      errors.category = 'Please select a learning category'
     }
     
-    setModules([...modules, newModule])
-    setCurrentModule({
-      title: '',
-      description: '',
-      estimatedMinutes: 15,
-      resources: ['']
-    })
+    if (!courseData.interestLevel) {
+      errors.interestLevel = 'Please select your interest level'
+    }
+    
+    if (!courseData.learningStyle) {
+      errors.learningStyle = 'Please select your learning style'
+    }
+    
+    if (courseData.specificInterests.length < 2) {
+      errors.specificInterests = 'Please select at least 2 specific interests'
+    }
+    
+    setValidationErrors(errors)
+    setShowValidation(true)
+    return Object.keys(errors).length === 0
   }
 
-  const handleRemoveModule = (index: number) => {
-    setModules(modules.filter((_, i) => i !== index))
+  const performSafetyCheck = async () => {
+    setSafetyCheckLoading(true)
+    setSafetyCheckError('')
+    
+    try {
+      const result = await validateLearningPlan({
+        category: courseData.category,
+        interestLevel: courseData.interestLevel,
+        learningStyle: courseData.learningStyle,
+        specificInterests: courseData.specificInterests
+      })
+
+      if (!result.safe) {
+        const flaggedItems = result.flaggedItems || []
+        let errorMessage = ''
+        
+        if (flaggedItems.length > 0) {
+          errorMessage = `Please modify these interests: ${flaggedItems.join(', ')}`
+        } else if (result.issues && result.issues.length > 0) {
+          errorMessage = result.issues.map(issue => issue.reason).join(', ')
+        } else {
+          errorMessage = 'Please review and adjust your learning interests to continue.'
+        }
+        
+        setSafetyCheckError(errorMessage)
+        return false
+      }
+
+      return true
+    } catch (error: any) {
+      // use the backend error message if available, otherwise provide a helpful fallback
+      const errorMessage = error.message || 'Unable to process your request right now. Please try again in a moment.'
+      setSafetyCheckError(errorMessage)
+      return false
+    } finally {
+      setSafetyCheckLoading(false)
+    }
   }
 
-  const handleAddResource = () => {
-    setCurrentModule({
-      ...currentModule,
-      resources: [...currentModule.resources, '']
-    })
-  }
-
-  const handleResourceChange = (index: number, value: string) => {
-    const newResources = [...currentModule.resources]
-    newResources[index] = value
-    setCurrentModule({ ...currentModule, resources: newResources })
-  }
-
-  const handleRemoveResource = (index: number) => {
-    setCurrentModule({
-      ...currentModule,
-      resources: currentModule.resources.filter((_, i) => i !== index)
-    })
-  }
-
-  const handleCreateCourse = () => {
-    if (!courseData.title.trim() || modules.length === 0) return
-
-    const totalHours = modules.reduce((acc, module) => acc + module.estimatedMinutes, 0) / 60
-
-    const newCourse: Course = {
-      id: Date.now().toString(),
-      ...courseData,
-      totalModules: modules.length,
-      estimatedHours: Math.round(totalHours * 10) / 10,
-      modules: modules.map((module, index) => ({
-        ...module,
-        id: `${Date.now()}-${index}`
-      })),
-      createdAt: new Date().toISOString()
+  const handleCreateCourse = async () => {
+    // clear any existing safety errors
+    if (safetyCheckError) {
+      setSafetyCheckError('')
     }
 
-    onCourseUpdate([...courses, newCourse])
+    if (!validateForm()) {
+      // scroll to first error
+      setTimeout(() => {
+        const firstError = document.querySelector('[data-error]')
+        if (firstError) {
+          firstError.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          })
+        }
+      }, 100)
+      return
+    }
+
+    // perform safety check before proceeding
+    const isSafe = await performSafetyCheck()
     
-    setCourseData({
-      title: '',
-      description: '',
-      category: 'Personal Development'
-    })
-    setModules([])
-    setShowForm(false)
+    if (!isSafe) {
+      // safety check failed, error will be displayed automatically
+      return
+    }
+
+    // if safety check passes, start course generation
+    generateCourse()
+  }
+
+  const addCustomInterest = () => {
+    const trimmedInterest = customInterest.trim()
+    
+    // Validate character length
+    if (trimmedInterest.length > 60) {
+      setValidationErrors({
+        ...validationErrors, 
+        customInterest: 'Interest must be 60 characters or less'
+      })
+      return
+    }
+    
+    if (trimmedInterest && !courseData.specificInterests.includes(trimmedInterest)) {
+      const newInterests = [...courseData.specificInterests, trimmedInterest]
+      setCourseData({
+        ...courseData,
+        specificInterests: newInterests
+      })
+      setCustomInterest('')
+      // clear custom interest error
+      if (validationErrors.customInterest) {
+        setValidationErrors({...validationErrors, customInterest: ''})
+      }
+      // clear error if we now have enough interests
+      if (showValidation && validationErrors.specificInterests && newInterests.length >= 2) {
+        setValidationErrors({...validationErrors, specificInterests: ''})
+      }
+      // clear safety error when modifying interests
+      if (safetyCheckError) {
+        setSafetyCheckError('')
+      }
+    }
+  }
+
+  const generateCourse = async () => {
+    setCourseGenerating(true)
+    onGeneratingChange?.(true)
+    
+    try {
+      const analysisData = JSON.parse(localStorage.getItem('timeLearnHub-analysis') || '{}')
+      const freeTimePockets = analysisData.freeTimePockets || []
+      
+      const generatedCourse = await generateLearningPlan({
+        category: courseData.category,
+        interestLevel: courseData.interestLevel,
+        learningStyle: courseData.learningStyle,
+        specificInterests: courseData.specificInterests,
+        freeTimePockets: freeTimePockets
+      })
+
+      const courseId = generateCourseId()
+
+      const newCourse: Course = {
+        id: courseId,
+        ...generatedCourse,
+        createdAt: new Date().toISOString(),
+        progress: 0,
+        completedModules: [],
+        completedQuizzes: {}
+      }
+
+      const updatedCourses = [...courses, newCourse]
+      onCourseUpdate(updatedCourses)
+      
+      localStorage.setItem('timeLearnHub-courses', JSON.stringify(updatedCourses))
+      
+      setCourseData({
+        category: 'creative',
+        interestLevel: 'Beginner',
+        learningStyle: 'Visual Learner',
+        specificInterests: []
+      })
+      setShowForm(false)
+      
+      // switch to learning progress tab after course creation
+      if (onViewChange) {
+        onViewChange('progress')
+      }
+      
+    } catch (error: any) {
+      setSafetyCheckError('Unable to generate your course at this time. Please try again.')
+    } finally {
+      setCourseGenerating(false)
+      onGeneratingChange?.(false)
+    }
   }
 
   const handleDeleteCourse = (courseId: string) => {
     onCourseUpdate(courses.filter(course => course.id !== courseId))
   }
 
-  const totalEstimatedTime = modules.reduce((acc, module) => acc + module.estimatedMinutes, 0)
+  // check if schedule analysis is completed
+  const checkAnalysisCompleted = () => {
+    const savedAnalysis = localStorage.getItem('timeLearnHub-analysis')
+    if (!savedAnalysis) return false
+    
+    try {
+      const analysisData = JSON.parse(savedAnalysis)
+      return Boolean(
+        analysisData.categoryBreakdown && 
+        analysisData.freeTimePockets && 
+        analysisData.metrics
+      )
+    } catch {
+      return false
+    }
+  }
+
+  const isAnalysisCompleted = checkAnalysisCompleted()
+  
+  // check if learning plan exists (only allow one)
+  const hasLearningPlan = courses.length > 0
+  const currentPlan = hasLearningPlan ? courses[0] : null
+
+  // if no analysis is completed, show redirect message
+  if (!isAnalysisCompleted) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Learning Plan</h2>
+          <p className="text-gray-600">Design personalized micro-learning plans for your free time</p>
+        </div>
+        
+        <Card className="p-8 text-center">
+          <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Schedule Analysis Required</h3>
+          <p className="text-gray-600 mb-6">
+            To create a personalized learning plan, we need to analyze your schedule first to understand your available time slots and preferences.
+          </p>
+          {onViewChange && (
+            <Button 
+              onClick={() => onViewChange('schedule-input')}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              Complete Schedule Analysis
+            </Button>
+          )}
+        </Card>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <>
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Course Creation</h2>
-          <p className="text-gray-600">Design personalized micro-learning courses for your free time</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Learning Plan</h2>
+          <p className="text-gray-600">
+            {hasLearningPlan 
+              ? "Your personalized micro-learning plan" 
+              : "Design personalized micro-learning plans for your free time"
+            }
+          </p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="flex items-center">
-          <Plus className="w-4 h-4 mr-2" />
-          Create New Course
-        </Button>
+        {!hasLearningPlan && (
+          <Button 
+            onClick={() => setShowForm(!showForm)} 
+            className="flex items-center"
+            variant={showForm ? "outline" : "primary"}
+          >
+            {showForm ? (
+              <>
+                <X className="w-4 h-4 mr-2" />
+                Cancel
+              </>
+            ) : (
+              <>
+                <Plus className="w-4 h-4 mr-2" />
+                Create New Learning Plan
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
-      {showForm && (
+      {!hasLearningPlan && showForm && (
         <Card className="p-6 border-2 border-blue-200">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900 flex items-center">
               <BookOpen className="w-6 h-6 mr-2 text-blue-600" />
-              New Learning Course
+              New Learning Plan
             </h3>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setShowForm(false)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
           </div>
 
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div data-error={showValidation && validationErrors.category ? "true" : undefined}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Course Title *
-                </label>
-                <input
-                  type="text"
-                  value={courseData.title}
-                  onChange={(e) => setCourseData({...courseData, title: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., Mindful Parenting Techniques"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
+                  Category *
                 </label>
                 <select
                   value={courseData.category}
-                  onChange={(e) => setCourseData({...courseData, category: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => {
+                    setCourseData({...courseData, category: e.target.value})
+                    if (showValidation && validationErrors.category) {
+                      setValidationErrors({...validationErrors, category: ''})
+                    }
+                    if (safetyCheckError) {
+                      setSafetyCheckError('')
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    showValidation && validationErrors.category 
+                      ? 'border-red-500 bg-red-50' 
+                      : 'border-gray-300'
+                  }`}
                 >
                   {COURSE_CATEGORIES.map(category => (
-                    <option key={category} value={category}>{category}</option>
+                    <option key={category.id} value={category.id}>{category.label}</option>
                   ))}
                 </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Course Description
-              </label>
-              <textarea
-                value={courseData.description}
-                onChange={(e) => setCourseData({...courseData, description: e.target.value})}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={3}
-                placeholder="Describe what learners will gain from this course..."
-              />
-            </div>
-
-            <div className="border-t pt-6">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Target className="w-5 h-5 mr-2 text-green-600" />
-                Course Modules ({modules.length})
-              </h4>
-
-              <div className="space-y-4">
-                <Card className="p-4 bg-gray-50 border-dashed border-2 border-gray-300">
-                  <h5 className="font-medium text-gray-900 mb-3">Add New Module</h5>
-                  
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <input
-                        type="text"
-                        value={currentModule.title}
-                        onChange={(e) => setCurrentModule({...currentModule, title: e.target.value})}
-                        className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Module title"
-                      />
-                      
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-4 h-4 text-gray-500" />
-                        <input
-                          type="number"
-                          value={currentModule.estimatedMinutes}
-                          onChange={(e) => setCurrentModule({...currentModule, estimatedMinutes: parseInt(e.target.value) || 15})}
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          min="5"
-                          max="120"
-                        />
-                        <span className="text-sm text-gray-500">min</span>
-                      </div>
-                      
-                      <Button onClick={handleAddModule} className="flex items-center">
-                        <Plus className="w-4 h-4 mr-1" />
-                        Add
-                      </Button>
-                    </div>
-                    
-                    <textarea
-                      value={currentModule.description}
-                      onChange={(e) => setCurrentModule({...currentModule, description: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={2}
-                      placeholder="Module description..."
-                    />
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Learning Resources
-                      </label>
-                      {currentModule.resources.map((resource, index) => (
-                        <div key={index} className="flex items-center space-x-2 mb-2">
-                          <input
-                            type="text"
-                            value={resource}
-                            onChange={(e) => handleResourceChange(index, e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Resource URL or description"
-                          />
-                          {currentModule.resources.length > 1 && (
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleRemoveResource(index)}
-                              className="text-red-600"
-                            >
-                              <X className="w-4 h-4" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
-                      <Button
-                        variant="outline"
-                        onClick={handleAddResource}
-                        className="text-sm"
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add Resource
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-
-                {modules.map((module, index) => (
-                  <Card key={index} className="p-4 border-l-4 border-l-blue-500">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h6 className="font-medium text-gray-900">{module.title}</h6>
-                        <p className="text-sm text-gray-600 mt-1">{module.description}</p>
-                        <div className="flex items-center mt-2 text-sm text-gray-500">
-                          <Clock className="w-4 h-4 mr-1" />
-                          {module.estimatedMinutes} minutes
-                          {module.resources.length > 0 && (
-                            <span className="ml-4">
-                              • {module.resources.length} resource{module.resources.length > 1 ? 's' : ''}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleRemoveModule(index)}
-                        className="text-red-600"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-6 border-t">
-              <div className="text-sm text-gray-600">
-                <p><strong>{modules.length}</strong> modules • <strong>{Math.round(totalEstimatedTime / 60 * 10) / 10}</strong> hours total</p>
+                {showValidation && validationErrors.category && (
+                  <p className="mt-1 text-sm text-red-600" data-error-message>
+                    {validationErrors.category}
+                  </p>
+                )}
               </div>
               
-              <div className="flex space-x-3">
-                <Button variant="outline" onClick={() => setShowForm(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleCreateCourse}
-                  disabled={!courseData.title.trim() || modules.length === 0}
-                  className="flex items-center"
+              <div data-error={showValidation && validationErrors.interestLevel ? "true" : undefined}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Interest Level *
+                </label>
+                <select
+                  value={courseData.interestLevel}
+                  onChange={(e) => {
+                    setCourseData({...courseData, interestLevel: e.target.value})
+                    if (showValidation && validationErrors.interestLevel) {
+                      setValidationErrors({...validationErrors, interestLevel: ''})
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    showValidation && validationErrors.interestLevel 
+                      ? 'border-red-500 bg-red-50' 
+                      : 'border-gray-300'
+                  }`}
                 >
-                  <Save className="w-4 h-4 mr-2" />
-                  Create Course
-                </Button>
+                  {INTEREST_LEVELS.map(level => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+                {showValidation && validationErrors.interestLevel && (
+                  <p className="mt-1 text-sm text-red-600" data-error-message>
+                    {validationErrors.interestLevel}
+                  </p>
+                )}
               </div>
+
+              <div data-error={showValidation && validationErrors.learningStyle ? "true" : undefined}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Learning Style *
+                </label>
+                <select
+                  value={courseData.learningStyle}
+                  onChange={(e) => {
+                    setCourseData({...courseData, learningStyle: e.target.value})
+                    if (showValidation && validationErrors.learningStyle) {
+                      setValidationErrors({...validationErrors, learningStyle: ''})
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    showValidation && validationErrors.learningStyle 
+                      ? 'border-red-500 bg-red-50' 
+                      : 'border-gray-300'
+                  }`}
+                >
+                  {LEARNING_STYLES.map(style => (
+                    <option key={style} value={style}>{style}</option>
+                  ))}
+                </select>
+                {showValidation && validationErrors.learningStyle && (
+                  <p className="mt-1 text-sm text-red-600" data-error-message>
+                    {validationErrors.learningStyle}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div data-error={showValidation && validationErrors.specificInterests ? "true" : undefined}>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Specific Interests * (minimum 2, select or add your own)
+              </label>
+              <p className="text-sm text-gray-500 mb-3">
+                Examples: {COURSE_CATEGORIES.find(c => c.id === courseData.category)?.examples.join(', ')}
+              </p>
+              
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {COURSE_CATEGORIES.find(c => c.id === courseData.category)?.examples.map(example => (
+                    <button
+                      key={example}
+                      type="button"
+                      onClick={() => {
+                        if (!courseData.specificInterests.includes(example)) {
+                          const newInterests = [...courseData.specificInterests, example]
+                          setCourseData({
+                            ...courseData, 
+                            specificInterests: newInterests
+                          })
+                          // clear error if we now have enough interests
+                          if (showValidation && validationErrors.specificInterests && newInterests.length >= 2) {
+                            setValidationErrors({...validationErrors, specificInterests: ''})
+                          }
+                          // clear safety error when modifying interests
+                          if (safetyCheckError) {
+                            setSafetyCheckError('')
+                          }
+                        }
+                      }}
+                      className={`px-3 py-1 text-sm rounded-full border ${
+                        courseData.specificInterests.includes(example)
+                          ? 'bg-blue-100 text-blue-800 border-blue-300'
+                          : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                      }`}
+                    >
+                      {example}
+                    </button>
+                  ))}
+                </div>
+                
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={customInterest}
+                    maxLength={60}
+                    onChange={(e) => {
+                      const value = e.target.value
+                      setCustomInterest(value)
+                      
+                      // Clear error when user starts typing within limit
+                      if (value.length <= 60 && validationErrors.customInterest) {
+                        setValidationErrors({...validationErrors, customInterest: ''})
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        addCustomInterest()
+                      }
+                    }}
+                    placeholder="Add your own interest..."
+                    className={`flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      validationErrors.customInterest ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                    }`}
+                  />
+                  <Button 
+                    type="button"
+                    onClick={addCustomInterest}
+                    variant="outline"
+                  >
+                    Add
+                  </Button>
+                </div>
+                
+                {/* Character counter and error message */}
+                <div className="flex justify-between items-center">
+                  {validationErrors.customInterest && (
+                    <p className="text-red-600 text-sm flex items-center gap-1">
+                      <AlertTriangle size={16} />
+                      {validationErrors.customInterest}
+                    </p>
+                  )}
+                  <div className={`text-sm ml-auto ${
+                    customInterest.length > 50 ? 'text-orange-600' : 
+                    customInterest.length > 55 ? 'text-red-600' : 'text-gray-500'
+                  }`}>
+                    {customInterest.length}/60 characters
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {courseData.specificInterests.map((interest, index) => (
+                    <div key={index} className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+                      {interest}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCourseData({
+                            ...courseData,
+                            specificInterests: courseData.specificInterests.filter((_, i) => i !== index)
+                          })
+                        }}
+                        className="ml-2 text-blue-600 hover:text-blue-800"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {showValidation && validationErrors.specificInterests && (
+                <p className="mt-2 text-sm text-red-600" data-error-message>
+                  {validationErrors.specificInterests}
+                </p>
+              )}
+            </div>
+
+            {/* safety check error display */}
+            {safetyCheckError && (
+              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-start">
+                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm text-red-700">{safetyCheckError}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 pt-6 border-t">
+              <Button variant="outline" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleCreateCourse}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Create Learning Plan
+              </Button>
             </div>
           </div>
         </Card>
       )}
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900 flex items-center">
-          <Lightbulb className="w-5 h-5 mr-2 text-yellow-600" />
-          Your Courses ({courses.length})
-        </h3>
-
-        {courses.length === 0 ? (
+      {hasLearningPlan ? (
+        // show current learning plan
+        <Card className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">{currentPlan?.title}</h3>
+              <p className="text-sm text-blue-600 font-medium">{currentPlan?.category}</p>
+              <p className="text-gray-600 mt-2">{currentPlan?.description}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handleDeleteCourse(currentPlan?.id || '')}
+              className="text-red-600 hover:bg-red-50"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          
+          <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+            <span>{currentPlan?.totalModules} modules</span>
+            <span className="flex items-center">
+              <Clock className="w-4 h-4 mr-1" />
+              {currentPlan?.estimatedHours}h total
+            </span>
+          </div>
+          
+          <Button variant="outline" className="w-full">
+            Start Learning
+          </Button>
+        </Card>
+      ) : (
+        // show creation interface when no plan exists
+        !showForm ? (
           <Card className="p-8 text-center">
             <BookOpen className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h4 className="text-lg font-medium text-gray-900 mb-2">No Courses Created</h4>
-            <p className="text-gray-600 mb-4">Design your first personalized learning course</p>
-            <Button onClick={() => setShowForm(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Your First Course
-            </Button>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">No Learning Plan Created</h4>
+            <p className="text-gray-600">Use the button above to design your personalized learning plan</p>
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {courses.map((course) => (
-              <Card key={course.id} className="p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-900">{course.title}</h4>
-                    <p className="text-sm text-blue-600 font-medium">{course.category}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => handleDeleteCourse(course.id)}
-                    className="text-red-600 hover:bg-red-50"
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                </div>
-                
-                <p className="text-gray-600 text-sm mb-4">{course.description}</p>
-                
-                <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-                  <span>{course.totalModules} modules</span>
-                  <span className="flex items-center">
-                    <Clock className="w-4 h-4 mr-1" />
-                    {course.estimatedHours}h total
-                  </span>
-                </div>
-                
-                <Button variant="outline" className="w-full">
-                  Start Learning
-                </Button>
-              </Card>
-            ))}
-          </div>
-        )}
+        ) : null
+      )}
       </div>
-    </div>
+
+      {(safetyCheckLoading || courseGenerating) && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[9999]">
+          <div className="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              {safetyCheckLoading ? 'Safety Check in Progress' : 'Generating Your Course'}
+            </h3>
+            <p className="text-gray-600">
+              {safetyCheckLoading 
+                ? 'Checking your learning plan inputs for safety...' 
+                : 'Creating your personalized learning modules...'
+              }
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              {safetyCheckLoading ? 'This may take a few moments' : 'Please wait up to 2 minutes'}
+            </p>
+            <p className="text-sm text-red-600 mt-3 font-medium">
+              ⚠️ Please do not close your browser during this process
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

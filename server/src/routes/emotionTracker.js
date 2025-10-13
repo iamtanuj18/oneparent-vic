@@ -5,7 +5,6 @@ const { geminiValidateJson } = require("../services/gemini");
 
 // generate ai insights for weekly emotion data
 router.post('/weekly-insights', asyncHandler(async (req, res) => {
-  console.log('[Emotion Tracker] Weekly insights generation started');
   
   const { weekData, previousWeekData, emotionLogs } = req.body;
   
@@ -22,7 +21,6 @@ router.post('/weekly-insights', asyncHandler(async (req, res) => {
       emotionLogs
     });
     
-    console.log('[Emotion Tracker] Weekly insights generated successfully');
     
     res.json({
       success: true,
@@ -31,7 +29,6 @@ router.post('/weekly-insights', asyncHandler(async (req, res) => {
     });
     
   } catch (error) {
-    console.error('[Emotion Tracker] Weekly insights generation failed:', error.message);
     
     // handle errors like journey map does
     if (error.message.includes('Gemini') || error.message.includes('API')) {
@@ -50,9 +47,9 @@ router.post('/weekly-insights', asyncHandler(async (req, res) => {
 
 // use gemini ai to analyze weekly emotion patterns
 async function generateWeeklyInsights({ weekData, previousWeekData, emotionLogs }) {
-  console.log('[Emotion Insights] Starting AI analysis...');
-  console.log('[Emotion Insights] Week data:', weekData?.weekNumber);
-  console.log('[Emotion Insights] Previous week data:', previousWeekData ? `Week ${previousWeekData.weekNumber}` : 'None');
+  // console.log('[Emotion Insights] Starting AI analysis...');
+  // console.log('[Emotion Insights] Week data:', weekData?.weekNumber);
+  // console.log('[Emotion Insights] Previous week data:', previousWeekData ? `Week ${previousWeekData.weekNumber}` : 'None');
   
   // prepare emotion data for ai analysis
   const analysisData = prepareAnalysisData({ weekData, previousWeekData, emotionLogs });
