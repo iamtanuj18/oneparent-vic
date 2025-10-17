@@ -44,3 +44,17 @@ aws/**/*.pem
 aws/**/*.key
 **/aws-config.json
 **/credentials.json
+
+# --- LaTeX Documentation ---
+latex-docs/
+docs/latex-docs/
+**/*.aux
+**/*.log
+**/*.toc
+**/*.out
+**/*.bbl
+**/*.blg
+**/*.fls
+**/*.fdb_latexmk
+**/*.synctex.gz
+**/*.pdf
