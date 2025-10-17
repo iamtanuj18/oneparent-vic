@@ -1,72 +1,64 @@
-# OneParent VIC - Internal Redis Deployment
+# AWS Redis Setup
 
-This folder contains an internal Redis deployment solution for OneParent VIC using direct container communication.
+Redis cache deployment using Docker containers on EC2 for session storage and caching. Provides secure Redis instance accessible via SSH tunnel for development and direct connection for production.
 
-## Architecture
+## What This Does
 
-- **Redis Container**: Persistent Redis 7 instance with password authentication
-- **Internal Access**: Direct container-to-server communication on localhost
-- **SSH Tunnel**: Encrypted access for external development connections
-- **Data Persistence**: Volume-mounted data directory for crash recovery
-- **Container Isolation**: Redis only accessible via localhost:6379
+Creates secure Redis cache infrastructure:
+- Redis 7 container with password authentication and data persistence
+- Internal-only access on localhost:6379 (no public exposure)
+- SSH tunnel support for development access from local machine
+- Optimized for t3.micro with 256MB memory limit and LRU eviction
+- Automatic container restart and health monitoring
 
-## Security Features
+## Files Overview
 
-- **Password Authentication**: Strong Redis password protection
-- **Internal Only**: No public port exposure (127.0.0.1 binding)
-- **SSH Tunnel Development**: Secure external access for local development
-- **Container Isolation**: Isolated Docker networking
+- `deploy-redis.ps1` - Deploys Redis container to EC2 instance with security configuration
+- `docker-compose.yml` - Redis container configuration with health checks and limits
+- `redis-simple.conf` - Redis server configuration with security and performance settings
+- `redis-connection-details.txt` - Connection information (created after deployment)
 
-## Files
+## Prerequisites
 
-- `docker-compose.yml` - Redis container configuration
-- `redis.conf` - Redis server configuration with security and performance settings
-- `deploy-redis.ps1` - PowerShell script to deploy Redis container on EC2
-- `README.md` - This documentation file
+- EC2 instance already deployed (from EC2 folder setup)
+- SSH key for EC2 access
+- Docker installed on EC2 (included in EC2 setup)
 
-## Quick Start
+## Quick Setup
 
-### 1. Deploy to EC2
 ```powershell
-# From aws/redis directory
-.\deploy-redis.ps1 -EC2PublicIP YOUR_EC2_IP
+# Deploy Redis to existing EC2 instance
+./deploy-redis.ps1 -EC2PublicIP <your-ec2-ip>
 ```
 
-### 2. Connect from your application
+## Connection Methods
 
-#### Production (Node.js server on AWS):
+### Production (Node.js on EC2)
 ```javascript
-// Your server connects directly to Redis container
-API_ENV=aws-prod
-REDIS_PASSWORD=your_generated_password
-
-// GET a key
-const response = await fetch(`${REDIS_URL}/get/mykey`);
-const data = await response.json();
-
-// SET a key
-await fetch(`${REDIS_URL}/set/mykey`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ value: 'hello world' })
+// Direct localhost connection from server
+const redis = new Redis({
+  host: '127.0.0.1',
+  port: 6379,
+  password: 'your_generated_password'
 });
 ```
 
-#### Option B: SSH Tunnel (for local development)
+### Development (SSH Tunnel)
 ```bash
-# Start tunnel
-ssh -i ../ec2/oneparent-vic-key.pem -L 6379:localhost:6379 ec2-user@YOUR_EC2_IP
+# Create SSH tunnel for local development
+ssh -i ../ec2/oneparent-vic-key.pem -L 6379:localhost:6379 ec2-user@<ec2-ip>
 
-# Connect with any Redis client
-redis-cli -h localhost -p 6379 -a your_redis_password
+# Then connect locally
+redis-cli -h localhost -p 6379 -a <redis-password>
 ```
 
-#### Option C: Direct Redis Protocol over SSL
-```javascript
-// For Node.js applications using ioredis or redis
-const Redis = require('ioredis');
-const redis = new Redis('rediss://:password@redis.yourdomain.com:6380');
-```
+## Configuration
+
+- **Memory**: 256MB limit with LRU eviction policy
+- **Persistence**: RDB snapshots + AOF logging for data durability
+- **Security**: Password authentication, disabled dangerous commands
+- **Health Check**: Automatic container restart on failure
+- **Port**: Internal 6379 (localhost only, accessed via SSH tunnel)
 
 ## REST API Endpoints
 

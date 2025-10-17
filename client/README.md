@@ -1,36 +1,142 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OneParent VIC - Frontend Application
 
-## Getting Started
+A comprehensive web application providing digital tools and resources specifically designed for single parents across Victoria, Australia. The platform offers AI-powered insights, community resources, and practical tools to support single parenting journeys.
 
-First, run the development server:
+## What This App Does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+**OneParent VIC** is a digital support platform that helps single parents with:
+
+- **Schedule Management**: AI-powered analysis of weekly routines to identify free time and optimization opportunities
+- **Emotional Wellbeing**: Mood tracking and mental health insights with weekly pattern analysis
+- **Activity Planning**: Personalized activity suggestions for children based on age, interests, and location
+- **Community Discovery**: Find single parent-friendly neighborhoods with cultural diversity and school ratings
+- **Event Finding**: Discover family-friendly events from Ticketmaster and local community sources
+- **Journey Mapping**: Track milestones and progress through different aspects of single parenting
+- **Resource Access**: Government support information, childcare options, and community services
+
+## Technology Stack
+
+**Frontend Framework**
+- Next.js 14 with App Router for server-side rendering and routing
+- React 18 with TypeScript for type-safe component development
+- Tailwind CSS for responsive utility-first styling
+- Framer Motion for smooth animations and transitions
+
+**UI & UX**
+- Lucide React for consistent iconography
+- Custom design system optimized for single parent workflows
+- Mobile-first responsive design with touch-friendly interfaces
+- Accessibility compliance (WCAG 2.1 AA standards)
+
+**Data & State Management**
+- Local Storage for user preferences and offline functionality
+- React hooks for component state management
+- Custom API client with error handling and loading states
+- TypeScript interfaces for data consistency
+
+## Application Structure
+
+```
+client/
+├── src/
+│   ├── app/                     # Next.js App Router (pages and routing)
+│   │   ├── page.tsx             # Homepage with navigation to all tools
+│   │   ├── layout.tsx           # Root layout with navigation and footer
+│   │   ├── your-journey-map/    # Single parenting milestone tracking
+│   │   ├── time-and-learn-hub/  # AI-powered schedule analysis
+│   │   ├── emotion-tracker/     # Daily mood and wellbeing tracking
+│   │   ├── playdate/            # Activity suggestions and planning
+│   │   ├── community-match/     # Neighborhood discovery tool
+│   │   ├── find-events/         # Family-friendly event discovery
+│   │   └── resources/           # Government support and services
+│   ├── components/              # Reusable React components
+│   │   ├── ui/                  # Base components (buttons, cards, forms)
+│   │   ├── shared/              # Navigation, footer, common layouts
+│   │   └── [feature]/           # Feature-specific components
+│   ├── lib/
+│   │   ├── api/                 # Backend API client functions
+│   │   ├── utils/               # Helper functions and utilities
+│   │   └── types/               # TypeScript type definitions
+│   └── types/                   # Global TypeScript interfaces
+├── public/
+│   ├── images/                  # Static images and assets
+│   ├── data/                    # Static JSON data files
+│   └── sitemap.xml             # SEO sitemap
+├── next.config.ts              # Next.js build and deployment config
+├── tailwind.config.js          # Tailwind CSS styling configuration
+└── package.json                # Dependencies and build scripts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Core Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Time & Learn Hub**: AI-powered weekly schedule analysis that identifies free time pockets and provides optimization suggestions using Google Gemini AI.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Emotion Tracker**: Daily mood tracking with 5-point scale and weekly emotional pattern analysis to support mental wellbeing.
 
-## Learn More
+**PlayDate Planner**: Personalized activity suggestions based on child age, interests, and budget with integration to local event data.
 
-To learn more about Next.js, take a look at the following resources:
+**Community Match**: Neighborhood discovery tool helping single parents find communities with good schools, cultural diversity, and family support services.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Find Events**: Family-friendly event discovery with integration to Ticketmaster and Eventfinda APIs, filtered by age groups and location.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+**Journey Map**: Milestone tracking system for single parenting progress across different life areas with goal setting and achievement visualization.
 
-## Deploy on Vercel
+**Resource Hub**: Access to government support information, childcare options, and community services specific to Victoria, Australia.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Development Setup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Prerequisites
+- Node.js 18 or higher
+- npm package manager
+
+### Installation & Running
+
+```bash
+# Navigate to client directory
+cd client
+
+# Install all dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Application will be available at http://localhost:3000
+```
+
+### Environment Configuration
+
+Create `.env.local` file in the client directory:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+### Available Commands
+
+```bash
+npm run dev          # Start development server (http://localhost:3000)
+npm run build        # Build production version
+npm run start        # Start production server  
+npm run lint         # Run code quality checks
+npm run type-check   # Validate TypeScript types
+```
+
+## Backend Integration
+
+The frontend communicates with the Node.js backend API for:
+- **AI Analysis**: Schedule analysis via Google Gemini AI integration
+- **Event Data**: Real-time events from Ticketmaster and Eventfinda APIs  
+- **Community Data**: Demographics, school ratings, and neighborhood information
+- **Data Persistence**: User preferences and application state storage
+
+All API calls include proper error handling, loading states, and retry logic through the `/src/lib/api/` client functions.
+
+## Design & Accessibility
+
+**Mobile-First Design**: Responsive layout optimized for single parents who primarily use mobile devices while managing daily routines.
+
+**Accessibility Compliant**: WCAG 2.1 AA standards with keyboard navigation, screen reader support, and high contrast color schemes.
+
+**Performance Optimized**: Next.js automatic code splitting, image optimization, and lazy loading for fast loading on any device.
+
+**Browser Support**: Modern browsers including Chrome 90+, Firefox 88+, Safari 14+, and mobile browsers.

@@ -1,119 +1,122 @@
 
 # OneParent VIC
 
-A comprehensive platform supporting single parents across Victoria, Australia. Built with modern technologies to provide tools, resources, and community features that make single parenting easier.
+A comprehensive digital platform designed to support single parents across Victoria, Australia. OneParent VIC provides intelligent schedule management, community resources, event discovery, and wellbeing tools to make single parenting easier and more connected.
 
-## Technology Stack
+🌐 **Live Application**: https://www.oneparentvic.me
 
-**Frontend**
-- Next.js 14 with App Router
+## Platform Overview
+
+OneParent VIC combines AI-powered schedule analysis, community resource mapping, and social features into one unified platform. Built with modern web technologies and deployed on robust cloud infrastructure.
+
+**Key Features:**
+- AI-powered schedule analysis and free time optimization
+- Family-friendly event discovery and recommendations  
+- Government benefits and childcare facility lookup
+- Mental health resources and emotional tracking
+- Community matching and playdate planning
+- Interactive journey mapping for single parent experiences
+
+## Technology Architecture
+
+**Frontend (Client)**
+- Next.js 14 with App Router and TypeScript
 - Tailwind CSS with custom design system
-- Framer Motion for animations
-- TypeScript for type safety
-- Deployed on Netlify
+- Framer Motion animations and micro-interactions
+- Deployed on Netlify with global CDN
 
-**Backend**
-- Node.js with Express.js
-- PostgreSQL database (Heroku)
-- Security middleware (Helmet, Rate Limiting, CORS)
-- External API integrations (Ticketmaster, Eventfinda)
-- Deployed on Heroku (prod), Render (dev)
+**Backend (Server)**  
+- Node.js with Express.js REST API
+- PostgreSQL database for user data and analytics
+- Redis for caching and rate limiting
+- Google Gemini AI for schedule analysis
+- External integrations: Ticketmaster, Eventfinda APIs
 
-**Infrastructure**
-- Domain: Namecheap with Cloudflare protection
-- CDN: Cloudflare
-- Database: Heroku Postgres
-
-## Live Applications
-
-**Production**
-- Website: https://oneparentvic.me/
+**Infrastructure (AWS)**
+- EC2 instances for production server hosting
+- RDS PostgreSQL for managed database services
+- ElastiCache Redis for session and API caching
+- S3 + CloudFront for asset delivery
+- SSL certificates and security configurations
 
 ## Project Structure
 
 ```
 oneparent-vic/
-├── client/                    # Next.js Frontend Application
-│   ├── src/
-│   │   ├── app/              # App Router pages
-│   │   ├── components/       # Reusable UI components
-│   │   └── lib/             # Utilities and API clients
-│   ├── public/              # Static assets
-│   ├── next.config.ts       # Next.js configuration
-│   └── tailwind.config.js   # Tailwind CSS config
-├── server/                   # Express.js Backend API
-│   ├── src/
-│   │   ├── routes/          # API endpoints
-│   │   ├── middleware/      # Security and validation
-│   │   ├── services/        # External API integrations
-│   │   └── db/             # Database connection
-│   └── .env.example
-├── datasets/                # Data files
-└── docs/                   # Documentation
+├── client/                   # Frontend Application (Next.js)
+│   ├── src/app/             # App Router pages and layouts
+│   ├── src/components/      # Reusable UI components and feature modules  
+│   ├── src/lib/            # Utilities, API clients, and configuration
+│   ├── public/             # Static assets and data files
+│   └── README.md           # Frontend setup and development guide
+│
+├── server/                  # Backend API (Node.js + Express)
+│   ├── src/routes/         # REST API endpoints and route handlers
+│   ├── src/services/       # External API integrations (Gemini, Ticketmaster)
+│   ├── src/middleware/     # Security, validation, and rate limiting
+│   ├── src/db/            # PostgreSQL connection and queries
+│   └── README.md          # Server setup and deployment guide
+│
+├── aws/                    # Cloud Infrastructure & Deployment
+│   ├── client/            # Frontend deployment (Netlify/S3+CloudFront)
+│   ├── server/            # Backend deployment (EC2, Docker, Nginx)
+│   ├── database/          # PostgreSQL RDS setup and migrations
+│   ├── redis/             # ElastiCache Redis configuration
+│   ├── ec2/               # Server infrastructure and security
+│   └── README.md          # Infrastructure overview and setup
+│
+├── datasets/               # Community Data & Research
+│   ├── *.csv              # Victorian demographics, trends, and services data
+│   └── README.md          # Data sources and usage documentation
+│
+├── docs/                   # Project Documentation
+│   └── README.md          # Documentation index and guidelines
+│
+├── figma/                  # Design System & UI Kit  
+│   ├── src/               # Interactive design system components
+│   └── README.md          # Design principles and component usage
+│
+├── Test-cases/             # Testing Suite
+│   ├── emotion-tracker/   # Feature-specific test cases
+│   ├── timeandlearnhub/   # Schedule analysis testing
+│   └── README.md          # Testing strategy and execution
+│
+├── netlify.toml           # Frontend deployment configuration
+├── all.env               # Environment variables template
+└── package.json          # Root project configuration
 ```
 
-## Local Development Setup
+## How It Works
 
-### Prerequisites
-- Node.js 18+
-- npm or yarn
-- PostgreSQL (or access to remote database)
+**Backend Infrastructure**: The server runs on AWS EC2 instances with auto-scaling, using PostgreSQL RDS for data persistence and Redis ElastiCache for performance optimization. The API handles AI-powered schedule analysis, external event data aggregation, and secure user data management.
 
-### Backend Setup
+**Frontend Experience**: The client application is deployed on Netlify with global CDN delivery, providing fast load times across Australia. Built with Next.js for optimal SEO and performance, featuring responsive design and accessibility-first components.
+
+**Data & Security**: All user data is encrypted and stored securely on AWS RDS. The platform implements comprehensive security measures including rate limiting, CORS protection, and secure API authentication. Community data is sourced from Australian government datasets and research studies.
+
+## Getting Started
+
+Each project directory contains detailed setup and development instructions:
+
+- **`/client`** - Frontend development, component library, and UI guidelines
+- **`/server`** - Backend API, database setup, and service integrations  
+- **`/aws`** - Infrastructure deployment, security configuration, and scaling
+- **`/datasets`** - Community data sources and research methodology
+- **`/docs`** - Comprehensive project documentation and API guides
+- **`/figma`** - Design system, UI components, and accessibility standards
+- **`/Test-cases`** - Testing strategy, feature tests, and quality assurance
+
+## Quick Development Setup
+
 ```bash
-cd server
-npm install
-cp .env.example .env.local
-# Add your database URL and API keys to .env.local
-npm run dev
-```
-Backend runs on http://localhost:5000
+# Backend setup
+cd server && npm install && npm run dev
 
-### Frontend Setup
-```bash
-cd client
-npm install
-npm run dev
-```
-Frontend runs on http://localhost:3000
-
-## Deployment
-
-**Frontend (Netlify)**
-- Build Command: `cd client && npm run build`
-- Publish Directory: `client/out`
-
-**Backend (Heroku)**
-- Buildpack: Node.js
-- Start Command: `npm start`
-
-## Available Scripts
-
-**Frontend (client/)**
-```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm start            # Start production server
-npm run lint         # Run ESLint
+# Frontend setup (new terminal)
+cd client && npm install && npm run dev
 ```
 
-**Backend (server/)**
-```bash
-npm run dev          # Start development with nodemon
-npm start            # Start production server
-npm test             # Run tests
-```
-
-## Key Features
-
-### For Single Parents
-- PlayDate Planner: AI-powered activity suggestions
-- Find Events: Curated family-friendly events
-- Community Match: Find culturally diverse neighborhoods
-- Journey Map: Single parenting milestone tracking
-- Resources Hub: Government support information
-
-### Technical Features
+Visit http://localhost:3000 to see the application running locally.
 - Responsive mobile-first design
 - Performance optimized with image optimization and code splitting
 - SEO friendly with proper meta tags
@@ -129,15 +132,36 @@ npm test             # Run tests
 - SQL injection prevention with parameterized queries
 - Cloudflare DDoS protection
 
-## Contributing
+## Documentation Structure
 
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/your-feature`)
-3. Commit changes (`git commit -m 'Add your feature'`)
-4. Push to branch (`git push origin feature/your-feature`)
-5. Open Pull Request
+The project includes comprehensive documentation across multiple areas:
 
-## Support
+### Component Documentation
+- **[Client Application](client/README.md)** - Frontend React/Next.js application setup, features, and development
+- **[Server Application](server/README.md)** - Backend Node.js/Express API documentation and deployment
+- **[AWS Infrastructure](aws/README.md)** - Cloud infrastructure setup, deployment scripts, and management
+- **[Design System](figma/README.md)** - UI component library, design tokens, and accessibility guidelines
+- **[Test Suite](Test-cases/README.md)** - Testing strategy, test execution, and quality assurance
+- **[Datasets](datasets/README.md)** - Community data, demographics, and dataset usage documentation
+- **[Documentation Hub](docs/README.md)** - Technical specifications, user guides, and API references
 
-For technical issues or feature requests, create an issue on GitHub or check the documentation in the `/docs` folder.
+### Feature Areas
+Each major platform feature includes dedicated documentation covering:
+## Contributing & Development
+
+For detailed development setup, code standards, and contribution guidelines, see the README files in individual project directories. Each component has specific setup instructions and development workflows.
+
+**Repository**: https://github.com/iamtanuj18/oneparent-vic  
+**Issues & Support**: GitHub Issues  
+**Documentation**: See `/docs` directory for comprehensive guides
+- **Feature Requests**: Use GitHub Discussions for community input
+- **Documentation**: Check component-specific README files in each directory
+- **API Questions**: Refer to [Server API Documentation](server/README.md)
+- **Design Guidelines**: Review [Design System Documentation](figma/README.md)
+
+### Community Resources
+- Project roadmap and milestone tracking via GitHub Projects
+- Community discussions and feature planning in GitHub Discussions
+- Regular contributor meetings and development updates
+- Open source contribution guidelines and recognition program
 

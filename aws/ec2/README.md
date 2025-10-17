@@ -1,105 +1,92 @@
-# oneparent vic ec2 setup guide
+# AWS EC2 Server Setup
 
-complete guide to deploy secure ec2 infrastructure for oneparent vic nodejs server with nginx proxy and local redis
+Secure EC2 infrastructure setup for hosting the OneParent VIC Node.js server with Nginx reverse proxy, Redis cache, and comprehensive security hardening.
 
-## what you need before starting
+## What This Does
 
-1. amazon aws account with billing setup
-2. aws cli installed and configured
-3. powershell terminal access
-4. about 20 minutes setup time
-5. your public ip address (script will detect automatically)
+Creates production-ready server infrastructure:
+- EC2 instance (t3.micro, free tier eligible) with Amazon Linux 2023
+- Nginx reverse proxy with security headers and rate limiting
+- Local Redis server with password authentication
+- Complete security hardening with fail2ban and SSH restrictions
+- CloudWatch monitoring and logging setup
+- Automatic security updates and system monitoring
 
-## what gets created
+## Files Overview
 
-### aws resources
-- t3.micro ec2 instance (free tier eligible)
-- security group with minimal required ports
-- iam role with cloudwatch permissions
-- encrypted ebs storage (30gb free tier)
-- ssh key pair for secure access
+- `setup-ec2-infrastructure.ps1` - Main script that creates EC2 infrastructure and installs software
+- `ec2-infrastructure.yml` - CloudFormation template for AWS resources
+- `secure-ec2-instance.ps1` - Additional security hardening script  
+- `monitor-ec2-instance.ps1` - System monitoring and health check script
+- `nginx-config-template.conf` - Production Nginx configuration template
+- `connection-details.txt` - SSH connection information (created after setup)
 
-### software installed on ec2
-- amazon linux 2023 (latest)
-- nodejs 20 with npm
-- nginx reverse proxy server
-- redis server (local instance)
-- pm2 process manager
-- docker (for future use)
-- cloudwatch logs agent
-- fail2ban security tool
-- automatic security updates
+## Prerequisites
 
-### security configuration
-- ssh hardened (key only, no root login)
-- firewall configured for required ports only
-- nginx with security headers and rate limiting
-- redis secured with password authentication
-- encrypted storage and secure boot
-- cloudwatch monitoring and logging
-- fail2ban intrusion detection
+- AWS CLI installed and configured (`aws configure`)
+- PowerShell terminal
+- Public IP address (automatically detected)
 
-## deployment steps
+## Quick Setup
 
-### step 1 - create ec2 infrastructure
+```powershell
+# Create complete EC2 infrastructure
+./setup-ec2-infrastructure.ps1
 
-navigate to ec2 deployment folder
-```
-cd aws\ec2
+# Apply additional security hardening (use IP from previous output)
+./secure-ec2-instance.ps1 -InstanceIP <your-instance-ip>
+
+# Monitor system health
+./monitor-ec2-instance.ps1 -InstanceIP <your-instance-ip>
 ```
 
-run the infrastructure setup script
-```
-.\setup-ec2-infrastructure.ps1
-```
+## What Gets Created
 
-this script will:
-- verify aws credentials and region
-- create or use existing ssh key pair
-- detect your public ip for ssh access
-- deploy cloudformation stack with ec2 instance
-- configure nginx proxy for nodejs and redis
-- install all required software and security tools
-- setup cloudwatch logging and monitoring
+### AWS Resources
+- t3.micro EC2 instance with encrypted 30GB EBS storage
+- Security group allowing SSH (your IP only) and HTTP/HTTPS
+- IAM role for CloudWatch monitoring
+- SSH key pair for secure access
 
-the deployment takes 10-15 minutes to complete
+### Server Software
+- Node.js 20 with npm and PM2 process manager
+- Nginx reverse proxy (port 80 → Node.js port 5000)
+- Redis server on localhost:6379 with password authentication
+- fail2ban intrusion detection system
+- Docker for containerization
+- CloudWatch logs agent
 
-### step 2 - apply security hardening
+## Network Configuration
 
-after infrastructure is created, run security hardening
-```
-.\secure-ec2-instance.ps1 -InstanceIP <your-instance-ip>
-```
+- **Port 22**: SSH access (restricted to your IP)
+- **Port 80**: HTTP access via Nginx proxy
+- **Port 443**: HTTPS (for SSL setup)
+- **Internal**: Node.js on 5000, Redis on 6379 (localhost only)
 
-replace <your-instance-ip> with the public ip from step 1 output
+## Security Features
 
-this applies additional security measures:
-- hardens ssh configuration
-- configures fail2ban intrusion detection
-- secures redis with authentication
-- applies nginx rate limiting and security headers
-- enables automatic security updates
-- configures log rotation and monitoring
+- SSH key-only authentication with hardened configuration
+- fail2ban monitoring for intrusion attempts
+- Nginx rate limiting and security headers
+- Redis password authentication and command renaming
+- Automatic security updates enabled
+- Encrypted EBS storage and secure boot
 
-### step 3 - verify installation
+## Cost
 
-connect to your instance using ssh
-```
-ssh -i ../oneparent-vic-key.pem ec2-user@<your-instance-ip>
-```
+- Free for 12 months (AWS free tier: 750 hours t3.micro + 30GB storage)
+- After free tier: ~$10-15/month for EC2 + ~$3-5/month for storage
 
-check system status
-```
-./system-monitor.sh
-```
+## Connection
 
-verify services are running
-```
+```bash
+# SSH to your instance
+ssh -i oneparent-vic-key.pem ec2-user@<your-instance-ip>
+
+# Check system status
 sudo systemctl status nginx redis fail2ban
-```
 
-test nginx proxy
-```
+# Test Nginx proxy
 curl http://localhost/health
 ```
 
