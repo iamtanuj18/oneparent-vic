@@ -1,53 +1,51 @@
-# AWS Frontend Deployment System
+# AWS Client Deployment
 
-This folder contains a complete automated deployment system for the OneParent VIC frontend application. The system uses AWS services to provide automatic deployments, global content delivery, and professional hosting infrastructure.
+Automated AWS infrastructure for deploying the Next.js frontend application. Creates complete CI/CD pipeline from GitHub to AWS with S3 hosting and CloudFront CDN.
 
-## System Overview
+## What This Does
 
-This deployment system creates a fully automated pipeline that:
-- Monitors your GitHub repository for code changes
-- Automatically builds your Next.js application when changes are detected
-- Deploys the built application to AWS infrastructure
-- Serves your website globally with high performance and reliability
+Creates fully automated deployment system that:
+- Watches GitHub repository for code changes
+- Builds Next.js app automatically when code is pushed
+- Deploys to S3 with CloudFront CDN for global delivery
+- Handles SSL certificates and custom domains
 
-## Required Prerequisites
+## Files Overview
 
-Before using this system, ensure you have:
+- `setup-automated-deployment.ps1` - Main deployment script, creates all AWS infrastructure
+- `frontend-infrastructure.yml` - CloudFormation template defining AWS resources  
+- `build-configuration.yml` - CodeBuild configuration for Next.js build process
+- `add-custom-domain.ps1` - Adds custom domain and SSL to existing infrastructure
+- `update-environment-variables.ps1` - Updates environment variables in build system
+- `.env` - Frontend environment variables (API URLs, etc)
 
-1. **AWS Account**: Active AWS account with administrative access
-2. **AWS CLI**: Installed and configured with your AWS credentials
-   ```bash
-   aws configure
-   ```
-3. **GitHub Personal Access Token**: Token with repository permissions for your GitHub account
-4. **PowerShell**: Windows PowerShell for running deployment scripts
-5. **Node.js and npm**: Required for local testing (optional)
+## Prerequisites
 
-## Files and Their Purpose
+- AWS CLI installed and configured (`aws configure`)
+- GitHub personal access token with repo permissions
+- PowerShell (for running scripts)
 
-### Core Deployment Files
-- **`setup-automated-deployment.ps1`**: Master deployment script that creates entire infrastructure
-- **`frontend-infrastructure.yml`**: CloudFormation template defining all AWS resources
-- **`.env`**: Environment variables for your frontend application
+## Quick Setup
 
-### Management Scripts
-- **`add-custom-domain.ps1`**: Adds custom domain and SSL certificate to existing infrastructure
-- **`update-environment-variables.ps1`**: Updates environment variables in AWS build system
+```powershell
+# Deploy complete infrastructure
+./setup-automated-deployment.ps1
 
-### Documentation
-- **`README.md`**: This comprehensive guide
- handling
+# Add custom domain (optional)
+./add-custom-domain.ps1
 
-## AWS Infrastructure Created
+# Update environment variables if needed  
+./update-environment-variables.ps1
+```
 
-When you run the deployment, the system creates:
+## AWS Resources Created
 
-### Storage and Distribution
-- **S3 Bucket**: Hosts your static website files with optimized configuration
-- **CloudFront Distribution**: Global CDN for fast content delivery worldwide
-
-### Automation Pipeline
-- **CodePipeline**: Orchestrates the entire deployment process
+- S3 bucket for static website hosting
+- CloudFront distribution for global CDN
+- CodePipeline for automated deployments
+- CodeBuild project for Next.js builds
+- IAM roles and policies for permissions
+- SSL certificate via ACM (if custom domain used)
 - **CodeBuild Project**: Builds your Next.js application in AWS cloud
 - **GitHub Webhook**: Automatically triggers deployments when code changes
 

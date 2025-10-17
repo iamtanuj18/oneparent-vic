@@ -1,114 +1,63 @@
-# oneparent vic database setup guide
+# AWS Database Setup
 
-complete guide to setup the oneparent vic database on amazon aws rds from scratch using the provided scripts and csv data files
+Automated PostgreSQL database setup on AWS RDS with complete schema creation and CSV data import for the OneParent VIC platform.
 
-## what you need before starting
+## What This Does
 
-1. amazon aws account with billing setup
-2. aws cli installed on your computer
-3. postgresql client tools installed
-4. powershell terminal access
-5. about 30 minutes of setup time
+Creates complete database infrastructure:
+- AWS RDS PostgreSQL database with security groups
+- 4 schemas: community, hilda, trends, vic_geo  
+- 13 tables with full data import from CSV files
+- SSL encryption and secure random password generation
+- Connection details saved locally (not committed to git)
 
-## security important notes
+## Files Overview
 
- **before running any scripts:**
-- this setup will create files with database passwords
-- never commit database-connection.txt to git
-- keep your aws credentials secure
-- change passwords if accidentally exposed
-- use placeholder values for any shared documentation
+- `setup-database.ps1` - Main script that creates AWS RDS and imports all data
+- `create-schema.sql` - Database schema definition with all tables and structures
+- `import-csv-data.ps1` - Imports CSV files from datasets folder into database tables
+- `verify-database.sql` - Verification queries to check data was imported correctly
 
-## step by step setup process
+## Prerequisites
 
-### step 1 - prepare your environment
+- AWS CLI installed and configured (`aws configure`)
+- PostgreSQL client tools (psql command)
+- PowerShell terminal
 
-open powershell terminal and check aws cli is working
-```
-aws --version
-```
+## Quick Setup
 
-make sure you are logged into your aws account
-```
-aws sts get-caller-identity
-```
+```powershell
+# Create complete database with data
+./setup-database.ps1
 
-if not logged in run this command and follow prompts
-```
-aws configure
+# Verify everything imported correctly  
+psql "connection-string-from-output" -f verify-database.sql
 ```
 
-### step 2 - run the database setup script
+## What Gets Created
 
-navigate to the project aws database folder
-```
-cd "path\to\your\project\aws\database"
-```
+### AWS Resources
+- RDS PostgreSQL 16.4 instance (db.t3.micro - free tier eligible)
+- VPC security group restricting access to your IP
+- Subnet group for multi-AZ setup
 
-run the master setup script
-```
-.\setup-database.ps1
-```
+### Database Content
+- 1,277 school records with location data
+- 3,511 postcode demographic records
+- 3,161 suburb geographic mappings
+- HILDA survey data for housing and wellbeing
+- Community services and council mappings
 
-this script will automatically do these things for you:
-- create new rds postgresql database on aws
-- setup security groups and networking
-- create all database schemas and tables
-- import all csv data files
-- configure ssl connections
-- generate secure random database password
-- save connection details to a secure file (not committed to git)
+## Cost
+- Free for first 12 months (AWS free tier)
+- Approximately $15-20/month after free tier
+- Can be deleted anytime to stop costs
 
-the script takes about 10-15 minutes to complete
-
-### step 3 - verify database setup
-
-once setup script finishes it will show you database connection details
-
-use the provided connection string to test your database
-
-run the verification script to check everything is working
-```
-psql "your-connection-string-here" -f verify-database.sql
-```
-
-you should see all table row counts matching expected values
-
-### step 4 - update your application config
-
-copy the database connection string from setup script output
-
-update your application environment variables with new database url
-
-test your application connects to new database successfully
-
-## what gets created
-
-### aws resources
-- rds postgresql 16.4 database instance
-- vpc security group for database access
-- subnet group for multi availability zone setup
-
-### database structure
-- 4 database schemas: community, hilda, trends, vic_geo
-- 13 tables with complete data
-- all indexes and performance optimizations
-- ssl encrypted connections
-
-### data imported
-- 1277 schools records
-- 3511 postcode demographics records  
-- 3161 suburb geographic records
-- complete hilda survey data
-- community services mapping data
-
-## cost information
-
-using aws free tier the database costs nothing for first 12 months
-
-after free tier expires costs about 15-20 dollars per month for small usage
-
-you can delete database anytime to stop costs
+## Security
+- SSL encrypted connections only
+- Randomly generated 20-character password
+- IP-restricted security group access
+- Connection details saved locally only (never committed)
 
 ## troubleshooting common issues
 
