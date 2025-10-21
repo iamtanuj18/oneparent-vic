@@ -3,7 +3,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Navbar, Footer } from "@/components/layout";
-import AuthGuard from "@/components/AuthGuard";
 
 // search engine optimization metadata for single parent support
 export const metadata: Metadata = {
@@ -135,13 +134,11 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <AuthGuard>
-          <Navbar />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
-        </AuthGuard>
+        <Navbar />
+        <main className="min-h-screen">
+          {children}
+        </main>
+        <Footer />
       </body>
     </html>
   );
