@@ -10,7 +10,7 @@ interface OverviewProps {
 }
 
 export function TimeLearnOverview({ scheduleData, courses, onViewChange }: OverviewProps) {
-  const hasAnalysis = localStorage.getItem('timeLearnHub-analysis')
+  const hasAnalysis = typeof window !== 'undefined' ? localStorage.getItem('timeLearnHub-analysis') : null
   const isFirstTime = scheduleData.length === 0 && !hasAnalysis
 
   if (isFirstTime) {
@@ -186,7 +186,7 @@ export function TimeLearnOverview({ scheduleData, courses, onViewChange }: Overv
   }
 
   // get analysis data for better overview
-  const analysisData = hasAnalysis ? JSON.parse(localStorage.getItem('timeLearnHub-analysis') || '{}') : null
+  const analysisData = hasAnalysis && typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('timeLearnHub-analysis') || '{}') : null
   const freeTimeSlots = analysisData?.freeTimePockets?.length || 0
   const parseDurationToHours = (durationStr: string): number => {
     if (!durationStr) return 0

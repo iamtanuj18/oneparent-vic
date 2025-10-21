@@ -58,11 +58,13 @@ export function TimeLearnHub() {
     storage.remove('timeLearnHub-profile')
     
     // clean up any old image data
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('image_course_') || key.startsWith('image_module_')) {
-        storage.remove(key)
-      }
-    })
+    if (typeof window !== 'undefined') {
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('image_course_') || key.startsWith('image_module_')) {
+          storage.remove(key)
+        }
+      })
+    }
     
     // use consistent localstorage keys with timelearn prefix
     const savedSchedule = storage.get<DaySchedule[] | null>('timeLearnHub-approvedSchedule', null)
@@ -116,12 +118,14 @@ export function TimeLearnHub() {
     // Check if there are courses or any localStorage data
     if (courses.length > 0) return true
     
+    if (typeof window === 'undefined') return false
     return Object.keys(localStorage).some(key => 
       key.startsWith('timeLearnHub-') || key.startsWith('timeLearn')
     )
   }
 
   const handleDeleteAllData = () => {
+    if (typeof window === 'undefined') return
     Object.keys(localStorage).forEach(key => {
       if (key.startsWith('timeLearnHub-') || key.startsWith('timeLearn')) {
         localStorage.removeItem(key)
