@@ -32,6 +32,7 @@ server/.env
 server/.env.*
 aws/*.env
 aws/**/*.env     
+ssh.txt
 
 # --- Editor / OS junk ---
 .DS_Store
