@@ -1,167 +1,118 @@
+# OneParent VIC - Support Platform for Single Parents
 
-# OneParent VIC
+A digital companion for single parents across Victoria. Combines AI-powered schedule analysis, community resources, and emotional wellbeing tools to make single parenting less overwhelming and more connected.
 
-A comprehensive digital platform designed to support single parents across Victoria, Australia. OneParent VIC provides intelligent schedule management, community resources, event discovery, and wellbeing tools to make single parenting easier and more connected.
+## 🚀 [Live Platform](https://www.oneparentvic.me)
 
-🌐 **Live Application**: https://www.oneparentvic.me
+Try it out: **[www.oneparentvic.me](https://www.oneparentvic.me)**
 
-## Platform Overview
+## What's This?
 
-OneParent VIC combines AI-powered schedule analysis, community resource mapping, and social features into one unified platform. Built with modern web technologies and deployed on robust cloud infrastructure.
+Single parenting is hard. Between work, childcare, school runs, and trying to maintain your own wellbeing, finding time feels impossible. OneParent VIC helps you reclaim those moments.
 
-**Key Features:**
-- AI-powered schedule analysis and free time optimization
-- Family-friendly event discovery and recommendations  
-- Government benefits and childcare facility lookup
-- Mental health resources and emotional tracking
-- Community matching and playdate planning
-- Interactive journey mapping for single parent experiences
+The platform analyzes your weekly schedule using AI to find hidden pockets of free time, discovers family-friendly events happening near you, connects you with other single parents in your suburb, and provides mental health resources when you need them most.
 
-## Technology Architecture
+It's not just another app—it's a support system that understands the unique challenges of raising kids solo.
 
-**Frontend (Client)**
-- Next.js 14 with App Router and TypeScript
-- Tailwind CSS with custom design system
-- Framer Motion animations and micro-interactions
-- Deployed on Netlify with global CDN
+## Features
 
-**Backend (Server)**  
-- Node.js with Express.js REST API
-- PostgreSQL database for user data and analytics
-- Redis for caching and rate limiting
-- Google Gemini AI for schedule analysis
-- External integrations: Ticketmaster, Eventfinda APIs
+- **Time & Learn Hub**: AI analyzes your schedule and finds free time you didn't know you had
+- **Event Discovery**: Family-friendly events from Ticketmaster and Eventfinda filtered for single parents
+- **Community Match**: Find other single parents in your area based on kids' ages, interests, and location
+- **Emotion Tracker**: Track your mental health journey with AI-powered weekly insights
+- **Journey Map**: Interactive roadmap of single parenting milestones and resources
+- **Government Resources**: Benefits, childcare facilities, and support services in Victoria
 
-**Infrastructure (AWS)**
-- EC2 instances for production server hosting
-- RDS PostgreSQL for managed database services
-- ElastiCache Redis for session and API caching
-- S3 + CloudFront for asset delivery
-- SSL certificates and security configurations
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS, Framer Motion
+- **Backend**: Node.js 20, Express, PostgreSQL, Redis
+- **AI**: Google Gemini AI (10-key rotation for free tier)
+- **Deployment**: AWS (CloudFront, S3, EC2, RDS)
+- **APIs**: Ticketmaster, Eventfinda
 
 ## Project Structure
 
 ```
-oneparent-vic/
-├── client/                   # Frontend Application (Next.js)
-│   ├── src/app/             # App Router pages and layouts
-│   ├── src/components/      # Reusable UI components and feature modules  
-│   ├── src/lib/            # Utilities, API clients, and configuration
-│   ├── public/             # Static assets and data files
-│   └── README.md           # Frontend setup and development guide
-│
-├── server/                  # Backend API (Node.js + Express)
-│   ├── src/routes/         # REST API endpoints and route handlers
-│   ├── src/services/       # External API integrations (Gemini, Ticketmaster)
-│   ├── src/middleware/     # Security, validation, and rate limiting
-│   ├── src/db/            # PostgreSQL connection and queries
-│   └── README.md          # Server setup and deployment guide
-│
-├── aws/                    # Cloud Infrastructure & Deployment
-│   ├── client/            # Frontend deployment (Netlify/S3+CloudFront)
-│   ├── server/            # Backend deployment (EC2, Docker, Nginx)
-│   ├── database/          # PostgreSQL RDS setup and migrations
-│   ├── redis/             # ElastiCache Redis configuration
-│   ├── ec2/               # Server infrastructure and security
-│   └── README.md          # Infrastructure overview and setup
-│
-├── datasets/               # Community Data & Research
-│   ├── *.csv              # Victorian demographics, trends, and services data
-│   └── README.md          # Data sources and usage documentation
-│
-├── docs/                   # Project Documentation
-│   └── README.md          # Documentation index and guidelines
-│
-├── figma/                  # Design System & UI Kit  
-│   ├── src/               # Interactive design system components
-│   └── README.md          # Design principles and component usage
-│
-├── Test-cases/             # Testing Suite
-│   ├── emotion-tracker/   # Feature-specific test cases
-│   ├── timeandlearnhub/   # Schedule analysis testing
-│   └── README.md          # Testing strategy and execution
-│
-├── netlify.toml           # Frontend deployment configuration
-├── all.env               # Environment variables template
-└── package.json          # Root project configuration
+├── client/          # Next.js frontend
+├── server/          # Node.js backend API
+└── test-cases/      # Pre-populated test data for AI features
 ```
+
+## Deployment
+
+### Frontend
+Deployed on **AWS CloudFront + S3**
+- Static export hosted on S3
+- Global CDN via CloudFront
+- Auto-deploys from `main` branch via CodeBuild
+- SSL: `www.oneparentvic.me`
+
+### Backend
+Deployed on **AWS EC2 (Sydney)**
+- Docker containers: `oneparent-server-green` + `oneparent-redis`
+- Nginx reverse proxy with SSL
+- PostgreSQL on AWS RDS
+- GitHub webhook triggers blue-green deployment
+- Daily health monitoring via cron job emails
+
+**Zero downtime deployments:** Health checks ensure new container is ready before traffic switch.
 
 ## How It Works
 
-**Backend Infrastructure**: The server runs on AWS EC2 instances with auto-scaling, using PostgreSQL RDS for data persistence and Redis ElastiCache for performance optimization. The API handles AI-powered schedule analysis, external event data aggregation, and secure user data management.
+**AI Schedule Analysis:**  
+You input your weekly schedule. Gemini AI processes it through 10 rotating API keys (tracked by Redis) to handle free tier limits. The system analyzes patterns, identifies gaps, and suggests optimal free time slots for self-care, study, or socializing.
 
-**Frontend Experience**: The client application is deployed on Netlify with global CDN delivery, providing fast load times across Australia. Built with Next.js for optimal SEO and performance, featuring responsive design and accessibility-first components.
+**Event Discovery:**  
+Backend aggregates events from Ticketmaster and Eventfinda, filters them by family-friendly categories, and ranks by proximity to your suburb. Events are cached in Redis to reduce API calls.
 
-**Data & Security**: All user data is encrypted and stored securely on AWS RDS. The platform implements comprehensive security measures including rate limiting, CORS protection, and secure API authentication. Community data is sourced from Australian government datasets and research studies.
+**Community Matching:**  
+PostgreSQL stores Victorian demographic data (suburbs, schools, childcare). The system matches you with nearby single parents based on children's ages, school zones, and shared interests.
 
-## Getting Started
+**Emotional Tracking:**  
+Weekly mood logs are sent to Gemini AI for pattern analysis. The system identifies burnout signs, suggests coping strategies, and tracks recovery progress over weeks.
 
-Each project directory contains detailed setup and development instructions:
+## Local Development
 
-- **`/client`** - Frontend development, component library, and UI guidelines
-- **`/server`** - Backend API, database setup, and service integrations  
-- **`/aws`** - Infrastructure deployment, security configuration, and scaling
-- **`/datasets`** - Community data sources and research methodology
-- **`/docs`** - Comprehensive project documentation and API guides
-- **`/figma`** - Design system, UI components, and accessibility standards
-- **`/Test-cases`** - Testing strategy, feature tests, and quality assurance
+### Prerequisites
+- Node.js 20+
+- PostgreSQL database
+- Redis server
+- Google Gemini API keys
+- Ticketmaster + Eventfinda API keys
 
-## Quick Development Setup
+### Setup
 
+**Backend:**
 ```bash
-# Backend setup
-cd server && npm install && npm run dev
-
-# Frontend setup (new terminal)
-cd client && npm install && npm run dev
+cd server
+npm install
+cp .env.example .env.local  # Add your API keys and database URL
+npm run dev
 ```
 
-Visit http://localhost:3000 to see the application running locally.
-- Responsive mobile-first design
-- Performance optimized with image optimization and code splitting
-- SEO friendly with proper meta tags
-- Accessibility compliant (WCAG 2.1)
-- Comprehensive error monitoring and logging
+**Frontend:**
+```bash
+cd client
+npm install
+cp .env.example .env.local  # Add API base URL
+npm run dev
+```
 
-## Security
+Frontend runs on `http://localhost:3000`  
+Backend runs on `http://localhost:5000`
 
-- Helmet.js for security headers
-- Rate limiting for API protection
-- CORS for origin control
-- Parameter validation and input sanitization
-- SQL injection prevention with parameterized queries
-- Cloudflare DDoS protection
+## Testing AI Features
 
-## Documentation Structure
+The `test-cases/` folder contains pre-populated data to test AI features without waiting:
 
-The project includes comprehensive documentation across multiple areas:
+**Emotion Tracker:** Paste test case in browser console → See 3 weeks of mood data + AI insights  
+**Time Hub:** Paste test case → Auto-fill schedule with realistic single parent scenarios
 
-### Component Documentation
-- **[Client Application](client/README.md)** - Frontend React/Next.js application setup, features, and development
-- **[Server Application](server/README.md)** - Backend Node.js/Express API documentation and deployment
-- **[AWS Infrastructure](aws/README.md)** - Cloud infrastructure setup, deployment scripts, and management
-- **[Design System](figma/README.md)** - UI component library, design tokens, and accessibility guidelines
-- **[Test Suite](Test-cases/README.md)** - Testing strategy, test execution, and quality assurance
-- **[Datasets](datasets/README.md)** - Community data, demographics, and dataset usage documentation
-- **[Documentation Hub](docs/README.md)** - Technical specifications, user guides, and API references
+See [test-cases/README.md](test-cases/README.md) for details.
 
-### Feature Areas
-Each major platform feature includes dedicated documentation covering:
-## Contributing & Development
+## More Info
 
-For detailed development setup, code standards, and contribution guidelines, see the README files in individual project directories. Each component has specific setup instructions and development workflows.
-
-**Repository**: https://github.com/iamtanuj18/oneparent-vic  
-**Issues & Support**: GitHub Issues  
-**Documentation**: See `/docs` directory for comprehensive guides
-- **Feature Requests**: Use GitHub Discussions for community input
-- **Documentation**: Check component-specific README files in each directory
-- **API Questions**: Refer to [Server API Documentation](server/README.md)
-- **Design Guidelines**: Review [Design System Documentation](figma/README.md)
-
-### Community Resources
-- Project roadmap and milestone tracking via GitHub Projects
-- Community discussions and feature planning in GitHub Discussions
-- Regular contributor meetings and development updates
-- Open source contribution guidelines and recognition program
+- [Frontend Documentation](client/README.md) - Next.js setup, features, deployment
+- [Backend Documentation](server/README.md) - API architecture, Gemini rotation, infrastructure
 

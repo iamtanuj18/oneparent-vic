@@ -1,142 +1,120 @@
-# OneParent VIC - Frontend Application
+# Client
 
-A comprehensive web application providing digital tools and resources specifically designed for single parents across Victoria, Australia. The platform offers AI-powered insights, community resources, and practical tools to support single parenting journeys.
+Next.js frontend for OneParent VIC. Digital support platform for single parents across Victoria, Australia.
 
-## What This App Does
+🌐 **Live**: [https://oneparentvic.me](https://oneparentvic.me)
 
-**OneParent VIC** is a digital support platform that helps single parents with:
+## Tech Stack
 
-- **Schedule Management**: AI-powered analysis of weekly routines to identify free time and optimization opportunities
-- **Emotional Wellbeing**: Mood tracking and mental health insights with weekly pattern analysis
-- **Activity Planning**: Personalized activity suggestions for children based on age, interests, and location
-- **Community Discovery**: Find single parent-friendly neighborhoods with cultural diversity and school ratings
-- **Event Finding**: Discover family-friendly events from Ticketmaster and local community sources
-- **Journey Mapping**: Track milestones and progress through different aspects of single parenting
-- **Resource Access**: Government support information, childcare options, and community services
+- Next.js 15 (App Router, Static Export)
+- React 19 with TypeScript
+- Tailwind CSS + Framer Motion
+- Leaflet (maps)
+- SWR (data fetching)
+- Upstash Redis (caching)
 
-## Technology Stack
+## Features
 
-**Frontend Framework**
-- Next.js 14 with App Router for server-side rendering and routing
-- React 18 with TypeScript for type-safe component development
-- Tailwind CSS for responsive utility-first styling
-- Framer Motion for smooth animations and transitions
+**Time & Learn Hub** - Upload your weekly schedule, get AI analysis of time usage, identify free time blocks, and receive personalized optimization suggestions.
 
-**UI & UX**
-- Lucide React for consistent iconography
-- Custom design system optimized for single parent workflows
-- Mobile-first responsive design with touch-friendly interfaces
-- Accessibility compliance (WCAG 2.1 AA standards)
+**Emotion Tracker** - Track daily mood with visual ratings, view weekly patterns, get insights into emotional trends over time.
 
-**Data & State Management**
-- Local Storage for user preferences and offline functionality
-- React hooks for component state management
-- Custom API client with error handling and loading states
-- TypeScript interfaces for data consistency
+**PlayDate Planner** - Get activity suggestions based on child's age, interests, and budget. Discover local family-friendly activities.
 
-## Application Structure
+**Community Match** - Explore Victorian neighborhoods with data on schools, cultural diversity, housing costs, and single parent demographics. Interactive map visualization.
+
+**Event Finder** - Browse family-friendly events from Ticketmaster and Eventfinda. Filter by age group, location, and date range.
+
+**Journey Map** - Track milestones and progress across different areas of single parenting. Set goals and celebrate achievements.
+
+## Project Structure
 
 ```
-client/
-├── src/
-│   ├── app/                     # Next.js App Router (pages and routing)
-│   │   ├── page.tsx             # Homepage with navigation to all tools
-│   │   ├── layout.tsx           # Root layout with navigation and footer
-│   │   ├── your-journey-map/    # Single parenting milestone tracking
-│   │   ├── time-and-learn-hub/  # AI-powered schedule analysis
-│   │   ├── emotion-tracker/     # Daily mood and wellbeing tracking
-│   │   ├── playdate/            # Activity suggestions and planning
-│   │   ├── community-match/     # Neighborhood discovery tool
-│   │   ├── find-events/         # Family-friendly event discovery
-│   │   └── resources/           # Government support and services
-│   ├── components/              # Reusable React components
-│   │   ├── ui/                  # Base components (buttons, cards, forms)
-│   │   ├── shared/              # Navigation, footer, common layouts
-│   │   └── [feature]/           # Feature-specific components
-│   ├── lib/
-│   │   ├── api/                 # Backend API client functions
-│   │   ├── utils/               # Helper functions and utilities
-│   │   └── types/               # TypeScript type definitions
-│   └── types/                   # Global TypeScript interfaces
-├── public/
-│   ├── images/                  # Static images and assets
-│   ├── data/                    # Static JSON data files
-│   └── sitemap.xml             # SEO sitemap
-├── next.config.ts              # Next.js build and deployment config
-├── tailwind.config.js          # Tailwind CSS styling configuration
-└── package.json                # Dependencies and build scripts
+src/
+├── app/                    # Next.js pages
+│   ├── page.tsx           # Landing page
+│   ├── layout.tsx         # Root layout
+│   ├── your-journey-map/  # Milestone tracking
+│   ├── time-and-learn-hub/# AI schedule analysis
+│   ├── emotion-tracker/   # Mood tracking
+│   ├── playdate/          # Activity planner
+│   ├── community-match/   # Neighborhood finder
+│   └── events/            # Event discovery
+├── components/            # React components
+│   ├── ui/                # Base UI components
+│   ├── layout/            # Navbar, Footer
+│   └── [feature]/         # Feature-specific components
+├── lib/
+│   ├── api/               # Backend API clients
+│   ├── utils/             # Utilities
+│   └── config.ts          # API configuration
+└── types/                 # TypeScript interfaces
 ```
 
-## Core Features
-
-**Time & Learn Hub**: AI-powered weekly schedule analysis that identifies free time pockets and provides optimization suggestions using Google Gemini AI.
-
-**Emotion Tracker**: Daily mood tracking with 5-point scale and weekly emotional pattern analysis to support mental wellbeing.
-
-**PlayDate Planner**: Personalized activity suggestions based on child age, interests, and budget with integration to local event data.
-
-**Community Match**: Neighborhood discovery tool helping single parents find communities with good schools, cultural diversity, and family support services.
-
-**Find Events**: Family-friendly event discovery with integration to Ticketmaster and Eventfinda APIs, filtered by age groups and location.
-
-**Journey Map**: Milestone tracking system for single parenting progress across different life areas with goal setting and achievement visualization.
-
-**Resource Hub**: Access to government support information, childcare options, and community services specific to Victoria, Australia.
-
-## Development Setup
-
-### Prerequisites
-- Node.js 18 or higher
-- npm package manager
-
-### Installation & Running
+## Development
 
 ```bash
-# Navigate to client directory
 cd client
-
-# Install all dependencies
 npm install
-
-# Start development server
 npm run dev
-
-# Application will be available at http://localhost:3000
 ```
 
-### Environment Configuration
+Open [http://localhost:3000](http://localhost:3000)
 
-Create `.env.local` file in the client directory:
+The app connects to the backend API for AI analysis, event data, and community resources. Make sure the backend server is running (see [server/README.md](../server/README.md)).
+
+### Environment Variables
+
+Create `.env.local`:
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
 ```
 
-### Available Commands
+For production, set:
+```env
+NEXT_PUBLIC_API_BASE_URL=https://your-api-domain.com/api
+```
+
+## Deployment
+
+Deployed on **AWS CloudFront + S3** with automated CI/CD via AWS CodeBuild.
+
+**How it works:**
+1. Push code changes to `main` branch
+2. GitHub webhook triggers AWS CodePipeline
+3. CodeBuild runs `npm ci && npm run build` with Node.js 20
+4. Static files (`/out` directory) deployed to S3
+5. CloudFront cache invalidated for immediate updates
+6. Live at [oneparentvic.me](https://oneparentvic.me) within minutes
+
+**Build config**: `aws/client/build-configuration.yml`
+
+Environment variables set in AWS CodeBuild for production builds.
+
+See [aws/client/README.md](../aws/client/README.md) for full deployment setup and infrastructure details.
+
+## Build
 
 ```bash
-npm run dev          # Start development server (http://localhost:3000)
-npm run build        # Build production version
-npm run start        # Start production server  
-npm run lint         # Run code quality checks
-npm run type-check   # Validate TypeScript types
+npm run build
+npm start
 ```
 
-## Backend Integration
+Output in `/out` directory (static export).
 
-The frontend communicates with the Node.js backend API for:
-- **AI Analysis**: Schedule analysis via Google Gemini AI integration
-- **Event Data**: Real-time events from Ticketmaster and Eventfinda APIs  
-- **Community Data**: Demographics, school ratings, and neighborhood information
-- **Data Persistence**: User preferences and application state storage
+## Scripts
 
-All API calls include proper error handling, loading states, and retry logic through the `/src/lib/api/` client functions.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
 
-## Design & Accessibility
+## API Integration
 
-**Mobile-First Design**: Responsive layout optimized for single parents who primarily use mobile devices while managing daily routines.
+Backend provides:
+- AI schedule analysis (Gemini AI)
+- Event data (Ticketmaster, Eventfinda)
+- Victorian suburb/school data
+- Community resources
 
-**Accessibility Compliant**: WCAG 2.1 AA standards with keyboard navigation, screen reader support, and high contrast color schemes.
-
-**Performance Optimized**: Next.js automatic code splitting, image optimization, and lazy loading for fast loading on any device.
-
-**Browser Support**: Modern browsers including Chrome 90+, Firefox 88+, Safari 14+, and mobile browsers.
+API client: `src/lib/api/client.ts`

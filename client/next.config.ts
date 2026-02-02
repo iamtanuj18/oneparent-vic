@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enable static export for universal deployment (works on both Vercel and Netlify)
+  // Enable static export for AWS S3 + CloudFront deployment
   output: 'export',
   trailingSlash: true,
   

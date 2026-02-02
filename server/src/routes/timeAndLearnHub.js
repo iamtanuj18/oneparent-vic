@@ -798,7 +798,8 @@ router.post("/time-and-learn-hub/generate-course", strictLimiter, aiGenerationBr
                 {
                   "question": string,
                   "options": [string],
-                  "correctAnswer": number
+                  "correctAnswer": number,
+                  "explanation": string
                 }
               ]
             }
@@ -830,7 +831,7 @@ MODULE REQUIREMENTS:
 - Core Content: 150-200 words with practical guidance
 - Key Takeaways: 3-4 bullet points
 - One Example: Simple activity or approach with clear steps
-- Quiz: Exactly 3 multiple choice questions
+- Quiz: Exactly 3 multiple choice questions with explanations for the correct answer
 
 Generate content that covers both parenting skills and personal development topics relevant to single parents.`;
 
