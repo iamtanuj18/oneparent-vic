@@ -49,7 +49,7 @@ async function geocodeNominatim(placeRaw) {
 
   var res = await fetch(url, {
     headers: {
-      "User-Agent": "oneparent-vic/1.0 (contact: you@example.com)"
+      "User-Agent": "oneparent-vic/1.0"
     }
   });
   if (!res.ok) throw new Error("geocode failed " + res.status);

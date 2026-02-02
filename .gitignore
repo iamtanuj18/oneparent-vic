@@ -9,9 +9,23 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# --- AWS / Infrastructure ---
+aws/
+
+# --- Datasets / Data Files ---
+datasets/
+
+# --- Documentation / LaTeX ---
+docs/
+latex-docs/
+
+# --- Editor / IDE ---
+.vscode/
+
 # --- Environment / secrets ---
 .env
-.env.*               
+.env.*
+all.env
 client/.env
 client/.env.*         
 server/.env
