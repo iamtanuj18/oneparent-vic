@@ -73,3 +73,6 @@ docs/latex-docs/
 **/*.fdb_latexmk
 **/*.synctex.gz
 **/*.pdf
+
+# --- Private Documentation ---
+documents/

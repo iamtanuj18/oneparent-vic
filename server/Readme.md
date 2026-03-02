@@ -1,247 +1,254 @@
 # Server
 
-Node.js backend for OneParent VIC. Provides AI-powered schedule analysis, event discovery, and community resources for single parents across Victoria.
+Express.js backend for OneParent VIC — provides AI-powered features, event discovery, and community resources for single parents across Victoria.
+
+**API:** [api.oneparentvic.me](https://api.oneparentvic.me/api/api-status)
 
 ## Tech Stack
 
-- Node.js 20 + Express
-- Google Gemini AI (multi-key rotation for free tier limits)
-- PostgreSQL (AWS RDS) for community data
-- Redis (Docker container) for API key rotation tracking
-- Ticketmaster + Eventfinda APIs for events
-- Puppeteer for web scraping
+- Node.js 20, Express.js
+- Google Gemini AI (multi-model fallback with Redis-based rate tracking)
+- PostgreSQL 16 (AWS RDS) — 4 schemas, 13 tables
+- Redis 7 (Docker container) — rate tracking
+- Ticketmaster + Eventfinda APIs
+- Open-Meteo + Nominatim (weather + geocoding)
 
 ## Architecture
 
 ```
 src/
-├── server.js                      # Express app + startup
-├── config.js                      # Environment config
-├── routes/                        # API endpoints
-│   ├── timeAndLearnHub.js         # Schedule AI analysis
-│   ├── events.js                  # Event discovery
-│   ├── communityMatch.js          # Suburb matching
-│   ├── emotionTracker.js          # Mood tracking
-│   ├── journeyMap.js              # Progress tracking
-│   ├── apiHealthCheck.js          # Health monitoring
-│   └── victoriaSuburbList.js      # Location data
+├── server.js                      # Express app entry point
+├── config.js                      # Environment configuration
+├── routes/                        # API route handlers
+│   ├── timeAndLearnHub.js         # AI schedule analysis (4 endpoints)
+│   ├── events.js                  # Event discovery + weather (5 endpoints)
+│   ├── communityMatch.js          # Suburb matching + demographics (8 endpoints)
+│   ├── emotionTracker.js          # Mood tracking + AI insights (5 endpoints)
+│   ├── journeyMap.js              # Journey milestones + AI guidance (7 endpoints)
+│   ├── playdate.js                # AI activity suggestions (2 endpoints)
+│   ├── insights.js                # Homepage dashboard data (3 endpoints)
+│   ├── apiHealthCheck.js          # Health monitoring (1 endpoint)
+│   ├── victoriaSuburbList.js      # Suburb autocomplete (1 endpoint)
+│   └── contact.js                 # Contact form (1 endpoint)
 ├── services/                      # External integrations
-│   ├── gemini.js                  # Gemini AI + key rotation
-│   ├── redis.js                   # Redis client + rate limiting
-│   ├── ticketmasterService.js     # Ticketmaster API
-│   └── eventfindaService.js       # Eventfinda API
+│   ├── gemini.js                  # Gemini AI client — model tiers, fallback, rate tracking
+│   ├── redis.js                   # Redis connection + rate limit helpers
+│   ├── ticketmasterService.js     # Ticketmaster Discovery API v2
+│   └── eventfindaService.js       # Eventfinda Australia API v2
 ├── db/
-│   └── index.js                   # PostgreSQL connection pool
-├── middleware/
+│   └── index.js                   # PostgreSQL connection pool (SSL)
+├── middleware/                     # 6-layer security stack
 │   ├── security.js                # Helmet + CORS
 │   ├── rateLimit.js               # Redis-backed rate limiting
-│   ├── bruteForceProtection.js    # IP-based blocking
-│   ├── xssProtection.js           # XSS sanitization
+│   ├── bruteForceProtection.js    # IP-based brute force blocking
+│   ├── xssProtection.js           # XSS input sanitisation
 │   ├── parameterProtection.js     # HPP protection
-│   └── errorHandler.js            # Global error handling
+│   └── errorHandler.js            # Global error handler
 └── utils/
-    ├── categoryMapping.js         # Event categorization
-    ├── locationResolver.js        # Suburb resolution
-    └── weather.js                 # Weather integration
+    ├── categoryMapping.js         # Event category normalisation
+    ├── locationResolver.js        # Suburb/postcode resolution
+    ├── logger.js                  # Structured logging
+    └── weather.js                 # Open-Meteo weather client
 ```
 
-## How It Works
+## Gemini AI Integration
 
-1. **Client requests AI analysis** → Server selects best available Gemini API key from pool
-2. **Redis tracks key usage** → Atomic counters prevent rate limit violations (RPM/RPD per tier)
-3. **Key rotation** → Shuffled keys spread load evenly across 10 free-tier Gemini accounts
-4. **Fallback strategy** → 4-tier model system (Pro → Flash → Lite → Flash-2.0) ensures reliability
-5. **PostgreSQL serves community data** → Demographics, schools, housing from AWS RDS
-6. **Event aggregation** → Ticketmaster + Eventfinda APIs filtered for family-friendly content
-7. **Health monitoring** → Daily cron job emails server metrics + container status
+The server integrates Google Gemini AI across **14 call sites** using a multi-model fallback strategy with Redis-based rate tracking.
 
-## Gemini API Key Rotation
+### Model Tiers
 
-**Why:** Google Gemini free tier has strict limits (5-15 RPM per key, 1500 RPD)
+| Tier | Model | Rate Limit (RPM) | Use Case |
+|------|-------|-------------------|----------|
+| 1 | `gemini-2.5-flash` | 10 | Primary — fast, capable |
+| 2 | `gemini-2.5-flash-lite` | 15 | Fallback — lighter, higher throughput |
+| 3 | `gemini-2.0-flash` | 15 | Secondary fallback |
+| 4 | `gemini-2.5-pro` | 5 | Complex tasks requiring deeper reasoning |
 
-**Solution:** Multi-key pool with Redis-based atomic rotation
-```javascript
-// 10 API keys pooled with different rate limits per model tier
-GEMINI_API_KEY_1 through GEMINI_API_KEY_10
+### How It Works
 
-// Redis tracks usage per key, per model tier, per time window
-rate_limit:{keyHash}:{tier}:minute:{timestamp}
-rate_limit:{keyHash}:{tier}:day:{timestamp}
+1. Request comes in requiring AI processing
+2. `gemini.js` selects an available API key from the pool
+3. Redis tracks per-key, per-model, per-minute usage with atomic counters
+4. If the current model tier is exhausted, automatically falls back to the next tier
+5. Exponential backoff on transient failures
+6. All 14 call sites use two core functions: `generateContent()` and `validateAndParseJSON()`
 
-// Shuffled key order per minute spreads load evenly
-// Falls back to next tier if current tier exhausted
-```
+### AI Call Sites
 
-**Model Tiers:**
-- **Tier 1:** `gemini-2.5-pro` (5 RPM), `gemini-2.5-flash` (10 RPM)
-- **Tier 2:** `gemini-2.5-flash-lite` (15 RPM), `gemini-2.0-flash` (15 RPM)
+| Route | Call Sites | Purpose |
+|-------|-----------|---------|
+| Journey Map | 4 | Stage guidance, milestone advice, resource recommendations, progress analysis |
+| Time & Learn Hub | 3 | Schedule analysis, time optimisation, learning suggestions |
+| Emotion Tracker | 3 | Weekly insights, pattern analysis, coping strategies |
+| Playdate Planner | 2 | Activity generation, personalisation |
+| Events | 1 | Event relevance scoring |
+| Insights | 1 | Homepage trend summaries |
 
-Redis ensures atomic key selection and prevents rate limit violations across concurrent requests.
+## Database Schema
+
+PostgreSQL with **4 schemas** and **13 tables**:
+
+| Schema | Tables | Purpose |
+|--------|--------|---------|
+| `trends` | 4 | ABS single parent statistics, labour force data, PPS recipients, economic trends |
+| `hilda` | 3 | HILDA survey data — time use, wellbeing, childcare |
+| `community` | 5 | Stories, playdate activities, contact submissions, emotion logs, journey milestones |
+| `vic_geo` | 1 | Victorian suburb geometry + demographics |
+
+## API Endpoints
+
+### Health
+- `GET /api/api-status` — Health check + uptime
+
+### Journey Map (7 endpoints)
+- `GET /api/journey-map/stages` — All journey stages
+- `GET /api/journey-map/stages/:stageId` — Single stage details
+- `POST /api/journey-map/stages/:stageId/generate` — AI guidance for stage
+- `GET /api/journey-map/milestones` — User milestones
+- `POST /api/journey-map/milestones` — Save milestone
+- `PUT /api/journey-map/milestones/:id` — Update milestone
+- `DELETE /api/journey-map/milestones/:id` — Delete milestone
+
+### Time & Learn Hub (4 endpoints)
+- `POST /api/time-and-learn-hub/analyze` — AI schedule analysis
+- `POST /api/time-and-learn-hub/optimize` — Time optimisation
+- `POST /api/time-and-learn-hub/learn` — Learning recommendations
+- `GET /api/time-and-learn-hub/categories` — Activity categories
+
+### Emotion Tracker (5 endpoints)
+- `POST /api/emotion-tracker/log` — Log daily mood
+- `GET /api/emotion-tracker/logs` — Retrieve mood logs
+- `POST /api/emotion-tracker/insights` — AI weekly insights
+- `GET /api/emotion-tracker/trends` — Mood trends over time
+- `DELETE /api/emotion-tracker/logs/:id` — Delete mood log
+
+### Events (5 endpoints)
+- `GET /api/events` — Aggregated events (Ticketmaster + Eventfinda)
+- `GET /api/events/ticketmaster` — Ticketmaster events only
+- `GET /api/events/eventfinda` — Eventfinda events only
+- `GET /api/events/weather` — Weather for event location
+- `GET /api/events/geocode` — Geocode suburb name
+
+### Community Match (8 endpoints)
+- `GET /api/community-match/suburbs` — Suburb search
+- `GET /api/community-match/suburbs/:name` — Suburb details
+- `GET /api/community-match/demographics` — Demographic data
+- `GET /api/community-match/schools` — Schools by suburb
+- `GET /api/community-match/housing` — Housing data
+- `GET /api/community-match/childcare` — Childcare centres
+- `GET /api/community-match/compare` — Compare suburbs
+- `GET /api/community-match/geometry` — GeoJSON boundaries
+
+### Playdate Planner (2 endpoints)
+- `POST /api/playdate/suggestions` — AI activity suggestions
+- `GET /api/playdate/categories` — Activity categories
+
+### Insights (3 endpoints)
+- `GET /api/insights/trends` — Single parent trend data
+- `GET /api/insights/pps` — PPS recipient statistics
+- `GET /api/insights/labour` — Labour force participation
+
+### Other
+- `GET /api/victoria-suburb-list` — Suburb autocomplete
+- `POST /api/contact` — Contact form submission
+
+**Total: 10 routes, 37 endpoints**
 
 ## Infrastructure
 
-**Production Deployment:** AWS EC2 t3.micro (Sydney ap-southeast-2)
+### Production
+- **EC2 t3.micro** — Sydney (ap-southeast-2)
+- **Nginx** — reverse proxy, SSL termination (Let's Encrypt / Certbot)
+- **Docker** — Express container (`oneparent-server-blue`, port 5000) + Redis container (`oneparent-redis`, port 6379) on `oneparent-network` bridge
+- **RDS PostgreSQL 16** — `db.t3.micro`, SSL connections
+- **Memory:** 256MB limit per container, 0.5 CPU
 
-**Container Architecture:**
+### Container Layout
+
 ```
-┌─────────────────────────────────────┐
-│  Nginx (Port 443)                   │
-│  SSL Termination + Reverse Proxy    │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│  oneparent-server-green             │
-│  Node.js + Express (Port 5000)      │
-│  Docker: oneparent-vic-server       │
-└──────────────┬──────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│  oneparent-redis                    │
-│  Redis 7 Alpine (Port 6379)         │
-│  Key rotation + rate limit tracking │
-└─────────────────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────┐
-│  AWS RDS PostgreSQL 16              │
-│  Community data + demographics      │
-└─────────────────────────────────────┘
+EC2 Instance
+├── Nginx (port 443/80)
+│   ├── /api/*    → upstream :5000 (Express)
+│   └── /webhook  → proxy :3001 (Webhook Receiver)
+│
+├── Docker: oneparent-network
+│   ├── oneparent-server-blue (:5000)
+│   └── oneparent-redis (:6379)
+│
+└── Webhook Receiver (:3001)
+    └── Signature verified → deploy.sh
 ```
 
-**Blue-Green Deployment:**
-1. GitHub webhook triggers on push to `main`
-2. EC2 runs deployment script
-3. Builds new Docker image: `oneparent-vic-server:latest`
-4. Starts new container: `oneparent-server-green`
-5. Health check validates new container
-6. Nginx switches traffic to new container
-7. Old container stopped after 30s grace period
+### Blue-Green Deployment
 
-**Zero downtime** ensured by health checks before traffic switch.
+Zero-downtime deployments via custom blue-green strategy:
 
-## Automated Monitoring
+1. GitHub webhook fires on push to `main` (if `server/` changed)
+2. Webhook receiver (port 3001) verifies the webhook signature
+3. `deploy.sh` executes:
+   - Detect active container (blue on :5000)
+   - `git pull` latest code
+   - `docker build` new image
+   - Start green container on :5001
+   - Health check: `GET /api/api-status` × 30 attempts (2s apart)
+   - If healthy: `sed` swap port in Nginx config → `nginx -s reload`
+   - Stop old container + cleanup images
+   - **If unhealthy: kill green, blue keeps serving (automatic rollback)**
+4. Email notification sent on success/failure
 
-**Daily Health Reports** (Cron job at 06:00 UTC):
-- API status + response time
-- Memory/disk usage
-- Docker container health (2 containers)
-- System uptime
-- SSL certificate validity
-- Auto-deployment status
+### Monitoring
 
-**Email sent to:** Production admin  
-**Monitored endpoint:** `https://api.oneparentvic.me/api/api-status`
-
-**Automation Systems:**
-- GitHub webhook for instant deployments
-- Daily health check emails
-- Container health monitoring
-- SSL auto-renewal
+- **Daily health report** (cron at 06:00 UTC / 5PM Melbourne): API status, memory, disk, Docker stats
+- **Deploy notifications**: Email on every deployment (success or failure)
+- **Container healthcheck**: `GET /api/api-status` every 30s in Docker
 
 ## Development
 
 ```bash
+cd server
 npm install
 cp .env.example .env.local
-npm run dev
+npm run dev                  # Runs on http://localhost:5000
 ```
-
-Runs on `http://localhost:5000`
 
 ### Environment Variables
 
-Create `.env.local`:
+Create `.env.local` with:
+
 ```env
-# Server
 NODE_ENV=development
-API_ENV=local
 PORT=5000
-
-# Database
-DATABASE_URL=postgresql://username:password@localhost:5432/oneparent_vic
-
-# Redis (local: use localhost, AWS: oneparent-redis container)
+DATABASE_URL=postgresql://user:pass@localhost:5432/oneparent_vic
 REDIS_PASSWORD=your_redis_password
-
-# Gemini API Keys (10 keys for rotation)
-GEMINI_API_KEY_1=your_key_1
-GEMINI_API_KEY_2=your_key_2
-# ... up to GEMINI_API_KEY_10
-
-# External APIs
+GEMINI_API_KEY_1=your_gemini_key
 TICKETMASTER_KEY=your_ticketmaster_key
 EVENTFINDA_USERNAME=your_username
 EVENTFINDA_PASSWORD=your_password
-
-# CORS
 CORS_ORIGINS=http://localhost:3000
 ```
 
-### Local Redis Connection
+### Docker (local)
 
-For local development with EC2 Redis:
-```bash
-# SSH tunnel to EC2 Redis
-ssh -i key.pem -L 6379:localhost:6379 ubuntu@ec2-instance
-
-# Set API_ENV=local in .env.local
-# Server connects to localhost:6379 (tunneled to EC2)
-```
-
-## API Endpoints
-
-- `GET /api/api-status` - Health check
-- `POST /api/time-and-learn-hub/analyze` - AI schedule analysis
-- `GET /api/events` - Family events (Ticketmaster + Eventfinda)
-- `GET /api/community-match` - Suburb matching
-- `POST /api/emotion-tracker/insights` - Mood insights generation
-- `GET /api/journey-map` - Progress tracking
-- `GET /api/victoria-suburb-list` - Location data
-
-## Docker
-
-Production build:
 ```bash
 docker build -t oneparent-vic-server .
 docker run -p 5000:5000 --env-file .env.local oneparent-vic-server
 ```
 
-Docker Compose (with Redis):
+With Redis:
+
 ```bash
 docker-compose up -d
 ```
 
 ## Security
 
-- Helmet.js for security headers
-- CORS restricted to allowed origins
-- Rate limiting: 60 req/min per IP
-- Brute force protection on sensitive endpoints
-- XSS sanitization on all inputs
-- HPP (HTTP Parameter Pollution) protection
-- PostgreSQL SSL with RDS certificates
-
-## Troubleshooting
-
-**Gemini API rate limits:**
-- Check Redis key rotation logs
-- Verify all 10 API keys configured
-- Increase key pool if hitting limits consistently
-
-**Container connection issues:**
-```bash
-# Check container health
-docker ps
-docker logs oneparent-server-green
-docker logs oneparent-redis
-
-# Test Redis connection
-docker exec -it oneparent-redis redis-cli PING
-```
-
-**Database connection:**
-- Verify RDS security group allows EC2 IP
-- Check `DATABASE_URL` format
-- SSL certificates must be valid
+| Layer | Protection |
+|-------|-----------|
+| Helmet.js | Security headers (CSP, HSTS, X-Frame) |
+| CORS | Restricted to allowed origins |
+| Rate Limiting | Redis-backed, 60 req/min per IP |
+| Brute Force | IP-based blocking on sensitive endpoints |
+| XSS | Input sanitisation on all request data |
+| HPP | HTTP Parameter Pollution protection |
+| PostgreSQL | SSL-only connections to RDS |
+| Docker | Non-root user, minimal Alpine image |
