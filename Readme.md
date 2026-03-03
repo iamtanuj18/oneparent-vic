@@ -15,7 +15,7 @@ A digital support platform for single parents across Victoria, Australia. Combin
 
 ## Architecture
 
-![OneParent VIC System Architecture](architecture-diagram.png)
+![OneParent VIC System Architecture](architecture-diagram-v2.png)
 
 ## Tech Stack
 
