@@ -15,55 +15,7 @@ A digital support platform for single parents across Victoria, Australia. Combin
 
 ## Architecture
 
-```
-                          ┌─────────────────────────────────────────────────────────┐
-                          │                    AWS Cloud (Sydney)                    │
-                          │                                                         │
-  ┌───────┐   ┌────────┐ │  ┌─────────────── Frontend ──────────────────┐          │
-  │       │   │Cloud-  │ │  │                                           │          │
-  │ Users ├──►│flare   ├─┼─►│  CloudFront CDN  ──►  S3 Bucket          │          │
-  │       │   │DNS+SSL │ │  │  (ACM SSL)            (Next.js 15 Static) │          │
-  └───────┘   └───┬────┘ │  └───────────────────────────────────────────┘          │
-                  │       │                                                         │
-                  │       │  ┌─────────────── EC2 Backend (t3.micro) ────────────┐  │
-                  │       │  │                                                   │  │
-                  └───────┼─►│  Nginx (:443, Let's Encrypt SSL)                  │  │
-                          │  │    │                                               │  │
-                          │  │    ├── /api/*  ──► 6 Security Middleware           │  │
-                          │  │    │                    │                          │  │
-                          │  │    │              ┌─────┴──── Docker Network ───┐  │  │
-                          │  │    │              │                             │  │  │
-                          │  │    │              │  Express API (:5000)        │  │  │
-                          │  │    │              │  10 routes · 35 endpoints   │  │  │
-                          │  │    │              │       │                     │  │  │
-                          │  │    │              │  Redis 7 (:6379)            │  │  │
-                          │  │    │              │  Rate Limiting + Cache      │  │  │
-                          │  │    │              └─────────────────────────────┘  │  │
-                          │  │    │                                               │  │
-                          │  │    └── /webhook ──► Webhook Receiver (:3001)       │  │
-                          │  │                     Signature Verification         │  │
-                          │  │                     Blue-Green Zero-Downtime Deploy│  │
-                          │  └───────────────────────────────────────────────────┘  │
-                          │                                                         │
-                          │  ┌─────────────── Database ─────────────────┐           │
-                          │  │  RDS PostgreSQL 16                       │           │
-                          │  │  4 Schemas: trends · hilda · community   │           │
-                          │  │             · vic_geo                     │           │
-                          │  │  13 Tables                               │           │
-                          │  └──────────────────────────────────────────┘           │
-                          └─────────────────────────────────────────────────────────┘
-
-                          Express API connects to:
-                            → Google Gemini 2.0 Flash (6 AI features, 14 call sites)
-                            → Ticketmaster Discovery v2 (events)
-                            → Eventfinda Australia v2 (events)
-                            → Open-Meteo (weather forecasts)
-                            → Nominatim (geocoding)
-
-                          CI/CD:
-                            Frontend: GitHub → CodePipeline → CodeBuild → S3 + CloudFront invalidation
-                            Backend:  GitHub webhook → deploy.sh → blue-green Docker swap (zero downtime)
-```
+![OneParent VIC System Architecture](architecture-diagram.png)
 
 ## Tech Stack
 
