@@ -1,76 +1,65 @@
-# OneParent VIC - Support Platform for Single Parents
+# OneParent VIC
 
-A digital companion for single parents across Victoria. Combines AI-powered schedule analysis, community resources, and emotional wellbeing tools to make single parenting less overwhelming and more connected.
+A digital support platform for single parents across Victoria, Australia. Combines AI-powered schedule analysis, community resources, event discovery, and emotional wellbeing tools.
 
-## 🚀 [Live Platform](https://www.oneparentvic.me)
-
-Try it out: **[www.oneparentvic.me](https://www.oneparentvic.me)**
-
-## What's This?
-
-Single parenting is hard. Between work, childcare, school runs, and trying to maintain your own wellbeing, finding time feels impossible. OneParent VIC helps you reclaim those moments.
-
-The platform analyzes your weekly schedule using AI to find hidden pockets of free time, discovers family-friendly events happening near you, connects you with other single parents in your suburb, and provides mental health resources when you need them most.
-
-It's not just another app—it's a support system that understands the unique challenges of raising kids solo.
+**Live:** [www.oneparentvic.me](https://www.oneparentvic.me)
 
 ## Features
 
-- **Time & Learn Hub**: AI analyzes your schedule and finds free time you didn't know you had
-- **Event Discovery**: Family-friendly events from Ticketmaster and Eventfinda filtered for single parents
-- **Community Match**: Find other single parents in your area based on kids' ages, interests, and location
-- **Emotion Tracker**: Track your mental health journey with AI-powered weekly insights
-- **Journey Map**: Interactive roadmap of single parenting milestones and resources
-- **Government Resources**: Benefits, childcare facilities, and support services in Victoria
+- **Your Journey Map** — Interactive milestone roadmap for the single parenting journey with personalised AI-generated guidance at each stage
+- **Time & Learn Hub** — Upload your weekly schedule and get AI analysis that identifies free time blocks, optimisation suggestions, and learning recommendations
+- **Emotion Tracker** — Daily mood logging with visual patterns, weekly AI-generated insights, and long-term trend analysis
+- **Playdate Planner** — AI-powered activity suggestions based on child's age, interests, weather, and budget
+- **Community Match** — Explore Victorian suburbs with interactive maps showing schools, cultural diversity, housing data, and single parent demographics
+- **Events** — Family-friendly events aggregated from Ticketmaster and Eventfinda, filtered by age group, location, and date
+
+## Architecture
+
+![OneParent VIC System Architecture](architecture-diagram.png)
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS, Framer Motion
-- **Backend**: Node.js 20, Express, PostgreSQL, Redis
-- **AI**: Google Gemini AI (10-key rotation for free tier)
-- **Deployment**: AWS (CloudFront, S3, EC2, RDS)
-- **APIs**: Ticketmaster, Eventfinda
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 15, React 19, TypeScript, Tailwind CSS, Framer Motion, Leaflet, SWR |
+| Backend | Node.js 20, Express.js |
+| AI | Google Gemini (multi-model fallback with Redis-based rate tracking) |
+| Database | PostgreSQL 16 (AWS RDS) — 4 schemas, 13 tables |
+| Cache | Redis 7 (Docker container) |
+| Hosting | AWS — CloudFront + S3 (frontend), EC2 (backend), RDS (database) |
+| CI/CD | AWS CodePipeline + CodeBuild (frontend), GitHub webhook + blue-green deploy (backend) |
+| DNS | Cloudflare (domain via Namecheap) |
+| SSL | AWS Certificate Manager (frontend), Let's Encrypt (API) |
+| External APIs | Ticketmaster, Eventfinda, Open-Meteo, Nominatim |
 
 ## Project Structure
 
 ```
-├── client/          # Next.js frontend
-├── server/          # Node.js backend API
+├── client/          # Next.js 15 frontend (static export)
+├── server/          # Express.js backend API (Dockerised)
 └── test-cases/      # Pre-populated test data for AI features
 ```
 
 ## Deployment
 
 ### Frontend
-Deployed on **AWS CloudFront + S3**
-- Static export hosted on S3
-- Global CDN via CloudFront
-- Auto-deploys from `main` branch via CodeBuild
-- SSL: `www.oneparentvic.me`
+- **AWS CloudFront + S3** — static export served via global CDN
+- **CI/CD:** Push to `main` → CodePipeline → CodeBuild (Node 20, `npm run build`) → S3 sync → CloudFront invalidation
+- **SSL:** AWS Certificate Manager
+- **URL:** [oneparentvic.me](https://oneparentvic.me)
 
 ### Backend
-Deployed on **AWS EC2 (Sydney)**
-- Docker containers: `oneparent-server-green` + `oneparent-redis`
-- Nginx reverse proxy with SSL
-- PostgreSQL on AWS RDS
-- GitHub webhook triggers blue-green deployment
-- Daily health monitoring via cron job emails
+- **AWS EC2 t3.micro** (Sydney, ap-southeast-2)
+- **Docker:** Express container + Redis container on a shared bridge network
+- **Nginx:** Reverse proxy with SSL termination (Let's Encrypt / Certbot)
+- **CI/CD:** GitHub webhook → signature verification → blue-green deployment script
+- **Zero downtime:** Health checks validate the new container before Nginx traffic switch. Failed health check triggers automatic rollback.
+- **Database:** AWS RDS PostgreSQL 16 — connected via SSL
+- **Monitoring:** Daily health report cron job (API status, memory, disk, Docker)
 
-**Zero downtime deployments:** Health checks ensure new container is ready before traffic switch.
-
-## How It Works
-
-**AI Schedule Analysis:**  
-You input your weekly schedule. Gemini AI processes it through 10 rotating API keys (tracked by Redis) to handle free tier limits. The system analyzes patterns, identifies gaps, and suggests optimal free time slots for self-care, study, or socializing.
-
-**Event Discovery:**  
-Backend aggregates events from Ticketmaster and Eventfinda, filters them by family-friendly categories, and ranks by proximity to your suburb. Events are cached in Redis to reduce API calls.
-
-**Community Matching:**  
-PostgreSQL stores Victorian demographic data (suburbs, schools, childcare). The system matches you with nearby single parents based on children's ages, school zones, and shared interests.
-
-**Emotional Tracking:**  
-Weekly mood logs are sent to Gemini AI for pattern analysis. The system identifies burnout signs, suggests coping strategies, and tracks recovery progress over weeks.
+### DNS
+- **Domain:** Namecheap (`oneparentvic.me`)
+- **DNS:** Cloudflare — CNAME records to CloudFront (frontend), A record to EC2 (API)
 
 ## Local Development
 
@@ -78,7 +67,7 @@ Weekly mood logs are sent to Gemini AI for pattern analysis. The system identifi
 - Node.js 20+
 - PostgreSQL database
 - Redis server
-- Google Gemini API keys
+- Google Gemini API key(s)
 - Ticketmaster + Eventfinda API keys
 
 ### Setup
@@ -88,31 +77,28 @@ Weekly mood logs are sent to Gemini AI for pattern analysis. The system identifi
 cd server
 npm install
 cp .env.example .env.local  # Add your API keys and database URL
-npm run dev
+npm run dev                  # Runs on http://localhost:5000
 ```
 
 **Frontend:**
 ```bash
 cd client
 npm install
-cp .env.example .env.local  # Add API base URL
-npm run dev
+cp .env.example .env.local  # Set NEXT_PUBLIC_API_BASE_URL
+npm run dev                  # Runs on http://localhost:3000
 ```
-
-Frontend runs on `http://localhost:3000`  
-Backend runs on `http://localhost:5000`
 
 ## Testing AI Features
 
-The `test-cases/` folder contains pre-populated data to test AI features without waiting:
+The `test-cases/` folder contains pre-populated data to quickly test AI-powered features:
 
-**Emotion Tracker:** Paste test case in browser console → See 3 weeks of mood data + AI insights  
-**Time Hub:** Paste test case → Auto-fill schedule with realistic single parent scenarios
+- **Emotion Tracker** — Paste test case in browser console → loads 3 weeks of mood data + AI insights
+- **Time & Learn Hub** — Paste test case → auto-fills realistic single parent schedule scenarios
 
-See [test-cases/README.md](test-cases/README.md) for details.
+See [test-cases/](test-cases/) for details.
 
-## More Info
+## Documentation
 
-- [Frontend Documentation](client/README.md) - Next.js setup, features, deployment
-- [Backend Documentation](server/README.md) - API architecture, Gemini rotation, infrastructure
+- [Frontend README](client/README.md) — Next.js setup, components, deployment
+- [Backend README](server/Readme.md) — API routes, services, infrastructure
 

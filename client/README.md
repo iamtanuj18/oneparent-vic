@@ -1,53 +1,49 @@
 # Client
 
-Next.js frontend for OneParent VIC. Digital support platform for single parents across Victoria, Australia.
+Next.js 15 frontend for OneParent VIC — a digital support platform for single parents across Victoria, Australia.
 
-🌐 **Live**: [https://oneparentvic.me](https://oneparentvic.me)
+**Live:** [oneparentvic.me](https://oneparentvic.me)
 
 ## Tech Stack
 
 - Next.js 15 (App Router, Static Export)
-- React 19 with TypeScript
-- Tailwind CSS + Framer Motion
-- Leaflet (maps)
-- SWR (data fetching)
-- Upstash Redis (caching)
+- React 19, TypeScript
+- Tailwind CSS + Framer Motion (animations)
+- Leaflet (interactive maps)
+- SWR (data fetching + caching)
 
 ## Features
 
-**Time & Learn Hub** - Upload your weekly schedule, get AI analysis of time usage, identify free time blocks, and receive personalized optimization suggestions.
-
-**Emotion Tracker** - Track daily mood with visual ratings, view weekly patterns, get insights into emotional trends over time.
-
-**PlayDate Planner** - Get activity suggestions based on child's age, interests, and budget. Discover local family-friendly activities.
-
-**Community Match** - Explore Victorian neighborhoods with data on schools, cultural diversity, housing costs, and single parent demographics. Interactive map visualization.
-
-**Event Finder** - Browse family-friendly events from Ticketmaster and Eventfinda. Filter by age group, location, and date range.
-
-**Journey Map** - Track milestones and progress across different areas of single parenting. Set goals and celebrate achievements.
+| Feature | Route | Description |
+|---------|-------|-------------|
+| **Your Journey Map** | `/your-journey-map` | Interactive milestone roadmap with AI-generated guidance at each parenting stage |
+| **Time & Learn Hub** | `/time-and-learn-hub` | Upload weekly schedule → AI identifies free time, optimisation suggestions, learning recommendations |
+| **Emotion Tracker** | `/emotion-tracker` | Daily mood logging, visual patterns, weekly AI insights, trend analysis |
+| **Playdate Planner** | `/playdate` | AI activity suggestions based on child's age, interests, weather, budget |
+| **Community Match** | `/community-match` | Victorian suburb explorer with schools, demographics, housing data + interactive map |
+| **Events** | `/events` | Family-friendly events from Ticketmaster + Eventfinda, filtered by age/location/date |
 
 ## Project Structure
 
 ```
 src/
-├── app/                    # Next.js pages
-│   ├── page.tsx           # Landing page
-│   ├── layout.tsx         # Root layout
-│   ├── your-journey-map/  # Milestone tracking
-│   ├── time-and-learn-hub/# AI schedule analysis
-│   ├── emotion-tracker/   # Mood tracking
-│   ├── playdate/          # Activity planner
-│   ├── community-match/   # Neighborhood finder
-│   └── events/            # Event discovery
+├── app/                    # Next.js pages (App Router)
+│   ├── page.tsx           # Landing page (hero, timeline, community stories, tools showcase)
+│   ├── layout.tsx         # Root layout with Navbar + Footer
+│   ├── your-journey-map/  # Journey Map feature
+│   ├── time-and-learn-hub/# Time & Learn Hub feature
+│   ├── emotion-tracker/   # Emotion Tracker feature
+│   ├── playdate/          # Playdate Planner feature
+│   ├── community-match/   # Community Match feature
+│   └── events/            # Event Discovery feature
 ├── components/            # React components
-│   ├── ui/                # Base UI components
+│   ├── ui/                # Base UI components (buttons, cards, modals)
 │   ├── layout/            # Navbar, Footer
 │   └── [feature]/         # Feature-specific components
 ├── lib/
-│   ├── api/               # Backend API clients
-│   ├── utils/             # Utilities
-│   └── config.ts          # API configuration
+│   ├── api/               # Backend API client (client.ts)
+│   ├── utils/             # Utility functions
+│   └── config.ts          # API base URL configuration
 └── types/                 # TypeScript interfaces
 ```
 
@@ -61,7 +57,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000)
 
-The app connects to the backend API for AI analysis, event data, and community resources. Make sure the backend server is running (see [server/README.md](../server/README.md)).
+Requires the backend server running — see [server/Readme.md](../server/Readme.md).
 
 ### Environment Variables
 
@@ -70,51 +66,48 @@ Create `.env.local`:
 NEXT_PUBLIC_API_BASE_URL=http://localhost:5000/api
 ```
 
-For production, set:
+Production:
 ```env
-NEXT_PUBLIC_API_BASE_URL=https://your-api-domain.com/api
+NEXT_PUBLIC_API_BASE_URL=https://api.oneparentvic.me/api
 ```
 
 ## Deployment
 
-Deployed on **AWS CloudFront + S3** with automated CI/CD via AWS CodeBuild.
+Deployed on **AWS CloudFront + S3** with automated CI/CD:
 
-**How it works:**
-1. Push code changes to `main` branch
-2. GitHub webhook triggers AWS CodePipeline
-3. CodeBuild runs `npm ci && npm run build` with Node.js 20
-4. Static files (`/out` directory) deployed to S3
+1. Push to `main` branch on GitHub
+2. AWS CodePipeline detects the change
+3. AWS CodeBuild runs the build (Node.js 20, Amazon Linux 2):
+   - `cd client && npm ci && npm run build`
+   - Outputs static files to `/out` directory
+4. Build artifacts synced to S3 bucket
 5. CloudFront cache invalidated for immediate updates
 6. Live at [oneparentvic.me](https://oneparentvic.me) within minutes
 
-**Build config**: `aws/client/build-configuration.yml`
+**DNS:** Cloudflare CNAME records point `oneparentvic.me` and `www.oneparentvic.me` to the CloudFront distribution.
 
-Environment variables set in AWS CodeBuild for production builds.
-
-See [aws/client/README.md](../aws/client/README.md) for full deployment setup and infrastructure details.
+**SSL:** AWS Certificate Manager — managed automatically.
 
 ## Build
 
 ```bash
-npm run build
-npm start
+npm run build     # Static export to /out
 ```
-
-Output in `/out` directory (static export).
 
 ## Scripts
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Build static export |
+| `npm run lint` | Run ESLint |
 
 ## API Integration
 
-Backend provides:
-- AI schedule analysis (Gemini AI)
-- Event data (Ticketmaster, Eventfinda)
-- Victorian suburb/school data
-- Community resources
+The frontend communicates with the backend via REST API calls through the client at `src/lib/api/client.ts`. All AI processing, event aggregation, and database queries happen server-side.
 
-API client: `src/lib/api/client.ts`
+Key API interactions:
+- Schedule analysis → Gemini AI processing
+- Event discovery → Ticketmaster + Eventfinda aggregation
+- Community data → PostgreSQL queries
+- Mood insights → Gemini AI pattern analysis
